@@ -1,0 +1,23 @@
+## .NET
+**/bin/
+**/obj/
+**/.vs/
+*.user
+*.suo
+*.cache
+*.DotSettings.user
+
+## IDE
+.idea/
+.vscode/
+*.swp
+
+## Environment
+.env
+
+## OS
+.DS_Store
+Thumbs.db
+
+## Docker
+mongo_data/

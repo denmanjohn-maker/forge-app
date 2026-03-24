@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # ─── MongoDB ───────────────────────────────────────────────
+  mongodb:
+    image: mongo:7
+    container_name: mtg-mongodb
+    restart: unless-stopped
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo_data:/data/db
+      - mongo_config:/data/configdb
+    environment:
+      # For production, uncomment and set credentials:
+      # MONGO_INITDB_ROOT_USERNAME: admin
+      # MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-changeme}
+      MONGO_INITDB_DATABASE: mtgdeckforge
+    networks:
+      - mtg-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ─── MTG Deck Forge API ────────────────────────────────────
+  mtg-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mtg-deckforge-api
+    restart: unless-stopped
+    ports:
+      - "5001:5000"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      # Override appsettings via env vars
+      MongoDb__ConnectionString: "mongodb://mongodb:27017"
+      MongoDb__DatabaseName: "mtgdeckforge"
+      MongoDb__DecksCollectionName: "decks"
+      ClaudeApi__ApiKey: "${ANTHROPIC_API_KEY}"
+      ClaudeApi__Model: "claude-sonnet-4-20250514"
+      ClaudeApi__MaxTokens: "8192"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - mtg-network
+
+volumes:
+  mongo_data:
+    driver: local
+  mongo_config:
+    driver: local
+
+networks:
+  mtg-network:
+    driver: bridge

@@ -1,0 +1,1563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ben's Magic Forge</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&family=MedievalSharp&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gold: #C9A84C;
+            --gold-light: #E8D48B;
+            --gold-dark: #8B6914;
+            --bg-deep: #1E1E1E;
+            --bg-card: #252525;
+            --bg-panel: #2C2C2C;
+            --bg-hover: #333333;
+            --text-primary: #E8E4D9;
+            --text-secondary: #9A9488;
+            --text-muted: #5C5850;
+            --border: #2A2A35;
+            --border-gold: rgba(201, 168, 76, 0.3);
+            --mana-white: #F9FAF4;
+            --mana-blue: #0E68AB;
+            --mana-black: #150B00;
+            --mana-red: #D3202A;
+            --mana-green: #00733E;
+            --danger: #8B2020;
+            --danger-hover: #A52A2A;
+            --success: #2D6B3F;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Crimson Text', Georgia, serif;
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Subtle texture overlay — castle stone atmosphere */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: 
+                radial-gradient(ellipse at 20% 0%, rgba(201, 168, 76, 0.04) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 100%, rgba(201, 168, 76, 0.03) 0%, transparent 50%),
+                repeating-linear-gradient(0deg, transparent 0px, transparent 60px, rgba(201, 168, 76, 0.008) 60px, rgba(201, 168, 76, 0.008) 61px),
+                repeating-linear-gradient(90deg, transparent 0px, transparent 80px, rgba(201, 168, 76, 0.005) 80px, rgba(201, 168, 76, 0.005) 81px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ===== HEADER — Castle Gate Bar ===== */
+        .app-header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: linear-gradient(180deg, rgba(10,10,15,0.98) 0%, rgba(10,10,15,0.95) 100%);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-gold);
+            padding: 0 2rem;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.4);
+        }
+
+        /* Castle battlement decoration under header */
+        .app-header::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0; right: 0;
+            height: 4px;
+            background: repeating-linear-gradient(90deg,
+                rgba(201, 168, 76, 0.15) 0px, rgba(201, 168, 76, 0.15) 12px,
+                transparent 12px, transparent 18px);
+        }
+
+        .header-inner {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 72px;
+        }
+
+        .logo-group {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 48px;
+            position: relative;
+        }
+
+        .logo-icon svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .logo-text {
+            font-family: 'Cinzel', serif;
+            font-weight: 900;
+            font-size: 1.3rem;
+            background: linear-gradient(135deg, var(--gold-light), var(--gold), var(--gold-dark));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 0.08em;
+        }
+
+        .logo-subtitle {
+            font-family: 'Cinzel', serif;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            margin-top: -4px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 0;
+            height: 100%;
+        }
+
+        .nav-tab {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-family: 'Cinzel', serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            padding: 0 1.5rem;
+            height: 72px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            position: relative;
+            transition: color 0.3s;
+        }
+
+        .nav-tab:hover { color: var(--gold-light); }
+
+        .nav-tab.active {
+            color: var(--gold);
+        }
+
+        .nav-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 1rem;
+            right: 1rem;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+        }
+
+        /* ===== MAIN LAYOUT ===== */
+        .app-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .view { display: none; }
+        .view.active { display: block; }
+
+        /* ===== FORGE VIEW (Generator) ===== */
+        .forge-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        .panel {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Subtle stone arch top border on panels */
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, rgba(201, 168, 76, 0.15) 20%, rgba(201, 168, 76, 0.25) 50%, rgba(201, 168, 76, 0.15) 80%, transparent);
+        }
+
+        .panel-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: linear-gradient(180deg, rgba(201, 168, 76, 0.03) 0%, transparent 100%);
+        }
+
+        .panel-header h2 {
+            font-family: 'Cinzel', serif;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--gold);
+            letter-spacing: 0.05em;
+        }
+
+        .panel-header .icon {
+            width: 20px;
+            height: 20px;
+            color: var(--gold-dark);
+        }
+
+        .panel-body {
+            padding: 1.5rem;
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            font-family: 'Cinzel', serif;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-bottom: 0.75rem;
+        }
+
+        /* Color selector - the mana symbols */
+        .color-selector {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .color-option {
+            position: relative;
+        }
+
+        .color-option input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .color-option label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            font-family: 'MedievalSharp', cursive;
+            font-size: 1.3rem;
+            font-weight: bold;
+        }
+
+        .color-option.white label {
+            background: radial-gradient(circle at 35% 35%, #FFFEF5, #F0E6C8);
+            color: #6B5B3E;
+            border: 2px solid #D4C5A0;
+            box-shadow: 0 0 0 3px transparent, inset 0 1px 3px rgba(255,255,255,0.5);
+        }
+        .color-option.blue label {
+            background: radial-gradient(circle at 35% 35%, #1B8FD4, #0A4F7A);
+            color: #C4E4FF;
+            border: 2px solid #2196C8;
+            box-shadow: 0 0 0 3px transparent;
+        }
+        .color-option.black label {
+            background: radial-gradient(circle at 35% 35%, #3A3035, #100B0E);
+            color: #A8959C;
+            border: 2px solid #4A3F44;
+            box-shadow: 0 0 0 3px transparent;
+        }
+        .color-option.red label {
+            background: radial-gradient(circle at 35% 35%, #E8482A, #8B1A1A);
+            color: #FFCFB8;
+            border: 2px solid #C43A2A;
+            box-shadow: 0 0 0 3px transparent;
+        }
+        .color-option.green label {
+            background: radial-gradient(circle at 35% 35%, #1DA050, #0A5028);
+            color: #B8F0C8;
+            border: 2px solid #1B8545;
+            box-shadow: 0 0 0 3px transparent;
+        }
+
+        .color-option input:checked + label {
+            box-shadow: 0 0 0 3px var(--gold), 0 0 20px rgba(201, 168, 76, 0.3);
+            transform: scale(1.1);
+        }
+
+        .color-option label:hover {
+            transform: scale(1.08);
+        }
+
+        .color-option input:checked + label:hover {
+            transform: scale(1.12);
+        }
+
+        /* Select / Input styling */
+        .form-select, .form-input, .form-textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: 'Crimson Text', Georgia, serif;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+            appearance: none;
+        }
+
+        .form-select {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239A9488' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            padding-right: 2.5rem;
+        }
+
+        .form-select:focus, .form-input:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--gold-dark);
+            box-shadow: 0 0 0 2px rgba(201, 168, 76, 0.1);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        option { background: var(--bg-panel); }
+
+        /* Radio group styled as segmented control */
+        .radio-group {
+            display: flex;
+            gap: 0;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .radio-option {
+            flex: 1;
+            position: relative;
+        }
+
+        .radio-option input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .radio-option label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.65rem 0.5rem;
+            cursor: pointer;
+            font-family: 'Cinzel', serif;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            color: var(--text-secondary);
+            background: var(--bg-card);
+            border-right: 1px solid var(--border);
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .radio-option:last-child label {
+            border-right: none;
+        }
+
+        .radio-option input:checked + label {
+            background: rgba(201, 168, 76, 0.12);
+            color: var(--gold);
+        }
+
+        .radio-option label:hover {
+            background: var(--bg-hover);
+        }
+
+        /* Generate Button */
+        .btn-forge {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, var(--gold-dark), var(--gold), var(--gold-dark));
+            background-size: 200% 200%;
+            border: none;
+            border-radius: 8px;
+            color: #0A0A0F;
+            font-family: 'Cinzel', serif;
+            font-size: 1rem;
+            font-weight: 900;
+            letter-spacing: 0.15em;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-forge:hover {
+            background-position: right center;
+            box-shadow: 0 4px 20px rgba(201, 168, 76, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .btn-forge:active {
+            transform: translateY(0);
+        }
+
+        .btn-forge:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-forge.loading {
+            color: transparent;
+        }
+
+        .btn-forge.loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 24px;
+            height: 24px;
+            margin: -12px 0 0 -12px;
+            border: 3px solid rgba(10, 10, 15, 0.3);
+            border-top-color: #0A0A0F;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Preview panel */
+        .preview-empty {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-muted);
+        }
+
+        .preview-empty .sigil {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1.5rem;
+            opacity: 0.3;
+        }
+
+        .preview-empty p {
+            font-family: 'Cinzel', serif;
+            font-size: 0.85rem;
+            letter-spacing: 0.05em;
+        }
+
+        /* ===== LIBRARY VIEW ===== */
+        .library-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .library-title {
+            font-family: 'Cinzel', serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--gold);
+            letter-spacing: 0.05em;
+        }
+
+        .library-count {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        .deck-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .deck-card {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+        }
+
+        /* Stone arch top accent */
+        .deck-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(201, 168, 76, 0.2) 30%, rgba(201, 168, 76, 0.3) 50%, rgba(201, 168, 76, 0.2) 70%, transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .deck-card:hover::before {
+            opacity: 1;
+        }
+
+        .deck-card:hover {
+            border-color: var(--border-gold);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 0 1px var(--border-gold);
+        }
+
+        .deck-card-top {
+            padding: 1.25rem 1.5rem;
+            position: relative;
+        }
+
+        .deck-card-colors {
+            display: flex;
+            gap: 0.4rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .mana-pip {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'MedievalSharp', cursive;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        .mana-pip.W { background: linear-gradient(135deg, #FFFEF5, #E8D8B8); color: #6B5B3E; }
+        .mana-pip.U { background: linear-gradient(135deg, #1B8FD4, #0A4F7A); color: #C4E4FF; }
+        .mana-pip.B { background: linear-gradient(135deg, #3A3035, #100B0E); color: #A8959C; border: 1px solid #4A3F44; }
+        .mana-pip.R { background: linear-gradient(135deg, #E8482A, #8B1A1A); color: #FFCFB8; }
+        .mana-pip.G { background: linear-gradient(135deg, #1DA050, #0A5028); color: #B8F0C8; }
+
+        .deck-card-name {
+            font-family: 'Cinzel', serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .deck-card-commander {
+            font-size: 0.9rem;
+            color: var(--gold);
+            font-style: italic;
+            margin-bottom: 0.5rem;
+        }
+
+        .deck-card-desc {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .deck-card-footer {
+            padding: 0.75rem 1.5rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .deck-card-meta {
+            display: flex;
+            gap: 1.25rem;
+        }
+
+        .deck-card-meta span {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .btn-delete-card {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .btn-delete-card:hover {
+            background: var(--danger);
+            color: var(--text-primary);
+        }
+
+        .library-empty {
+            text-align: center;
+            padding: 6rem 2rem;
+            color: var(--text-muted);
+        }
+
+        .library-empty .sigil {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 2rem;
+            opacity: 0.2;
+        }
+
+        .library-empty h3 {
+            font-family: 'Cinzel', serif;
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        /* ===== DECK DETAIL VIEW ===== */
+        .detail-back {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-family: 'Cinzel', serif;
+            font-size: 0.8rem;
+            letter-spacing: 0.05em;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            transition: color 0.3s;
+        }
+
+        .detail-back:hover { color: var(--gold); }
+
+        .detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .detail-header h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 2rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--gold-light), var(--gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.25rem;
+        }
+
+        .detail-commander {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            font-style: italic;
+            margin-bottom: 0.5rem;
+        }
+
+        .detail-strategy {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            max-width: 700px;
+        }
+
+        .detail-stats {
+            display: flex;
+            gap: 1.5rem;
+            text-align: center;
+        }
+
+        .stat-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            min-width: 90px;
+        }
+
+        .stat-value {
+            font-family: 'Cinzel', serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--gold);
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-top: 0.25rem;
+        }
+
+        /* Card list by category */
+        .category-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .category-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+        }
+
+        .category-name {
+            font-family: 'Cinzel', serif;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--gold);
+            letter-spacing: 0.05em;
+        }
+
+        .category-count {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .card-row {
+            display: grid;
+            grid-template-columns: 2.5rem 1fr auto auto;
+            gap: 1rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            align-items: center;
+            transition: background 0.2s;
+            font-size: 0.92rem;
+        }
+
+        .card-row:hover {
+            background: var(--bg-hover);
+        }
+
+        .card-qty {
+            color: var(--text-muted);
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .card-name-col {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-name-text {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .card-role-text {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .card-type-text {
+            color: var(--text-secondary);
+            font-size: 0.82rem;
+        }
+
+        .card-price {
+            color: var(--gold-dark);
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        /* Btn general */
+        .btn-outline {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 0.6rem 1.25rem;
+            border-radius: 6px;
+            font-family: 'Cinzel', serif;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-outline:hover {
+            border-color: var(--gold-dark);
+            color: var(--gold);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            border: 1px solid var(--danger-hover);
+            color: var(--text-primary);
+            padding: 0.6rem 1.25rem;
+            border-radius: 6px;
+            font-family: 'Cinzel', serif;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-danger:hover {
+            background: var(--danger-hover);
+        }
+
+        /* Toast notifications */
+        .toast-container {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .toast {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-gold);
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            animation: slideIn 0.3s ease-out;
+            max-width: 400px;
+        }
+
+        .toast.error {
+            border-color: var(--danger);
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Delete confirmation modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-overlay.hidden { display: none; }
+
+        .modal {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-gold);
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 420px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .modal h3 {
+            font-family: 'Cinzel', serif;
+            font-size: 1.1rem;
+            color: var(--gold);
+            margin-bottom: 0.75rem;
+        }
+
+        .modal p {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .forge-layout {
+                grid-template-columns: 1fr;
+            }
+            .header-inner {
+                flex-direction: column;
+                height: auto;
+                padding: 1rem 0;
+                gap: 1rem;
+            }
+            .nav-tabs {
+                height: auto;
+            }
+            .nav-tab {
+                height: 48px;
+            }
+            .detail-header {
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+            .detail-stats {
+                flex-wrap: wrap;
+            }
+        }
+
+        /* Loading shimmer for generation */
+        .generating-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(10,10,15,0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            z-index: 10;
+        }
+
+        .generating-overlay.hidden { display: none; }
+
+        .arcane-spinner {
+            width: 60px;
+            height: 60px;
+            border: 3px solid var(--border);
+            border-top-color: var(--gold);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        .generating-text {
+            font-family: 'Cinzel', serif;
+            font-size: 0.85rem;
+            color: var(--gold);
+            letter-spacing: 0.1em;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        /* Deck detail color bar */
+        .detail-colors {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        /* Description paragraph */
+        .deck-description-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--gold-dark);
+            border-radius: 0 8px 8px 0;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 2rem;
+            font-style: italic;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header class="app-header">
+        <div class="header-inner">
+            <div class="logo-group">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 42 56" fill="none">
+                        <defs>
+                            <linearGradient id="goldGrad" x1="0" y1="0" x2="42" y2="56">
+                                <stop offset="0%" stop-color="#E8D48B"/>
+                                <stop offset="50%" stop-color="#C9A84C"/>
+                                <stop offset="100%" stop-color="#8B6914"/>
+                            </linearGradient>
+                        </defs>
+                        <!-- Blade -->
+                        <path d="M21 2 L24 32 L21 36 L18 32 Z" fill="url(#goldGrad)" opacity="0.9"/>
+                        <!-- Blade center line -->
+                        <line x1="21" y1="4" x2="21" y2="34" stroke="#0A0A0F" stroke-width="0.6" opacity="0.3"/>
+                        <!-- Guard / crossguard -->
+                        <rect x="10" y="34" width="22" height="3" rx="1.5" fill="url(#goldGrad)"/>
+                        <circle cx="10" cy="35.5" r="2" fill="url(#goldGrad)" opacity="0.7"/>
+                        <circle cx="32" cy="35.5" r="2" fill="url(#goldGrad)" opacity="0.7"/>
+                        <!-- Grip -->
+                        <rect x="18.5" y="37" width="5" height="10" rx="1" fill="url(#goldGrad)" opacity="0.7"/>
+                        <line x1="19.5" y1="39" x2="22.5" y2="39" stroke="#0A0A0F" stroke-width="0.4" opacity="0.3"/>
+                        <line x1="19.5" y1="41" x2="22.5" y2="41" stroke="#0A0A0F" stroke-width="0.4" opacity="0.3"/>
+                        <line x1="19.5" y1="43" x2="22.5" y2="43" stroke="#0A0A0F" stroke-width="0.4" opacity="0.3"/>
+                        <line x1="19.5" y1="45" x2="22.5" y2="45" stroke="#0A0A0F" stroke-width="0.4" opacity="0.3"/>
+                        <!-- Pommel -->
+                        <circle cx="21" cy="50" r="3.5" fill="url(#goldGrad)"/>
+                        <circle cx="21" cy="50" r="1.5" fill="#0A0A0F" opacity="0.2"/>
+                        <!-- Glow -->
+                        <ellipse cx="21" cy="20" rx="6" ry="18" fill="url(#goldGrad)" opacity="0.06"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="logo-text">BEN'S MAGIC FORGE</div>
+                    <div class="logo-subtitle">Powered by Arcane Intelligence</div>
+                </div>
+            </div>
+            <nav class="nav-tabs">
+                <button class="nav-tab active" data-view="forge">&#9876; Forge</button>
+                <button class="nav-tab" data-view="library">&#128218; Library</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- MAIN -->
+    <main class="app-container">
+
+        <!-- FORGE VIEW -->
+        <div id="view-forge" class="view active">
+            <div class="forge-layout">
+                <!-- Left: Config Panel -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                        <h2>Deck Configuration</h2>
+                    </div>
+                    <div class="panel-body">
+                        <form id="deckForm" onsubmit="return false;">
+                            <!-- Colors -->
+                            <div class="form-group">
+                                <label class="form-label">Mana Colors</label>
+                                <div class="color-selector">
+                                    <div class="color-option white">
+                                        <input type="checkbox" id="color-W" name="colors" value="W">
+                                        <label for="color-W">W</label>
+                                    </div>
+                                    <div class="color-option blue">
+                                        <input type="checkbox" id="color-U" name="colors" value="U">
+                                        <label for="color-U">U</label>
+                                    </div>
+                                    <div class="color-option black">
+                                        <input type="checkbox" id="color-B" name="colors" value="B">
+                                        <label for="color-B">B</label>
+                                    </div>
+                                    <div class="color-option red">
+                                        <input type="checkbox" id="color-R" name="colors" value="R">
+                                        <label for="color-R">R</label>
+                                    </div>
+                                    <div class="color-option green">
+                                        <input type="checkbox" id="color-G" name="colors" value="G">
+                                        <label for="color-G">G</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Format -->
+                            <div class="form-group">
+                                <label class="form-label">Format</label>
+                                <div class="radio-group">
+                                    <div class="radio-option">
+                                        <input type="radio" id="fmt-commander" name="format" value="Commander" checked>
+                                        <label for="fmt-commander">Commander</label>
+                                    </div>
+                                    <div class="radio-option">
+                                        <input type="radio" id="fmt-standard" name="format" value="Standard">
+                                        <label for="fmt-standard">Standard</label>
+                                    </div>
+                                    <div class="radio-option">
+                                        <input type="radio" id="fmt-modern" name="format" value="Modern">
+                                        <label for="fmt-modern">Modern</label>
+                                    </div>
+                                    <div class="radio-option">
+                                        <input type="radio" id="fmt-pioneer" name="format" value="Pioneer">
+                                        <label for="fmt-pioneer">Pioneer</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Power Level -->
+                            <div class="form-group">
+                                <label class="form-label">Power Level</label>
+                                <div class="radio-group">
+                                    <div class="radio-option">
+                                        <input type="radio" id="pwr-casual" name="powerLevel" value="Casual" checked>
+                                        <label for="pwr-casual">Casual</label>
+                                    </div>
+                                    <div class="radio-option">
+                                        <input type="radio" id="pwr-focused" name="powerLevel" value="Focused">
+                                        <label for="pwr-focused">Focused</label>
+                                    </div>
+                                    <div class="radio-option">
+                                        <input type="radio" id="pwr-optimized" name="powerLevel" value="Optimized">
+                                        <label for="pwr-optimized">Optimized</label>
+                                    </div>
+                                    <div class="radio-option">
+                                        <input type="radio" id="pwr-competitive" name="powerLevel" value="Competitive">
+                                        <label for="pwr-competitive">cEDH</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Budget -->
+                            <div class="form-group">
+                                <label class="form-label">Budget Range</label>
+                                <div class="radio-group">
+                                    <div class="radio-option">
+                                        <input type="radio" id="bud-budget" name="budget" value="Budget (under $50)" checked>
+                                        <label for="bud-budget">Under $50</label>
+                                    </div>
+                                    <div class="radio-option">
+                                        <input type="radio" id="bud-mid" name="budget" value="Mid-range ($50-$150)">
+                                        <label for="bud-mid">$50–$150</label>
+                                    </div>
+                                    <div class="radio-option">
+                                        <input type="radio" id="bud-high" name="budget" value="High ($150-$500)">
+                                        <label for="bud-high">$150–$500</label>
+                                    </div>
+                                    <div class="radio-option">
+                                        <input type="radio" id="bud-nobudget" name="budget" value="No budget limit">
+                                        <label for="bud-nobudget">No Limit</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Strategy -->
+                            <div class="form-group">
+                                <label class="form-label">Preferred Strategy (Optional)</label>
+                                <select class="form-select" id="strategy">
+                                    <option value="">Any strategy</option>
+                                    <option value="Aggro">Aggro — Fast damage</option>
+                                    <option value="Control">Control — Counter & remove</option>
+                                    <option value="Combo">Combo — Infinite / game-winning combos</option>
+                                    <option value="Midrange">Midrange — Value & board presence</option>
+                                    <option value="Tokens">Tokens — Go wide</option>
+                                    <option value="Voltron">Voltron — One big commander</option>
+                                    <option value="Aristocrats">Aristocrats — Sacrifice synergy</option>
+                                    <option value="Reanimator">Reanimator — Graveyard recursion</option>
+                                    <option value="Tribal">Tribal — Creature type synergy</option>
+                                    <option value="Stax">Stax — Resource denial</option>
+                                    <option value="Mill">Mill — Library depletion</option>
+                                    <option value="Spellslinger">Spellslinger — Instants & sorceries</option>
+                                </select>
+                            </div>
+
+                            <!-- Commander Preference -->
+                            <div class="form-group">
+                                <label class="form-label">Preferred Commander (Optional)</label>
+                                <input type="text" class="form-input" id="commander" placeholder="e.g. Meren of Clan Nel Toth">
+                            </div>
+
+                            <!-- Additional Notes -->
+                            <div class="form-group">
+                                <label class="form-label">Additional Notes (Optional)</label>
+                                <textarea class="form-textarea" id="notes" placeholder="Any specific cards, themes, or constraints..."></textarea>
+                            </div>
+
+                            <button type="button" class="btn-forge" id="btnGenerate" onclick="generateDeck()">
+                                &#9876; FORGE DECK &#9876;
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Right: Preview Panel -->
+                <div class="panel" style="position: relative;">
+                    <div class="panel-header">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                        <h2>Preview</h2>
+                    </div>
+                    <div class="panel-body" id="previewPanel">
+                        <div class="preview-empty">
+                            <svg class="sigil" viewBox="0 0 80 80" fill="none">
+                                <polygon points="40,5 72,22 72,58 40,75 8,58 8,22" stroke="currentColor" stroke-width="1" fill="none" opacity="0.3"/>
+                                <polygon points="40,15 60,26 60,52 40,63 20,52 20,26" stroke="currentColor" stroke-width="0.8" fill="none" opacity="0.2"/>
+                                <circle cx="40" cy="40" r="8" stroke="currentColor" stroke-width="1" fill="none" opacity="0.25"/>
+                            </svg>
+                            <p>Configure your deck and forge it into existence</p>
+                        </div>
+                    </div>
+                    <div class="generating-overlay hidden" id="generatingOverlay">
+                        <div class="arcane-spinner"></div>
+                        <div class="generating-text">Channeling arcane energies...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- LIBRARY VIEW -->
+        <div id="view-library" class="view">
+            <div class="library-header">
+                <div>
+                    <div class="library-title">&#127984; Deck Library</div>
+                    <div class="library-count" id="libraryCount">Loading...</div>
+                </div>
+                <button class="btn-outline" onclick="loadLibrary()">&#8635; Refresh</button>
+            </div>
+            <div id="deckGrid" class="deck-grid"></div>
+        </div>
+
+        <!-- DETAIL VIEW -->
+        <div id="view-detail" class="view">
+            <div id="detailContent"></div>
+        </div>
+    </main>
+
+    <!-- Delete Modal -->
+    <div class="modal-overlay hidden" id="deleteModal">
+        <div class="modal">
+            <h3>Banish This Deck?</h3>
+            <p>This action cannot be undone. The deck configuration will be permanently removed from the library.</p>
+            <div class="modal-actions">
+                <button class="btn-outline" onclick="closeDeleteModal()">Cancel</button>
+                <button class="btn-danger" id="btnConfirmDelete" onclick="confirmDelete()">&#128293; Banish</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        const API_BASE = '/api/decks';
+        let currentDecks = [];
+        let deleteTargetId = null;
+
+        // === Navigation ===
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const view = tab.dataset.view;
+                switchView(view);
+            });
+        });
+
+        function switchView(view) {
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.nav-tab[data-view="${view}"]`).classList.add('active');
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(`view-${view}`).classList.add('active');
+
+            if (view === 'library') loadLibrary();
+        }
+
+        // === Deck Generation ===
+        async function generateDeck() {
+            const colors = [...document.querySelectorAll('input[name="colors"]:checked')].map(c => c.value);
+            if (colors.length === 0) {
+                showToast('Select at least one mana color', true);
+                return;
+            }
+
+            const format = document.querySelector('input[name="format"]:checked').value;
+            const powerLevel = document.querySelector('input[name="powerLevel"]:checked').value;
+            const budget = document.querySelector('input[name="budget"]:checked').value;
+            const strategy = document.getElementById('strategy').value;
+            const commander = document.getElementById('commander').value;
+            const notes = document.getElementById('notes').value;
+
+            const request = {
+                colors,
+                format,
+                powerLevel,
+                budgetRange: budget,
+                preferredStrategy: strategy || null,
+                preferredCommander: commander || null,
+                additionalNotes: notes || null
+            };
+
+            const btn = document.getElementById('btnGenerate');
+            const overlay = document.getElementById('generatingOverlay');
+            btn.disabled = true;
+            btn.classList.add('loading');
+            overlay.classList.remove('hidden');
+
+            try {
+                const res = await fetch(`${API_BASE}/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(request)
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.details || err.error || 'Generation failed');
+                }
+
+                const deck = await res.json();
+                showDeckPreview(deck);
+                showToast('Deck forged successfully!');
+            } catch (err) {
+                showToast(err.message, true);
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove('loading');
+                overlay.classList.add('hidden');
+            }
+        }
+
+        function showDeckPreview(deck) {
+            const panel = document.getElementById('previewPanel');
+            const categories = groupByCategory(deck.cards || []);
+
+            panel.innerHTML = `
+                <div class="deck-card-colors" style="margin-bottom:1rem;">
+                    ${(deck.colors || []).map(c => `<span class="mana-pip ${c}">${c}</span>`).join('')}
+                    <span style="color:var(--text-muted);font-size:0.8rem;margin-left:0.5rem;">${deck.format} · ${deck.powerLevel}</span>
+                </div>
+                <h3 style="font-family:'Cinzel',serif;font-size:1.25rem;color:var(--gold);margin-bottom:0.25rem;">${deck.deckName || 'Untitled Deck'}</h3>
+                ${deck.commander ? `<div style="color:var(--text-secondary);font-style:italic;margin-bottom:0.75rem;">Commander: ${deck.commander}</div>` : ''}
+                ${deck.deckDescription ? `<p style="color:var(--text-secondary);font-size:0.9rem;line-height:1.5;margin-bottom:1rem;">${deck.deckDescription}</p>` : ''}
+                <div style="display:flex;gap:1rem;margin-bottom:1rem;">
+                    <div class="stat-box">
+                        <div class="stat-value">${deck.totalCards || (deck.cards||[]).reduce((s,c)=>s+c.quantity,0)}</div>
+                        <div class="stat-label">Cards</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">$${(deck.estimatedTotalPrice || 0).toFixed(0)}</div>
+                        <div class="stat-label">Est. Cost</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">${Object.keys(categories).length}</div>
+                        <div class="stat-label">Categories</div>
+                    </div>
+                </div>
+                ${Object.entries(categories).map(([cat, cards]) => `
+                    <div style="margin-bottom:0.75rem;">
+                        <div style="font-family:'Cinzel',serif;font-size:0.8rem;color:var(--gold-dark);margin-bottom:0.25rem;">${cat} (${cards.reduce((s,c)=>s+c.quantity,0)})</div>
+                        ${cards.slice(0, 5).map(c => `<div style="font-size:0.85rem;color:var(--text-secondary);padding:0.15rem 0;">${c.quantity}x ${c.name}</div>`).join('')}
+                        ${cards.length > 5 ? `<div style="font-size:0.8rem;color:var(--text-muted);">... and ${cards.length - 5} more</div>` : ''}
+                    </div>
+                `).join('')}
+                <div style="display:flex;gap:0.75rem;margin-top:1.25rem;">
+                    <button class="btn-outline" onclick="viewDeckDetail('${deck.id}')">View Full Deck</button>
+                    <button class="btn-outline" onclick="switchView('library')">Go to Library</button>
+                </div>
+            `;
+        }
+
+        // === Library ===
+        async function loadLibrary() {
+            try {
+                const res = await fetch(API_BASE);
+                if (!res.ok) throw new Error('Failed to load decks');
+                currentDecks = await res.json();
+                renderLibrary();
+            } catch (err) {
+                document.getElementById('deckGrid').innerHTML = `
+                    <div class="library-empty" style="grid-column:1/-1;">
+                        <p style="color:var(--danger);">Failed to load library: ${err.message}</p>
+                    </div>`;
+            }
+        }
+
+        function renderLibrary() {
+            const grid = document.getElementById('deckGrid');
+            const count = document.getElementById('libraryCount');
+            count.textContent = `${currentDecks.length} deck${currentDecks.length !== 1 ? 's' : ''} in your library`;
+
+            if (currentDecks.length === 0) {
+                grid.innerHTML = `
+                    <div class="library-empty" style="grid-column:1/-1;">
+                        <svg class="sigil" viewBox="0 0 80 80" fill="none">
+                            <polygon points="40,5 72,22 72,58 40,75 8,58 8,22" stroke="currentColor" stroke-width="1" fill="none" opacity="0.3"/>
+                            <circle cx="40" cy="40" r="8" stroke="currentColor" stroke-width="1" fill="none" opacity="0.25"/>
+                        </svg>
+                        <h3>Your library is empty</h3>
+                        <p>Visit the Forge to create your first deck</p>
+                    </div>`;
+                return;
+            }
+
+            grid.innerHTML = currentDecks.map(deck => `
+                <div class="deck-card" onclick="viewDeckDetail('${deck.id}')">
+                    <div class="deck-card-top">
+                        <div class="deck-card-colors">
+                            ${(deck.colors || []).map(c => `<span class="mana-pip ${c}">${c}</span>`).join('')}
+                        </div>
+                        <div class="deck-card-name">${deck.deckName || 'Untitled'}</div>
+                        ${deck.commander ? `<div class="deck-card-commander">${deck.commander}</div>` : ''}
+                        <div class="deck-card-desc">${deck.deckDescription || deck.strategy || ''}</div>
+                    </div>
+                    <div class="deck-card-footer">
+                        <div class="deck-card-meta">
+                            <span>&#127183; ${deck.totalCards || '?'} cards</span>
+                            <span>&#128176; $${(deck.estimatedTotalPrice || 0).toFixed(0)}</span>
+                            <span>${deck.format || ''}</span>
+                        </div>
+                        <button class="btn-delete-card" onclick="event.stopPropagation(); openDeleteModal('${deck.id}')">&#128465;</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // === Deck Detail ===
+        async function viewDeckDetail(id) {
+            try {
+                const res = await fetch(`${API_BASE}/${id}`);
+                if (!res.ok) throw new Error('Deck not found');
+                const deck = await res.json();
+                renderDetail(deck);
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                document.getElementById('view-detail').classList.add('active');
+                document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                window.scrollTo(0, 0);
+            } catch (err) {
+                showToast(err.message, true);
+            }
+        }
+
+        function renderDetail(deck) {
+            const categories = groupByCategory(deck.cards || []);
+            const totalCards = (deck.cards || []).reduce((s, c) => s + c.quantity, 0);
+            const avgCmc = deck.cards && deck.cards.length > 0
+                ? (deck.cards.filter(c=>c.category!=='Land').reduce((s,c) => s + c.cmc * c.quantity, 0) / deck.cards.filter(c=>c.category!=='Land').reduce((s,c) => s + c.quantity, 0)).toFixed(2)
+                : '0';
+
+            document.getElementById('detailContent').innerHTML = `
+                <button class="detail-back" onclick="switchView('library')">&#8592; Back to Library</button>
+                <div class="detail-header">
+                    <div>
+                        <div class="detail-colors">
+                            ${(deck.colors || []).map(c => `<span class="mana-pip ${c}">${c}</span>`).join('')}
+                        </div>
+                        <h1>${deck.deckName || 'Untitled Deck'}</h1>
+                        ${deck.commander ? `<div class="detail-commander">Commander: ${deck.commander}</div>` : ''}
+                        <div class="detail-strategy">${deck.strategy || ''}</div>
+                    </div>
+                    <div class="detail-stats">
+                        <div class="stat-box">
+                            <div class="stat-value">${totalCards}</div>
+                            <div class="stat-label">Cards</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">$${(deck.estimatedTotalPrice || 0).toFixed(0)}</div>
+                            <div class="stat-label">Est. Cost</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">${avgCmc}</div>
+                            <div class="stat-label">Avg CMC</div>
+                        </div>
+                    </div>
+                </div>
+
+                ${deck.deckDescription ? `<div class="deck-description-box">${deck.deckDescription}</div>` : ''}
+
+                ${Object.entries(categories).map(([cat, cards]) => `
+                    <div class="category-section">
+                        <div class="category-header">
+                            <span class="category-name">${cat}</span>
+                            <span class="category-count">(${cards.reduce((s,c)=>s+c.quantity,0)})</span>
+                        </div>
+                        ${cards.map(c => `
+                            <div class="card-row">
+                                <span class="card-qty">${c.quantity}x</span>
+                                <div class="card-name-col">
+                                    <span class="card-name-text">${c.name}</span>
+                                    <span class="card-role-text">${c.roleInDeck || ''}</span>
+                                </div>
+                                <span class="card-type-text">${c.cardType || ''}</span>
+                                <span class="card-price">$${(c.estimatedPrice || 0).toFixed(2)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `).join('')}
+
+                <div style="display:flex;gap:1rem;margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--border);">
+                    <button class="btn-danger" onclick="openDeleteModal('${deck.id}')">&#128293; Banish Deck</button>
+                </div>
+            `;
+        }
+
+        // === Delete ===
+        function openDeleteModal(id) {
+            deleteTargetId = id;
+            document.getElementById('deleteModal').classList.remove('hidden');
+        }
+
+        function closeDeleteModal() {
+            deleteTargetId = null;
+            document.getElementById('deleteModal').classList.add('hidden');
+        }
+
+        async function confirmDelete() {
+            if (!deleteTargetId) return;
+            try {
+                const res = await fetch(`${API_BASE}/${deleteTargetId}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error('Delete failed');
+                showToast('Deck banished to the void');
+                closeDeleteModal();
+                // If we're on detail view, go back to library
+                if (document.getElementById('view-detail').classList.contains('active')) {
+                    switchView('library');
+                } else {
+                    loadLibrary();
+                }
+            } catch (err) {
+                showToast(err.message, true);
+            }
+        }
+
+        // === Helpers ===
+        function groupByCategory(cards) {
+            const order = ['Commander', 'Creature', 'Instant', 'Sorcery', 'Enchantment', 'Artifact', 'Planeswalker', 'Land'];
+            const groups = {};
+            cards.forEach(c => {
+                const cat = c.category || 'Other';
+                if (!groups[cat]) groups[cat] = [];
+                groups[cat].push(c);
+            });
+            // Sort by predefined order
+            const sorted = {};
+            order.forEach(cat => { if (groups[cat]) sorted[cat] = groups[cat]; });
+            Object.keys(groups).forEach(cat => { if (!sorted[cat]) sorted[cat] = groups[cat]; });
+            return sorted;
+        }
+
+        function showToast(msg, isError = false) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast${isError ? ' error' : ''}`;
+            toast.textContent = msg;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+    </script>
+</body>
+</html>
