@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(docker ps:*)"
+      "Bash(docker ps:*)",
+      "Bash(aws ecr:*)",
+      "Bash(aws sts:*)",
+      "Bash(docker login:*)",
+      "Bash(docker buildx:*)"
     ]
   }
 }
