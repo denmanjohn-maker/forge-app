@@ -62,6 +62,26 @@ public class DecksController : ControllerBase
         }
     }
 
+    [HttpPost("{id}/analyze")]
+    public async Task<ActionResult<DeckAnalysis>> Analyze(string id)
+    {
+        try
+        {
+            var deck = await _deckService.GetByIdAsync(id);
+            if (deck is null)
+                return NotFound();
+
+            _logger.LogInformation("Analyzing deck {Id}: {Name}", id, deck.DeckName);
+            var analysis = await _claudeService.AnalyzeDeckAsync(deck);
+            return Ok(analysis);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to analyze deck {Id}", id);
+            return StatusCode(500, new { error = "Failed to analyze deck", details = ex.Message });
+        }
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(string id)
     {

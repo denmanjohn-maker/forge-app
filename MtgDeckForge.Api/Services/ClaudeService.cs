@@ -94,6 +94,81 @@ public class ClaudeService
         return deck;
     }
 
+    public async Task<DeckAnalysis> AnalyzeDeckAsync(DeckConfiguration deck)
+    {
+        var cardList = string.Join("\n", deck.Cards.Select(c =>
+            $"- {c.Quantity}x {c.Name} ({c.CardType}, CMC {c.Cmc}): {c.RoleInDeck}"));
+
+        var prompt = $@"You are a Magic: The Gathering deck analysis expert. Analyze the following deck and provide detailed, actionable feedback.
+
+Deck: {deck.DeckName}
+Format: {deck.Format}
+Colors: {string.Join(", ", deck.Colors)}
+Commander: {(string.IsNullOrEmpty(deck.Commander) ? "N/A" : deck.Commander)}
+Strategy: {deck.Strategy}
+Power Level: {deck.PowerLevel}
+Budget: {deck.BudgetRange}
+Total Cards: {deck.TotalCards}
+
+Card List:
+{cardList}
+
+Respond with ONLY a valid JSON object (no markdown, no explanation) matching this exact schema:
+{{
+  ""synergyAssessment"": ""string - 2-3 sentence assessment of how well the cards synergize together"",
+  ""overallRating"": ""string - one of: Weak, Below Average, Average, Good, Strong, Excellent"",
+  ""weaknesses"": [""string"", ""string""],
+  ""improvementSuggestions"": [""string"", ""string""],
+  ""cardUpgrades"": [
+    {{
+      ""removeCard"": ""string - exact card name to remove"",
+      ""addCard"": ""string - exact card name to add instead"",
+      ""reason"": ""string - why this swap improves the deck""
+    }}
+  ]
+}}
+
+Provide 3-5 weaknesses, 3-5 improvement suggestions, and 3-5 card upgrade recommendations. Use real Magic: The Gathering card names for upgrades.";
+
+        var apiRequest = new
+        {
+            model = _settings.Model,
+            max_tokens = 2000,
+            messages = new[] { new { role = "user", content = prompt } }
+        };
+
+        var json = JsonSerializer.Serialize(apiRequest);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        _httpClient.DefaultRequestHeaders.Clear();
+        _httpClient.DefaultRequestHeaders.Add("x-api-key", _settings.ApiKey);
+        _httpClient.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
+
+        var response = await _httpClient.PostAsync("https://api.anthropic.com/v1/messages", content);
+        var responseBody = await response.Content.ReadAsStringAsync();
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogError("Claude API error: {StatusCode} - {Body}", response.StatusCode, responseBody);
+            throw new Exception($"Claude API returned {response.StatusCode}: {responseBody}");
+        }
+
+        var claudeResponse = JsonSerializer.Deserialize<ClaudeResponse>(responseBody);
+        var textContent = claudeResponse?.Content?.FirstOrDefault(c => c.Type == "text")?.Text;
+
+        if (string.IsNullOrEmpty(textContent))
+            throw new Exception("No text content in Claude response");
+
+        var jsonContent = ExtractJson(textContent);
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        var analysis = JsonSerializer.Deserialize<DeckAnalysis>(jsonContent, options);
+
+        if (analysis == null)
+            throw new Exception("Failed to deserialize deck analysis from Claude response");
+
+        return analysis;
+    }
+
     private string BuildPrompt(DeckGenerationRequest request, string colorIdentity)
     {
         var sb = new StringBuilder();

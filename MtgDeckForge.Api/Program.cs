@@ -39,6 +39,9 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 app.MapControllers();
 
+// Health check endpoint for ECS/ALB
+app.MapGet("/healthz", () => Results.Ok(new { status = "healthy" }));
+
 // Fallback to index.html for SPA routing
 app.MapFallbackToFile("index.html");
 
