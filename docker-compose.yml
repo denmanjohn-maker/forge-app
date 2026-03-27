@@ -20,6 +20,8 @@ version: '3.8'
 services:
   mtg-api:
     image: ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG:-latest}
+    env_file:
+      - .env
     ports:
       - "5000:5000"
     environment:
