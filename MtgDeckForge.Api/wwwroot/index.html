@@ -424,6 +424,7 @@
             background-position: right center;
             box-shadow: 0 4px 20px rgba(201, 168, 76, 0.3);
             transform: translateY(-1px);
+            animation: forgePulse 2s ease-in-out infinite;
         }
 
         .btn-forge:active {
@@ -999,6 +1000,60 @@
             line-height: 1.7;
         }
 
+        /* ===== DRAGON THEME ===== */
+
+        /* Subtle dragon-scale background texture */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image:
+                radial-gradient(ellipse 24px 15px at 50% 0%, rgba(201,168,76,0.038) 0%, transparent 100%),
+                radial-gradient(ellipse 24px 15px at 0% 50%,  rgba(201,168,76,0.028) 0%, transparent 100%);
+            background-size: 32px 24px, 32px 24px;
+            background-position: 0 0, 16px 12px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Dragon watermark */
+        .dragon-watermark {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: min(75vw, 680px);
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.038;
+            color: var(--gold);
+        }
+
+        /* Floating ember particles */
+        .ember {
+            position: fixed;
+            bottom: -6px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0;
+            filter: blur(0.8px);
+            animation: emberRise linear infinite;
+        }
+        @keyframes emberRise {
+            0%   { transform: translateY(0) translateX(0); opacity: 0; }
+            8%   { opacity: 0.7; }
+            75%  { opacity: 0.25; }
+            100% { transform: translateY(-102vh) translateX(var(--drift, 0px)); opacity: 0; }
+        }
+
+        /* Forge button fire pulse */
+        @keyframes forgePulse {
+            0%, 100% { box-shadow: 0 4px 20px rgba(201,168,76,0.3); }
+            50%       { box-shadow: 0 4px 28px rgba(201,168,76,0.5), 0 0 55px rgba(220,70,5,0.14); }
+        }
+
+        /* ===== END DRAGON THEME ===== */
+
         /* Card image tooltip */
         .card-img-tooltip {
             position: fixed;
@@ -1105,33 +1160,40 @@
         <div class="header-inner">
             <div class="logo-group">
                 <div class="logo-icon">
-                    <svg viewBox="0 0 42 56" fill="none">
+                    <svg viewBox="0 0 36 52" fill="none">
                         <defs>
-                            <linearGradient id="goldGrad" x1="0" y1="0" x2="42" y2="56">
+                            <linearGradient id="goldGrad" x1="0" y1="0" x2="36" y2="52">
                                 <stop offset="0%" stop-color="#E8D48B"/>
                                 <stop offset="50%" stop-color="#C9A84C"/>
                                 <stop offset="100%" stop-color="#8B6914"/>
                             </linearGradient>
                         </defs>
-                        <!-- Blade -->
-                        <path d="M21 2 L24 32 L21 36 L18 32 Z" fill="url(#goldGrad)" opacity="0.9"/>
-                        <!-- Blade center line -->
-                        <line x1="21" y1="4" x2="21" y2="34" stroke="#0A0A0F" stroke-width="0.6" opacity="0.3"/>
-                        <!-- Guard / crossguard -->
-                        <rect x="10" y="34" width="22" height="3" rx="1.5" fill="url(#goldGrad)"/>
-                        <circle cx="10" cy="35.5" r="2" fill="url(#goldGrad)" opacity="0.7"/>
-                        <circle cx="32" cy="35.5" r="2" fill="url(#goldGrad)" opacity="0.7"/>
-                        <!-- Grip -->
-                        <rect x="18.5" y="37" width="5" height="10" rx="1" fill="url(#goldGrad)" opacity="0.7"/>
-                        <line x1="19.5" y1="39" x2="22.5" y2="39" stroke="#0A0A0F" stroke-width="0.4" opacity="0.3"/>
-                        <line x1="19.5" y1="41" x2="22.5" y2="41" stroke="#0A0A0F" stroke-width="0.4" opacity="0.3"/>
-                        <line x1="19.5" y1="43" x2="22.5" y2="43" stroke="#0A0A0F" stroke-width="0.4" opacity="0.3"/>
-                        <line x1="19.5" y1="45" x2="22.5" y2="45" stroke="#0A0A0F" stroke-width="0.4" opacity="0.3"/>
-                        <!-- Pommel -->
-                        <circle cx="21" cy="50" r="3.5" fill="url(#goldGrad)"/>
-                        <circle cx="21" cy="50" r="1.5" fill="#0A0A0F" opacity="0.2"/>
-                        <!-- Glow -->
-                        <ellipse cx="21" cy="20" rx="6" ry="18" fill="url(#goldGrad)" opacity="0.06"/>
+                        <!-- Primary horn -->
+                        <path d="M 12 6 L 7 1 L 16 8 Z" fill="url(#goldGrad)"/>
+                        <!-- Secondary horn -->
+                        <path d="M 17 4 L 14 1 L 19 6 Z" fill="url(#goldGrad)" opacity="0.75"/>
+                        <!-- Head mass (profile, snout right) -->
+                        <path d="M 5 20 C 3 12 7 4 14 3 C 18 1 24 3 27 8 L 33 14 L 34 18 L 33 22 L 25 22 C 16 23 9 22 5 20 Z" fill="url(#goldGrad)" opacity="0.92"/>
+                        <!-- Lower jaw (slightly open) -->
+                        <path d="M 8 20 C 8 23 12 25 20 25 L 30 24 L 33 22" stroke="url(#goldGrad)" stroke-width="1.5" fill="none" opacity="0.6"/>
+                        <!-- Eye — slit pupil -->
+                        <ellipse cx="24" cy="13" rx="3.5" ry="3" fill="#080808" opacity="0.88"/>
+                        <ellipse cx="24" cy="13" rx="1" ry="2.2" fill="#C9A84C" opacity="0.48"/>
+                        <circle cx="22.5" cy="11.5" r="0.7" fill="white" opacity="0.22"/>
+                        <!-- Nostril -->
+                        <circle cx="32" cy="19.5" r="1.1" fill="#080808" opacity="0.4"/>
+                        <!-- Scale line on jaw -->
+                        <path d="M 8 20 C 14 19 20 19 26 20" stroke="#080808" stroke-width="0.5" fill="none" opacity="0.18"/>
+                        <!-- Neck -->
+                        <path d="M 12 22 C 11 30 12 40 14 46 C 16 50 20 50 21 46 C 23 42 21 30 20 22 Z" fill="url(#goldGrad)" opacity="0.82"/>
+                        <!-- Scale marks -->
+                        <path d="M 12 27 Q 16 25 20 27" stroke="#080808" stroke-width="0.5" fill="none" opacity="0.22"/>
+                        <path d="M 12 32 Q 16 30 20 32" stroke="#080808" stroke-width="0.5" fill="none" opacity="0.22"/>
+                        <path d="M 12 37 Q 16 35 20 37" stroke="#080808" stroke-width="0.5" fill="none" opacity="0.22"/>
+                        <!-- Base -->
+                        <ellipse cx="16" cy="50" rx="5" ry="2" fill="url(#goldGrad)" opacity="0.5"/>
+                        <!-- Ambient glow -->
+                        <ellipse cx="18" cy="15" rx="11" ry="14" fill="url(#goldGrad)" opacity="0.05"/>
                     </svg>
                 </div>
                 <div>
@@ -1304,11 +1366,19 @@
                     <div class="panel-body" id="previewPanel">
                         <div class="preview-empty">
                             <svg class="sigil" viewBox="0 0 80 80" fill="none">
-                                <polygon points="40,5 72,22 72,58 40,75 8,58 8,22" stroke="currentColor" stroke-width="1" fill="none" opacity="0.3"/>
-                                <polygon points="40,15 60,26 60,52 40,63 20,52 20,26" stroke="currentColor" stroke-width="0.8" fill="none" opacity="0.2"/>
-                                <circle cx="40" cy="40" r="8" stroke="currentColor" stroke-width="1" fill="none" opacity="0.25"/>
+                                <!-- Dragon eye sigil -->
+                                <circle cx="40" cy="40" r="36" stroke="currentColor" stroke-width="0.8" opacity="0.18"/>
+                                <path d="M 5 40 C 18 18 62 18 75 40 C 62 62 18 62 5 40 Z" stroke="currentColor" stroke-width="1.2" fill="none" opacity="0.32"/>
+                                <ellipse cx="40" cy="40" rx="5" ry="18" stroke="currentColor" stroke-width="1" fill="none" opacity="0.28"/>
+                                <ellipse cx="40" cy="40" rx="13" ry="13" stroke="currentColor" stroke-width="0.6" fill="none" opacity="0.15"/>
+                                <line x1="40" y1="4" x2="40" y2="22" stroke="currentColor" stroke-width="0.7" opacity="0.18"/>
+                                <line x1="40" y1="58" x2="40" y2="76" stroke="currentColor" stroke-width="0.7" opacity="0.18"/>
+                                <path d="M 12 28 L 5 20 L 15 24" stroke="currentColor" stroke-width="0.6" fill="none" opacity="0.16"/>
+                                <path d="M 68 28 L 75 20 L 65 24" stroke="currentColor" stroke-width="0.6" fill="none" opacity="0.16"/>
+                                <path d="M 12 52 L 5 60 L 15 56" stroke="currentColor" stroke-width="0.6" fill="none" opacity="0.16"/>
+                                <path d="M 68 52 L 75 60 L 65 56" stroke="currentColor" stroke-width="0.6" fill="none" opacity="0.16"/>
                             </svg>
-                            <p>Configure your deck and forge it into existence</p>
+                            <p>Summon a deck from the dragon&#8217;s hoard</p>
                         </div>
                     </div>
                     <div class="generating-overlay hidden" id="generatingOverlay">
@@ -1336,6 +1406,43 @@
             <div id="detailContent"></div>
         </div>
     </main>
+
+    <!-- Dragon watermark -->
+    <svg class="dragon-watermark" viewBox="0 0 380 265" fill="currentColor" aria-hidden="true">
+        <!-- Left wing -->
+        <path d="M 178 132 C 150 116 108 78 64 50 C 84 80 96 106 102 126 C 78 114 50 114 28 126 C 54 120 80 120 106 128 Z"/>
+        <!-- Right wing -->
+        <path d="M 202 132 C 230 116 272 78 316 50 C 296 80 284 106 278 126 C 302 114 330 114 352 126 C 326 120 300 120 274 128 Z"/>
+        <!-- Body -->
+        <ellipse cx="190" cy="152" rx="46" ry="25"/>
+        <!-- Neck -->
+        <path d="M 156 134 C 144 114 137 90 141 70 C 145 54 155 50 163 58 C 156 52 147 58 145 72 C 143 86 147 110 157 132 Z"/>
+        <!-- Head -->
+        <path d="M 141 64 C 135 54 127 52 125 60 C 123 68 129 76 137 78 C 131 80 127 88 133 92 C 139 96 147 90 149 80 C 153 86 159 88 161 82 C 163 74 156 64 148 62 Z"/>
+        <!-- Snout/jaw -->
+        <path d="M 123 62 L 107 70 L 113 76 L 127 68 Z"/>
+        <!-- Horn -->
+        <path d="M 137 52 L 131 36 L 141 54 Z"/>
+        <!-- Tail -->
+        <path d="M 234 165 C 258 169 279 179 293 197 C 285 203 275 197 271 187 C 269 195 263 201 257 197 C 251 187 243 175 234 165 Z"/>
+        <!-- Front legs -->
+        <path d="M 162 172 L 154 198 L 158 199 L 160 190 L 162 199 L 166 198 L 164 172 Z"/>
+        <path d="M 218 172 L 210 198 L 214 199 L 216 190 L 218 199 L 222 198 L 220 172 Z"/>
+        <!-- Eye -->
+        <ellipse cx="135" cy="68" rx="4" ry="3.5" transform="rotate(-5 135 68)"/>
+    </svg>
+
+    <!-- Floating ember particles -->
+    <div class="ember" style="width:3px;height:3px;left:7%;animation-duration:11s;animation-delay:0s;--drift:18px;background:radial-gradient(circle,#FFA500,#FF4500 65%,transparent)"></div>
+    <div class="ember" style="width:4px;height:4px;left:21%;animation-duration:8s;animation-delay:3.2s;--drift:-14px;background:radial-gradient(circle,#FFB300,#FF5500 65%,transparent)"></div>
+    <div class="ember" style="width:2px;height:2px;left:36%;animation-duration:14s;animation-delay:0.8s;--drift:22px;background:radial-gradient(circle,#FF9500,#FF4000 65%,transparent)"></div>
+    <div class="ember" style="width:3px;height:3px;left:50%;animation-duration:9s;animation-delay:5.5s;--drift:-20px;background:radial-gradient(circle,#FF8C00,#FF3300 65%,transparent)"></div>
+    <div class="ember" style="width:5px;height:5px;left:63%;animation-duration:13s;animation-delay:2s;--drift:16px;background:radial-gradient(circle,#FFA500,#FF5000 65%,transparent)"></div>
+    <div class="ember" style="width:2px;height:2px;left:77%;animation-duration:7s;animation-delay:6.4s;--drift:-12px;background:radial-gradient(circle,#FF9000,#FF4500 65%,transparent)"></div>
+    <div class="ember" style="width:4px;height:4px;left:88%;animation-duration:10s;animation-delay:4s;--drift:24px;background:radial-gradient(circle,#FFB000,#FF5500 65%,transparent)"></div>
+    <div class="ember" style="width:3px;height:3px;left:14%;animation-duration:16s;animation-delay:7.1s;--drift:-18px;background:radial-gradient(circle,#FF8000,#FF3500 65%,transparent)"></div>
+    <div class="ember" style="width:2px;height:2px;left:43%;animation-duration:12s;animation-delay:1.5s;--drift:20px;background:radial-gradient(circle,#FFA000,#FF4800 65%,transparent)"></div>
+    <div class="ember" style="width:3px;height:3px;left:71%;animation-duration:9s;animation-delay:9s;--drift:-22px;background:radial-gradient(circle,#FF8C00,#FF4200 65%,transparent)"></div>
 
     <!-- Card Image Tooltip -->
     <div class="card-img-tooltip" id="cardImgTooltip">
@@ -1499,10 +1606,14 @@
                 grid.innerHTML = `
                     <div class="library-empty" style="grid-column:1/-1;">
                         <svg class="sigil" viewBox="0 0 80 80" fill="none">
-                            <polygon points="40,5 72,22 72,58 40,75 8,58 8,22" stroke="currentColor" stroke-width="1" fill="none" opacity="0.3"/>
-                            <circle cx="40" cy="40" r="8" stroke="currentColor" stroke-width="1" fill="none" opacity="0.25"/>
+                            <circle cx="40" cy="40" r="36" stroke="currentColor" stroke-width="0.8" opacity="0.18"/>
+                            <path d="M 5 40 C 18 18 62 18 75 40 C 62 62 18 62 5 40 Z" stroke="currentColor" stroke-width="1.2" fill="none" opacity="0.32"/>
+                            <ellipse cx="40" cy="40" rx="5" ry="18" stroke="currentColor" stroke-width="1" fill="none" opacity="0.28"/>
+                            <ellipse cx="40" cy="40" rx="13" ry="13" stroke="currentColor" stroke-width="0.6" fill="none" opacity="0.15"/>
+                            <line x1="40" y1="4" x2="40" y2="22" stroke="currentColor" stroke-width="0.7" opacity="0.18"/>
+                            <line x1="40" y1="58" x2="40" y2="76" stroke="currentColor" stroke-width="0.7" opacity="0.18"/>
                         </svg>
-                        <h3>Your library is empty</h3>
+                        <h3>The dragon&#8217;s hoard is empty</h3>
                         <p>Visit the Forge to create your first deck</p>
                     </div>`;
                 return;
