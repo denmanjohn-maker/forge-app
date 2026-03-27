@@ -15,10 +15,10 @@ RUN dotnet publish -c Release -o /app/publish --no-restore
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 
-# Add healthcheck
+# Add curl for healthcheck
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
-HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
-    CMD curl -f http://localhost:5000/swagger/index.html || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD curl -f http://localhost:5000/healthz || exit 1
 
 COPY --from=build /app/publish .
 

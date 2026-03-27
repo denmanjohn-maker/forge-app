@@ -999,6 +999,103 @@
             line-height: 1.7;
         }
 
+        /* Card image tooltip */
+        .card-img-tooltip {
+            position: fixed;
+            z-index: 9999;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+            border-radius: 10px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.75);
+            border: 1px solid var(--border-gold);
+            overflow: hidden;
+            width: 200px;
+        }
+        .card-img-tooltip.visible { opacity: 1; }
+        .card-img-tooltip img { display: block; width: 200px; height: auto; }
+        .card-name-text {
+            cursor: pointer;
+            text-decoration: underline dotted;
+            text-underline-offset: 3px;
+        }
+        .card-name-text:hover { color: var(--gold-light) !important; }
+
+        /* Analysis panel */
+        .analysis-panel {
+            margin-top: 2rem;
+            border: 1px solid var(--border-gold);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .analysis-panel-header {
+            background: linear-gradient(90deg, rgba(201,168,76,0.12) 0%, transparent 100%);
+            padding: 0.75rem 1.25rem;
+            font-family: 'Cinzel', serif;
+            font-size: 0.85rem;
+            color: var(--gold);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border-gold);
+        }
+        .analysis-body { padding: 1.25rem; }
+        .analysis-rating {
+            display: inline-block;
+            background: var(--bg-card);
+            border: 1px solid var(--border-gold);
+            border-radius: 4px;
+            padding: 0.25rem 0.75rem;
+            font-family: 'Cinzel', serif;
+            font-size: 0.85rem;
+            color: var(--gold-light);
+            margin-bottom: 1rem;
+        }
+        .analysis-synergy {
+            color: var(--text-secondary);
+            font-style: italic;
+            line-height: 1.6;
+            margin-bottom: 1.25rem;
+        }
+        .analysis-section-title {
+            font-family: 'Cinzel', serif;
+            font-size: 0.8rem;
+            color: var(--gold-dark);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.5rem;
+            margin-top: 1rem;
+        }
+        .analysis-list { list-style: none; padding: 0; margin: 0 0 0.5rem 0; }
+        .analysis-list li {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            padding: 0.3rem 0 0.3rem 1rem;
+            position: relative;
+            line-height: 1.4;
+        }
+        .analysis-list li::before { content: '▸'; position: absolute; left: 0; color: var(--gold-dark); }
+        .upgrade-row {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.65rem 0.85rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+        .upgrade-swap { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; flex-wrap: wrap; }
+        .upgrade-remove { color: #c0392b; text-decoration: line-through; opacity: 0.8; }
+        .upgrade-arrow { color: var(--text-muted); }
+        .upgrade-add { color: #27ae60; font-weight: 600; }
+        .upgrade-reason { color: var(--text-muted); font-size: 0.8rem; font-style: italic; }
+        .analysis-loading {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1.5rem;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
     </style>
 </head>
 <body>
@@ -1240,6 +1337,11 @@
         </div>
     </main>
 
+    <!-- Card Image Tooltip -->
+    <div class="card-img-tooltip" id="cardImgTooltip">
+        <img id="cardImgEl" src="" alt="Card image">
+    </div>
+
     <!-- Delete Modal -->
     <div class="modal-overlay hidden" id="deleteModal">
         <div class="modal">
@@ -1259,6 +1361,7 @@
         const API_BASE = '/api/decks';
         let currentDecks = [];
         let deleteTargetId = null;
+        let currentDetailDeck = null;
 
         // === Navigation ===
         document.querySelectorAll('.nav-tab').forEach(tab => {
@@ -1433,6 +1536,7 @@
                 const res = await fetch(`${API_BASE}/${id}`);
                 if (!res.ok) throw new Error('Deck not found');
                 const deck = await res.json();
+                currentDetailDeck = deck;
                 renderDetail(deck);
                 document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
                 document.getElementById('view-detail').classList.add('active');
@@ -1443,11 +1547,41 @@
             }
         }
 
+        function buildManaCurveHtml(cards) {
+            const nonLands = (cards || []).filter(c => c.category !== 'Land' && c.category !== 'Commander');
+            const counts = [0,1,2,3,4,5].map(cmc =>
+                nonLands.filter(c => (c.cmc||0) === cmc).reduce((s,c) => s + c.quantity, 0)
+            );
+            counts.push(nonLands.filter(c => (c.cmc||0) >= 6).reduce((s,c) => s + c.quantity, 0));
+            const max = Math.max(...counts, 1);
+            const labels = ['0','1','2','3','4','5','6+'];
+            const maxBarH = 60;
+            const barsHtml = counts.map((count, i) => {
+                const h = count > 0 ? Math.max(Math.round((count / max) * maxBarH), 4) : 0;
+                return `
+                    <div style="display:flex;flex-direction:column;align-items:center;flex:1;justify-content:flex-end;gap:2px;">
+                        <div style="font-size:0.7rem;color:var(--text-secondary);min-height:14px;text-align:center;">${count > 0 ? count : ''}</div>
+                        <div style="width:100%;height:${h}px;background:linear-gradient(180deg,var(--gold) 0%,var(--gold-dark) 100%);border-radius:3px 3px 0 0;${count===0?'opacity:0.15':''}"></div>
+                    </div>`;
+            }).join('');
+            const labelsHtml = labels.map(l =>
+                `<div style="font-size:0.72rem;color:var(--text-muted);text-align:center;flex:1;">${l}</div>`
+            ).join('');
+            return `
+                <div style="margin-bottom:2rem;">
+                    <div style="font-family:'Cinzel',serif;font-size:0.8rem;color:var(--gold);margin-bottom:0.75rem;text-transform:uppercase;letter-spacing:0.05em;">Mana Curve</div>
+                    <div style="display:flex;align-items:flex-end;gap:6px;height:76px;">${barsHtml}</div>
+                    <div style="display:flex;gap:6px;margin-top:4px;">${labelsHtml}</div>
+                </div>`;
+        }
+
         function renderDetail(deck) {
             const categories = groupByCategory(deck.cards || []);
             const totalCards = (deck.cards || []).reduce((s, c) => s + c.quantity, 0);
-            const avgCmc = deck.cards && deck.cards.length > 0
-                ? (deck.cards.filter(c=>c.category!=='Land').reduce((s,c) => s + c.cmc * c.quantity, 0) / deck.cards.filter(c=>c.category!=='Land').reduce((s,c) => s + c.quantity, 0)).toFixed(2)
+            const nonLandCards = (deck.cards || []).filter(c => c.category !== 'Land');
+            const nonLandTotal = nonLandCards.reduce((s,c) => s + c.quantity, 0);
+            const avgCmc = nonLandTotal > 0
+                ? (nonLandCards.reduce((s,c) => s + c.cmc * c.quantity, 0) / nonLandTotal).toFixed(2)
                 : '0';
 
             document.getElementById('detailContent').innerHTML = `
@@ -1479,6 +1613,8 @@
 
                 ${deck.deckDescription ? `<div class="deck-description-box">${deck.deckDescription}</div>` : ''}
 
+                ${buildManaCurveHtml(deck.cards)}
+
                 ${Object.entries(categories).map(([cat, cards]) => `
                     <div class="category-section">
                         <div class="category-header">
@@ -1489,7 +1625,7 @@
                             <div class="card-row">
                                 <span class="card-qty">${c.quantity}x</span>
                                 <div class="card-name-col">
-                                    <span class="card-name-text">${c.name}</span>
+                                    <span class="card-name-text" data-cn="${c.name.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}">${c.name}</span>
                                     <span class="card-role-text">${c.roleInDeck || ''}</span>
                                 </div>
                                 <span class="card-type-text">${c.cardType || ''}</span>
@@ -1499,10 +1635,25 @@
                     </div>
                 `).join('')}
 
-                <div style="display:flex;gap:1rem;margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--border);">
+                <div style="display:flex;gap:1rem;margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--border);flex-wrap:wrap;">
+                    <button class="btn-outline" onclick="exportDeck('mtga')">&#8659; Export (MTGA)</button>
+                    <button class="btn-outline" onclick="exportDeck('text')">&#8659; Export (Text)</button>
+                    <button class="btn-outline" onclick="analyzeDeck('${deck.id}')">&#9879; Analyze with AI</button>
                     <button class="btn-danger" onclick="openDeleteModal('${deck.id}')">&#128293; Banish Deck</button>
                 </div>
+
+                <div id="analysisSection"></div>
             `;
+
+            // Attach card image hover listeners after rendering
+            document.querySelectorAll('[data-cn]').forEach(el => {
+                el.addEventListener('mouseenter', e => showCardImage(e, el.dataset.cn));
+                el.addEventListener('mouseleave', hideCardImage);
+                el.addEventListener('mousemove', e => {
+                    if (document.getElementById('cardImgTooltip').classList.contains('visible'))
+                        positionTooltip(e);
+                });
+            });
         }
 
         // === Delete ===
@@ -1548,6 +1699,121 @@
             order.forEach(cat => { if (groups[cat]) sorted[cat] = groups[cat]; });
             Object.keys(groups).forEach(cat => { if (!sorted[cat]) sorted[cat] = groups[cat]; });
             return sorted;
+        }
+
+        // === Card Image Hover (Scryfall) ===
+        const _cardImageCache = new Map();
+        let _imgTooltipTimer = null;
+
+        function showCardImage(event, cardName) {
+            clearTimeout(_imgTooltipTimer);
+            _imgTooltipTimer = setTimeout(() => _fetchAndShowImage(event, cardName), 280);
+        }
+
+        async function _fetchAndShowImage(event, cardName) {
+            const tooltip = document.getElementById('cardImgTooltip');
+            if (_cardImageCache.has(cardName)) {
+                const url = _cardImageCache.get(cardName);
+                if (url) { document.getElementById('cardImgEl').src = url; positionTooltip(event); tooltip.classList.add('visible'); }
+                return;
+            }
+            try {
+                const resp = await fetch(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(cardName)}`);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    const url = data.image_uris?.normal || data.card_faces?.[0]?.image_uris?.normal || null;
+                    _cardImageCache.set(cardName, url);
+                    if (url) { document.getElementById('cardImgEl').src = url; positionTooltip(event); tooltip.classList.add('visible'); }
+                } else {
+                    _cardImageCache.set(cardName, null);
+                }
+            } catch { _cardImageCache.set(cardName, null); }
+        }
+
+        function positionTooltip(event) {
+            const tooltip = document.getElementById('cardImgTooltip');
+            const x = event.clientX + 18, y = event.clientY - 60;
+            const tipW = 200, tipH = 280;
+            tooltip.style.left = (x + tipW > window.innerWidth ? x - tipW - 24 : x) + 'px';
+            tooltip.style.top = Math.max(8, Math.min(y, window.innerHeight - tipH - 8)) + 'px';
+        }
+
+        function hideCardImage() {
+            clearTimeout(_imgTooltipTimer);
+            document.getElementById('cardImgTooltip').classList.remove('visible');
+        }
+
+        // === Deck Export ===
+        function exportDeck(format) {
+            if (!currentDetailDeck) return;
+            const deck = currentDetailDeck;
+            let text = '';
+            if (format === 'mtga') {
+                const commander = (deck.cards || []).filter(c => c.category === 'Commander');
+                const mainboard = (deck.cards || []).filter(c => c.category !== 'Commander');
+                if (commander.length > 0) { text += 'Commander\n'; commander.forEach(c => { text += `1 ${c.name}\n`; }); text += '\nDeck\n'; }
+                mainboard.forEach(c => { text += `${c.quantity} ${c.name}\n`; });
+            } else {
+                (deck.cards || []).forEach(c => { text += `${c.quantity} ${c.name}\n`; });
+            }
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${(deck.deckName || 'deck').replace(/[^a-z0-9]/gi, '_')}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('Deck exported!');
+        }
+
+        // === AI Deck Analysis ===
+        async function analyzeDeck(deckId) {
+            const section = document.getElementById('analysisSection');
+            if (!section) return;
+            section.innerHTML = `
+                <div class="analysis-panel">
+                    <div class="analysis-panel-header">&#9879; AI Analysis</div>
+                    <div class="analysis-loading">
+                        <div class="arcane-spinner" style="width:24px;height:24px;border-width:2px;flex-shrink:0;"></div>
+                        <span>Consulting the arcane archives...</span>
+                    </div>
+                </div>`;
+            section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            try {
+                const res = await fetch(`${API_BASE}/${deckId}/analyze`, { method: 'POST' });
+                if (!res.ok) throw new Error('Analysis failed');
+                const analysis = await res.json();
+                renderAnalysis(section, analysis);
+            } catch (err) {
+                section.innerHTML = `<div style="color:var(--danger);font-size:0.9rem;margin-top:1rem;padding:1rem;">Analysis failed: ${err.message}</div>`;
+            }
+        }
+
+        function renderAnalysis(section, a) {
+            const weaknesses = (a.weaknesses || []).map(w => `<li>${w}</li>`).join('');
+            const suggestions = (a.improvementSuggestions || []).map(s => `<li>${s}</li>`).join('');
+            const upgrades = (a.cardUpgrades || []).map(u => `
+                <div class="upgrade-row">
+                    <div class="upgrade-swap">
+                        <span class="upgrade-remove">&#x2715; ${u.removeCard}</span>
+                        <span class="upgrade-arrow">&#8594;</span>
+                        <span class="upgrade-add">&#x2713; ${u.addCard}</span>
+                    </div>
+                    <div class="upgrade-reason">${u.reason}</div>
+                </div>`).join('');
+            section.innerHTML = `
+                <div class="analysis-panel">
+                    <div class="analysis-panel-header">&#9879; AI Analysis</div>
+                    <div class="analysis-body">
+                        <div class="analysis-rating">Overall Rating: ${a.overallRating || 'N/A'}</div>
+                        <div class="analysis-synergy">${a.synergyAssessment || ''}</div>
+                        ${weaknesses ? `<div class="analysis-section-title">Weaknesses</div><ul class="analysis-list">${weaknesses}</ul>` : ''}
+                        ${suggestions ? `<div class="analysis-section-title">Suggestions</div><ul class="analysis-list">${suggestions}</ul>` : ''}
+                        ${upgrades ? `<div class="analysis-section-title">Recommended Upgrades</div>${upgrades}` : ''}
+                    </div>
+                </div>`;
         }
 
         function showToast(msg, isError = false) {

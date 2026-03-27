@@ -46,3 +46,19 @@ public class DeckGenerationRequest
     public string? PreferredCommander { get; set; }
     public string? AdditionalNotes { get; set; }
 }
+
+public class DeckAnalysis
+{
+    public string SynergyAssessment { get; set; } = null!;
+    public string OverallRating { get; set; } = null!;
+    public List<string> Weaknesses { get; set; } = new();
+    public List<string> ImprovementSuggestions { get; set; } = new();
+    public List<CardUpgrade> CardUpgrades { get; set; } = new();
+}
+
+public class CardUpgrade
+{
+    public string RemoveCard { get; set; } = null!;
+    public string AddCard { get; set; } = null!;
+    public string Reason { get; set; } = null!;
+}

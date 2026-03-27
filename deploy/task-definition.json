@@ -1,0 +1,54 @@
+{
+  "family": "mtg-deckforge",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::ACCOUNT_ID:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "mtg-deckforge-api",
+      "image": "ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/mtg-deckforge:latest",
+      "portMappings": [
+        {
+          "containerPort": 5000,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true,
+      "environment": [
+        { "name": "ASPNETCORE_ENVIRONMENT", "value": "Production" },
+        { "name": "ASPNETCORE_URLS",        "value": "http://+:5000" },
+        { "name": "MongoDb__DatabaseName",          "value": "mtgdeckforge" },
+        { "name": "MongoDb__DecksCollectionName",    "value": "decks" },
+        { "name": "ClaudeApi__Model",        "value": "claude-sonnet-4-20250514" },
+        { "name": "ClaudeApi__MaxTokens",    "value": "8192" }
+      ],
+      "secrets": [
+        {
+          "name": "ClaudeApi__ApiKey",
+          "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:mtg-deckforge/anthropic-api-key"
+        },
+        {
+          "name": "MongoDb__ConnectionString",
+          "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:mtg-deckforge/mongodb-connection-string"
+        }
+      ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:5000/healthz || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 15
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/mtg-deckforge",
+          "awslogs-region": "REGION",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}
