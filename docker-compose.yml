@@ -1,60 +1,53 @@
 version: '3.8'
 
-services:
-  # ─── MongoDB ───────────────────────────────────────────────
-  mongodb:
-    image: mongo:7
-    container_name: mtg-mongodb
-    restart: unless-stopped
-    ports:
-      - "27018:27017"
-    volumes:
-      - mongo_data:/data/db
-      - mongo_config:/data/configdb
-    environment:
-      # For production, uncomment and set credentials:
-      # MONGO_INITDB_ROOT_USERNAME: admin
-      # MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-changeme}
-      MONGO_INITDB_DATABASE: mtgdeckforge
-    networks:
-      - mtg-network
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+# AWS ECS Deployment
+# Prerequisites:
+#   - Image pushed to ECR via deploy/push-to-ecr.sh
+#   - MongoDB Atlas connection string available
+#   - Anthropic API key available
+#
+# Usage (Docker ECS context):
+#   docker context create ecs myecs
+#   docker compose --context myecs up
+#
+# Required environment variables (or set in a .env file):
+#   ECR_REGISTRY    - AWS account ECR registry (e.g. 123456789.dkr.ecr.us-east-1.amazonaws.com)
+#   ECR_REPOSITORY  - ECR repository name (e.g. mtg-deckforge)
+#   IMAGE_TAG       - Image tag to deploy (default: latest)
+#   ANTHROPIC_API_KEY       - Claude API key
+#   MONGODB_CONNECTION_STRING - MongoDB Atlas connection string
 
-  # ─── MTG Deck Forge API ────────────────────────────────────
+services:
   mtg-api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: mtg-deckforge-api
-    restart: unless-stopped
+    image: ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG:-latest}
     ports:
-      - "5001:5000"
+      - "5000:5000"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      # Override appsettings via env vars
-      MongoDb__ConnectionString: "mongodb://mongodb:27017"
+      MongoDb__ConnectionString: "${MONGODB_CONNECTION_STRING}"
       MongoDb__DatabaseName: "mtgdeckforge"
       MongoDb__DecksCollectionName: "decks"
       ClaudeApi__ApiKey: "${ANTHROPIC_API_KEY}"
       ClaudeApi__Model: "claude-sonnet-4-20250514"
       ClaudeApi__MaxTokens: "8192"
-    depends_on:
-      mongodb:
-        condition: service_healthy
-    networks:
-      - mtg-network
-
-volumes:
-  mongo_data:
-    driver: local
-  mongo_config:
-    driver: local
-
-networks:
-  mtg-network:
-    driver: bridge
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: /ecs/mtg-deckforge
+        awslogs-region: ${AWS_REGION:-us-east-1}
+        awslogs-stream-prefix: ecs

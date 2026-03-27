@@ -12,9 +12,6 @@ services:
       - mongo_data:/data/db
       - mongo_config:/data/configdb
     environment:
-      # For production, uncomment and set credentials:
-      # MONGO_INITDB_ROOT_USERNAME: admin
-      # MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-changeme}
       MONGO_INITDB_DATABASE: mtgdeckforge
     networks:
       - mtg-network
@@ -35,8 +32,7 @@ services:
     ports:
       - "5001:5000"
     environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      # Override appsettings via env vars
+      ASPNETCORE_ENVIRONMENT: Development
       MongoDb__ConnectionString: "mongodb://mongodb:27017"
       MongoDb__DatabaseName: "mtgdeckforge"
       MongoDb__DecksCollectionName: "decks"
