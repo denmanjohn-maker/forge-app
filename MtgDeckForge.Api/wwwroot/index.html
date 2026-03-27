@@ -1065,10 +1065,10 @@
             box-shadow: 0 8px 32px rgba(0,0,0,0.75);
             border: 1px solid var(--border-gold);
             overflow: hidden;
-            width: 200px;
+            width: 340px;
         }
         .card-img-tooltip.visible { opacity: 1; }
-        .card-img-tooltip img { display: block; width: 200px; height: auto; }
+        .card-img-tooltip img { display: block; width: 340px; height: auto; }
         .card-name-text {
             cursor: pointer;
             text-decoration: underline dotted;
@@ -1870,7 +1870,7 @@
         function positionTooltip(event) {
             const tooltip = document.getElementById('cardImgTooltip');
             const x = event.clientX + 18, y = event.clientY - 60;
-            const tipW = 200, tipH = 280;
+            const tipW = 340, tipH = 476;
             tooltip.style.left = (x + tipW > window.innerWidth ? x - tipW - 24 : x) + 'px';
             tooltip.style.top = Math.max(8, Math.min(y, window.innerHeight - tipH - 8)) + 'px';
         }
