@@ -5,7 +5,20 @@
       "Bash(aws ecr:*)",
       "Bash(aws sts:*)",
       "Bash(docker login:*)",
-      "Bash(docker buildx:*)"
+      "Bash(docker buildx:*)",
+      "Bash(brew install:*)",
+      "Bash(railway version:*)",
+      "Bash(railway:*)",
+      "Bash(dotnet build:*)",
+      "Bash(docker build:*)",
+      "WebSearch",
+      "WebFetch(domain:deckbox.org)",
+      "WebFetch(domain:moxfield.com)",
+      "WebFetch(domain:archidekt.com)",
+      "WebFetch(domain:deckstats.net)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.echomtg.com)",
+      "Bash(grep -r \"api.anthropic.com\\\\|anthropic\" /Users/johndenman/Desktop/MtgDeckForge --include=*.cs --include=*.js --include=*.html)"
     ]
   }
 }

@@ -33,6 +33,7 @@
 
         body {
             font-family: 'Crimson Text', Georgia, serif;
+            font-size: 12pt;
             background: var(--bg-deep);
             color: var(--text-primary);
             min-height: 100vh;
@@ -93,14 +94,16 @@
         }
 
         .logo-icon {
-            width: 32px;
+            width: 48px;
             height: 48px;
             position: relative;
         }
 
-        .logo-icon svg {
+        .logo-icon img {
             width: 100%;
             height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 0 6px rgba(201, 168, 76, 0.4));
         }
 
         .logo-text {
@@ -115,7 +118,7 @@
 
         .logo-subtitle {
             font-family: 'Cinzel', serif;
-            font-size: 0.65rem;
+            font-size: 0.75rem;
             color: var(--text-muted);
             letter-spacing: 0.3em;
             text-transform: uppercase;
@@ -378,7 +381,7 @@
             padding: 0.65rem 0.5rem;
             cursor: pointer;
             font-family: 'Cinzel', serif;
-            font-size: 0.72rem;
+            font-size: 0.75rem;
             font-weight: 600;
             letter-spacing: 0.03em;
             color: var(--text-secondary);
@@ -720,7 +723,7 @@
         }
 
         .stat-label {
-            font-size: 0.7rem;
+            font-size: 0.9rem;
             color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 0.08em;
@@ -744,14 +747,14 @@
 
         .category-name {
             font-family: 'Cinzel', serif;
-            font-size: 0.9rem;
+            font-size: 1.1rem;
             font-weight: 700;
             color: var(--gold);
             letter-spacing: 0.05em;
         }
 
         .category-count {
-            font-size: 0.8rem;
+            font-size: 1rem;
             color: var(--text-muted);
         }
 
@@ -763,7 +766,7 @@
             border-radius: 6px;
             align-items: center;
             transition: background 0.2s;
-            font-size: 0.92rem;
+            font-size: 1.1rem;
         }
 
         .card-row:hover {
@@ -787,20 +790,20 @@
         }
 
         .card-role-text {
-            font-size: 0.78rem;
+            font-size: 1rem;
             color: var(--text-muted);
             font-style: italic;
         }
 
         .card-type-text {
             color: var(--text-secondary);
-            font-size: 0.82rem;
+            font-size: 1rem;
         }
 
         .card-price {
             color: var(--gold-dark);
             font-weight: 600;
-            font-size: 0.85rem;
+            font-size: 1rem;
         }
 
         /* Btn general */
@@ -1065,10 +1068,10 @@
             box-shadow: 0 8px 32px rgba(0,0,0,0.75);
             border: 1px solid var(--border-gold);
             overflow: hidden;
-            width: 340px;
+            width: 680px;
         }
         .card-img-tooltip.visible { opacity: 1; }
-        .card-img-tooltip img { display: block; width: 340px; height: auto; }
+        .card-img-tooltip img { display: block; width: 680px; height: auto; }
         .card-name-text {
             cursor: pointer;
             text-decoration: underline dotted;
@@ -1160,41 +1163,6 @@
         <div class="header-inner">
             <div class="logo-group">
                 <div class="logo-icon">
-                    <svg viewBox="0 0 36 52" fill="none">
-                        <defs>
-                            <linearGradient id="goldGrad" x1="0" y1="0" x2="36" y2="52">
-                                <stop offset="0%" stop-color="#E8D48B"/>
-                                <stop offset="50%" stop-color="#C9A84C"/>
-                                <stop offset="100%" stop-color="#8B6914"/>
-                            </linearGradient>
-                        </defs>
-                        <!-- Primary horn -->
-                        <path d="M 12 6 L 7 1 L 16 8 Z" fill="url(#goldGrad)"/>
-                        <!-- Secondary horn -->
-                        <path d="M 17 4 L 14 1 L 19 6 Z" fill="url(#goldGrad)" opacity="0.75"/>
-                        <!-- Head mass (profile, snout right) -->
-                        <path d="M 5 20 C 3 12 7 4 14 3 C 18 1 24 3 27 8 L 33 14 L 34 18 L 33 22 L 25 22 C 16 23 9 22 5 20 Z" fill="url(#goldGrad)" opacity="0.92"/>
-                        <!-- Lower jaw (slightly open) -->
-                        <path d="M 8 20 C 8 23 12 25 20 25 L 30 24 L 33 22" stroke="url(#goldGrad)" stroke-width="1.5" fill="none" opacity="0.6"/>
-                        <!-- Eye — slit pupil -->
-                        <ellipse cx="24" cy="13" rx="3.5" ry="3" fill="#080808" opacity="0.88"/>
-                        <ellipse cx="24" cy="13" rx="1" ry="2.2" fill="#C9A84C" opacity="0.48"/>
-                        <circle cx="22.5" cy="11.5" r="0.7" fill="white" opacity="0.22"/>
-                        <!-- Nostril -->
-                        <circle cx="32" cy="19.5" r="1.1" fill="#080808" opacity="0.4"/>
-                        <!-- Scale line on jaw -->
-                        <path d="M 8 20 C 14 19 20 19 26 20" stroke="#080808" stroke-width="0.5" fill="none" opacity="0.18"/>
-                        <!-- Neck -->
-                        <path d="M 12 22 C 11 30 12 40 14 46 C 16 50 20 50 21 46 C 23 42 21 30 20 22 Z" fill="url(#goldGrad)" opacity="0.82"/>
-                        <!-- Scale marks -->
-                        <path d="M 12 27 Q 16 25 20 27" stroke="#080808" stroke-width="0.5" fill="none" opacity="0.22"/>
-                        <path d="M 12 32 Q 16 30 20 32" stroke="#080808" stroke-width="0.5" fill="none" opacity="0.22"/>
-                        <path d="M 12 37 Q 16 35 20 37" stroke="#080808" stroke-width="0.5" fill="none" opacity="0.22"/>
-                        <!-- Base -->
-                        <ellipse cx="16" cy="50" rx="5" ry="2" fill="url(#goldGrad)" opacity="0.5"/>
-                        <!-- Ambient glow -->
-                        <ellipse cx="18" cy="15" rx="11" ry="14" fill="url(#goldGrad)" opacity="0.05"/>
-                    </svg>
                 </div>
                 <div>
                     <div class="logo-text">BEN'S MAGIC FORGE</div>
@@ -1396,7 +1364,11 @@
                     <div class="library-title">&#127984; Deck Library</div>
                     <div class="library-count" id="libraryCount">Loading...</div>
                 </div>
-                <button class="btn-outline" onclick="loadLibrary()">&#8635; Refresh</button>
+                <div style="display:flex;gap:0.75rem;">
+                    <button class="btn-outline" onclick="document.getElementById('csvImportInput').click()">&#8593; Import CSV</button>
+                    <button class="btn-outline" onclick="loadLibrary()">&#8635; Refresh</button>
+                </div>
+                <input type="file" id="csvImportInput" accept=".csv" style="display:none;" onchange="importCsvFile(this)">
             </div>
             <div id="deckGrid" class="deck-grid"></div>
         </div>
@@ -1570,9 +1542,9 @@
                 </div>
                 ${Object.entries(categories).map(([cat, cards]) => `
                     <div style="margin-bottom:0.75rem;">
-                        <div style="font-family:'Cinzel',serif;font-size:0.8rem;color:var(--gold-dark);margin-bottom:0.25rem;">${cat} (${cards.reduce((s,c)=>s+c.quantity,0)})</div>
-                        ${cards.slice(0, 5).map(c => `<div style="font-size:0.85rem;color:var(--text-secondary);padding:0.15rem 0;">${c.quantity}x ${c.name}</div>`).join('')}
-                        ${cards.length > 5 ? `<div style="font-size:0.8rem;color:var(--text-muted);">... and ${cards.length - 5} more</div>` : ''}
+                        <div style="font-family:'Cinzel',serif;font-size:1rem;color:var(--gold-dark);margin-bottom:0.25rem;">${cat} (${cards.reduce((s,c)=>s+c.quantity,0)})</div>
+                        ${cards.slice(0, 5).map(c => `<div style="font-size:1rem;color:var(--text-secondary);padding:0.15rem 0;">${c.quantity}x ${c.name}</div>`).join('')}
+                        ${cards.length > 5 ? `<div style="font-size:1rem;color:var(--text-muted);">... and ${cards.length - 5} more</div>` : ''}
                     </div>
                 `).join('')}
                 <div style="display:flex;gap:0.75rem;margin-top:1.25rem;">
@@ -1671,16 +1643,16 @@
                 const h = count > 0 ? Math.max(Math.round((count / max) * maxBarH), 4) : 0;
                 return `
                     <div style="display:flex;flex-direction:column;align-items:center;flex:1;justify-content:flex-end;gap:2px;">
-                        <div style="font-size:0.7rem;color:var(--text-secondary);min-height:14px;text-align:center;">${count > 0 ? count : ''}</div>
+                        <div style="font-size:0.75rem;color:var(--text-secondary);min-height:14px;text-align:center;">${count > 0 ? count : ''}</div>
                         <div style="width:100%;height:${h}px;background:linear-gradient(180deg,var(--gold) 0%,var(--gold-dark) 100%);border-radius:3px 3px 0 0;${count===0?'opacity:0.15':''}"></div>
                     </div>`;
             }).join('');
             const labelsHtml = labels.map(l =>
-                `<div style="font-size:0.72rem;color:var(--text-muted);text-align:center;flex:1;">${l}</div>`
+                `<div style="font-size:0.75rem;color:var(--text-muted);text-align:center;flex:1;">${l}</div>`
             ).join('');
             return `
                 <div style="margin-bottom:2rem;">
-                    <div style="font-family:'Cinzel',serif;font-size:0.8rem;color:var(--gold);margin-bottom:0.75rem;text-transform:uppercase;letter-spacing:0.05em;">Mana Curve</div>
+                    <div style="font-family:'Cinzel',serif;font-size:1rem;color:var(--gold);margin-bottom:0.75rem;text-transform:uppercase;letter-spacing:0.05em;">Mana Curve</div>
                     <div style="display:flex;align-items:flex-end;gap:6px;height:76px;">${barsHtml}</div>
                     <div style="display:flex;gap:6px;margin-top:4px;">${labelsHtml}</div>
                 </div>`;
@@ -1747,8 +1719,13 @@
                 `).join('')}
 
                 <div style="display:flex;gap:1rem;margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--border);flex-wrap:wrap;">
-                    <button class="btn-outline" onclick="exportDeck('mtga')">&#8659; Export (MTGA)</button>
-                    <button class="btn-outline" onclick="exportDeck('text')">&#8659; Export (Text)</button>
+                    <button class="btn-outline" onclick="exportDeck('mtga')">&#8659; MTGA</button>
+                    <button class="btn-outline" onclick="exportDeck('text')">&#8659; Text</button>
+                    <button class="btn-outline" onclick="exportDeck('csv')">&#8659; CSV</button>
+                    <button class="btn-outline" onclick="exportDeck('moxfield')">&#8659; Moxfield</button>
+                    <button class="btn-outline" onclick="exportDeck('archidekt')">&#8659; Archidekt</button>
+                    <button class="btn-outline" onclick="exportDeck('deckbox')">&#8659; Deckbox</button>
+                    <button class="btn-outline" onclick="exportDeck('deckstats')">&#8659; Deckstats</button>
                     <button class="btn-outline" onclick="analyzeDeck('${deck.id}')">&#9879; Analyze with AI</button>
                     <button class="btn-danger" onclick="openDeleteModal('${deck.id}')">&#128293; Banish Deck</button>
                 </div>
@@ -1870,7 +1847,7 @@
         function positionTooltip(event) {
             const tooltip = document.getElementById('cardImgTooltip');
             const x = event.clientX + 18, y = event.clientY - 60;
-            const tipW = 340, tipH = 476;
+            const tipW = 680, tipH = 952;
             tooltip.style.left = (x + tipW > window.innerWidth ? x - tipW - 24 : x) + 'px';
             tooltip.style.top = Math.max(8, Math.min(y, window.innerHeight - tipH - 8)) + 'px';
         }
@@ -1885,6 +1862,22 @@
         function exportDeck(format) {
             if (!currentDetailDeck) return;
             const deck = currentDetailDeck;
+            const safeName = (deck.deckName || 'deck').replace(/[^a-z0-9]/gi, '_');
+            const esc = (s) => `"${(s || '').replace(/"/g, '""')}"`;
+            const csvFormats = ['csv', 'moxfield', 'archidekt', 'deckbox', 'deckstats'];
+
+            if (csvFormats.includes(format)) {
+                // Use the server-side export for CSV formats
+                const a = document.createElement('a');
+                a.href = `${API_BASE}/${deck.id}/export/csv?format=${format}`;
+                a.download = `${safeName}_${format}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                showToast(`Deck exported as ${format.charAt(0).toUpperCase() + format.slice(1)} CSV!`);
+                return;
+            }
+
             let text = '';
             if (format === 'mtga') {
                 const commander = (deck.cards || []).filter(c => c.category === 'Commander');
@@ -1898,12 +1891,41 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${(deck.deckName || 'deck').replace(/[^a-z0-9]/gi, '_')}.txt`;
+            a.download = `${safeName}.txt`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             showToast('Deck exported!');
+        }
+
+        // === CSV Import ===
+        async function importCsvFile(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch(`${API_BASE}/import/csv`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.details || err.error || 'Import failed');
+                }
+
+                const deck = await res.json();
+                showToast(`Imported "${deck.deckName}" with ${deck.totalCards} cards!`);
+                loadLibrary();
+            } catch (err) {
+                showToast(err.message, true);
+            } finally {
+                input.value = '';
+            }
         }
 
         // === AI Deck Analysis ===
