@@ -1815,30 +1815,56 @@
         // === Card Image Hover (Scryfall) ===
         const _cardImageCache = new Map();
         let _imgTooltipTimer = null;
+        let _activeHoverCard = null;
 
         function showCardImage(event, cardName) {
             clearTimeout(_imgTooltipTimer);
-            _imgTooltipTimer = setTimeout(() => _fetchAndShowImage(event, cardName), 280);
+            _activeHoverCard = cardName;
+            _imgTooltipTimer = setTimeout(() => _fetchAndShowImage(event, cardName), 300);
         }
 
         async function _fetchAndShowImage(event, cardName) {
+            // Guard: user already moved off this card
+            if (_activeHoverCard !== cardName) return;
+
             const tooltip = document.getElementById('cardImgTooltip');
+            const imgEl  = document.getElementById('cardImgEl');
+
+            let url;
             if (_cardImageCache.has(cardName)) {
-                const url = _cardImageCache.get(cardName);
-                if (url) { document.getElementById('cardImgEl').src = url; positionTooltip(event); tooltip.classList.add('visible'); }
-                return;
-            }
-            try {
-                const resp = await fetch(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(cardName)}`);
-                if (resp.ok) {
-                    const data = await resp.json();
-                    const url = data.image_uris?.normal || data.card_faces?.[0]?.image_uris?.normal || null;
-                    _cardImageCache.set(cardName, url);
-                    if (url) { document.getElementById('cardImgEl').src = url; positionTooltip(event); tooltip.classList.add('visible'); }
-                } else {
-                    _cardImageCache.set(cardName, null);
+                url = _cardImageCache.get(cardName);
+            } else {
+                try {
+                    // fuzzy matching handles slight Claude name variations
+                    const resp = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(cardName)}`);
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        url = data.image_uris?.normal ?? data.card_faces?.[0]?.image_uris?.normal ?? null;
+                    } else {
+                        url = null;
+                    }
+                } catch {
+                    url = null;
                 }
-            } catch { _cardImageCache.set(cardName, null); }
+                _cardImageCache.set(cardName, url);
+            }
+
+            // Guard again after async gap
+            if (_activeHoverCard !== cardName || !url) return;
+
+            // Wait for image to load before showing (avoids blank flash)
+            imgEl.onload = () => {
+                if (_activeHoverCard === cardName) {
+                    positionTooltip(event);
+                    tooltip.classList.add('visible');
+                }
+            };
+            imgEl.src = url;
+            // If browser already has it cached, onload won't fire — show immediately
+            if (imgEl.complete && imgEl.naturalHeight > 0) {
+                positionTooltip(event);
+                tooltip.classList.add('visible');
+            }
         }
 
         function positionTooltip(event) {
@@ -1851,6 +1877,7 @@
 
         function hideCardImage() {
             clearTimeout(_imgTooltipTimer);
+            _activeHoverCard = null;
             document.getElementById('cardImgTooltip').classList.remove('visible');
         }
 
