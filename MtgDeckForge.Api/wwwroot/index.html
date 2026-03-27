@@ -84,59 +84,47 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            height: 72px;
+            height: 148px;
         }
 
         .logo-group {
             display: flex;
             align-items: center;
-            gap: 0;
+            gap: 1rem;
         }
 
-        .logo-banner {
-            position: relative;
-            width: 280px;
-            height: 64px;
+        .logo-dragon {
+            width: 128px;
+            height: 128px;
             border-radius: 8px;
             overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
+            flex-shrink: 0;
         }
 
-        .logo-banner img {
-            position: absolute;
-            top: 50%;
-            left: 50%;
+        .logo-dragon img {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transform: translate(-50%, -50%);
-            filter: brightness(0.6);
+            filter: drop-shadow(0 0 10px rgba(201, 168, 76, 0.4));
         }
 
         .logo-text {
-            position: relative;
-            z-index: 1;
             font-family: 'Cinzel', serif;
             font-weight: 900;
             font-size: 1.4rem;
-            color: var(--gold-light);
+            background: linear-gradient(135deg, var(--gold-light), var(--gold), var(--gold-dark));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
             letter-spacing: 0.08em;
-            text-shadow: 0 0 10px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.7), 0 2px 4px rgba(0,0,0,0.8);
         }
 
         .logo-subtitle {
-            position: relative;
-            z-index: 1;
             font-family: 'Cinzel', serif;
             font-size: 0.65rem;
-            color: var(--gold);
+            color: var(--text-muted);
             letter-spacing: 0.3em;
             text-transform: uppercase;
             margin-top: 2px;
-            text-shadow: 0 0 8px rgba(0,0,0,0.9), 0 1px 3px rgba(0,0,0,0.8);
         }
 
         .nav-tabs {
@@ -1176,8 +1164,10 @@
     <header class="app-header">
         <div class="header-inner">
             <div class="logo-group">
-                <div class="logo-banner">
-                    <img src="/images/dragon-banner.png" alt="Dragon Banner">
+                <div class="logo-dragon">
+                    <img src="/images/dragon-banner.png" alt="Dragon">
+                </div>
+                <div>
                     <div class="logo-text">BEN'S MAGIC FORGE</div>
                     <div class="logo-subtitle">Powered by Arcane Intelligence</div>
                 </div>
