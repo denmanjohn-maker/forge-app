@@ -23,10 +23,13 @@ public class DeckService
     public async Task<DeckConfiguration?> GetByIdAsync(string id) =>
         await _decksCollection.Find(x => x.Id == id).FirstOrDefaultAsync();
 
-    public async Task<List<DeckConfiguration>> SearchAsync(string? color = null, string? format = null)
+    public async Task<List<DeckConfiguration>> SearchAsync(string? color = null, string? format = null, string? userId = null)
     {
         var builder = Builders<DeckConfiguration>.Filter;
         var filter = builder.Empty;
+
+        if (!string.IsNullOrEmpty(userId))
+            filter &= builder.Eq(d => d.UserId, userId);
 
         if (!string.IsNullOrEmpty(color))
             filter &= builder.AnyEq(d => d.Colors, color);

@@ -49,7 +49,8 @@ public class DecksController : ControllerBase
     [HttpGet("search")]
     public async Task<ActionResult<List<DeckConfiguration>>> Search([FromQuery] string? color, [FromQuery] string? format)
     {
-        var decks = await _deckService.SearchAsync(color, format);
+        var userId = IsAdmin() ? null : GetUserId();
+        var decks = await _deckService.SearchAsync(color, format, userId);
         return Ok(decks);
     }
 
