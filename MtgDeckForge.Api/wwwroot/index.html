@@ -10,10 +10,10 @@
             --gold: #C9A84C;
             --gold-light: #E8D48B;
             --gold-dark: #8B6914;
-            --bg-deep: #1E1E1E;
-            --bg-card: #252525;
-            --bg-panel: #2C2C2C;
-            --bg-hover: #333333;
+            --bg-deep: #0A0A0A;
+            --bg-card: #111111;
+            --bg-panel: #161616;
+            --bg-hover: #1E1E1E;
             --text-primary: #E8E4D9;
             --text-secondary: #9A9488;
             --text-muted: #5C5850;
@@ -111,20 +111,22 @@
         .logo-text {
             font-family: 'Cinzel', serif;
             font-weight: 900;
-            font-size: 1.4rem;
+            font-size: 2rem;
             background: linear-gradient(135deg, var(--gold-light), var(--gold), var(--gold-dark));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            letter-spacing: 0.08em;
+            letter-spacing: 0.1em;
+            text-shadow: none;
+            filter: drop-shadow(0 0 8px rgba(201, 168, 76, 0.4));
         }
 
         .logo-subtitle {
             font-family: 'Cinzel', serif;
-            font-size: 0.65rem;
-            color: var(--text-muted);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
             letter-spacing: 0.3em;
             text-transform: uppercase;
-            margin-top: 2px;
+            margin-top: 4px;
         }
 
         .nav-tabs {
