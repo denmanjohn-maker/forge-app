@@ -271,7 +271,7 @@ public class DecksController : ControllerBase
             cards = await _scryfallService.EnrichCardsAsync(cards);
 
             // Derive color identity from enriched mana costs
-            var colors = await _scryfallService.DeriveColorsAsync(cards);
+            var colors = _scryfallService.DeriveColors(cards);
 
             var resolvedDeckName = deckName ?? Path.GetFileNameWithoutExtension(file.FileName);
             var commander = cards.FirstOrDefault(c => c.Category.Equals("Commander", StringComparison.OrdinalIgnoreCase))?.Name ?? "";

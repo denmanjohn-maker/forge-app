@@ -59,7 +59,13 @@ public class ScryfallService
                     foreach (var card in result.Data)
                     {
                         if (!string.IsNullOrEmpty(card.Name))
+                        {
                             scrayfallData[card.Name] = card;
+                            // Double-faced cards return "Card A // Card B" — also index by front face
+                            var slashIdx = card.Name.IndexOf(" // ", StringComparison.Ordinal);
+                            if (slashIdx > 0)
+                                scrayfallData[card.Name[..slashIdx]] = card;
+                        }
                     }
                 }
             }
@@ -99,9 +105,8 @@ public class ScryfallService
     /// Derives color identity from enriched card entries, falling back to scryfall data.
     /// Returns WUBRG ordering.
     /// </summary>
-    public async Task<List<string>> DeriveColorsAsync(List<CardEntry> cards)
+    public List<string> DeriveColors(List<CardEntry> cards)
     {
-        // First try from mana costs already on cards
         var colorSet = new HashSet<string>();
         foreach (var card in cards)
         {
