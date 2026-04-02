@@ -166,6 +166,208 @@
             background: linear-gradient(90deg, transparent, var(--gold), transparent);
         }
 
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.4rem 1rem;
+            border: 1px solid var(--border-gold);
+            border-radius: 8px;
+            background: rgba(201, 168, 76, 0.05);
+        }
+
+        .user-info-name {
+            font-family: 'Cinzel', serif;
+            font-size: 0.8rem;
+            color: var(--gold);
+            letter-spacing: 0.05em;
+        }
+
+        .user-info-role {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .btn-logout {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-family: 'Cinzel', serif;
+            font-size: 0.7rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            letter-spacing: 0.05em;
+        }
+
+        .btn-logout:hover {
+            border-color: var(--danger);
+            color: var(--danger-hover);
+        }
+
+        /* ===== LOGIN VIEW ===== */
+        .login-backdrop {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .login-panel {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-gold);
+            border-radius: 16px;
+            padding: 3rem 2.5rem;
+            max-width: 420px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .login-panel .logo-text {
+            font-size: 1.6rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .login-panel .logo-subtitle {
+            margin-bottom: 2rem;
+        }
+
+        .login-field {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--bg-deep);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: 'Crimson Text', serif;
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .login-field:focus {
+            outline: none;
+            border-color: var(--gold);
+        }
+
+        .login-field::placeholder {
+            color: var(--text-muted);
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 0.85rem;
+            background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+            border: none;
+            border-radius: 8px;
+            color: #1a1a1a;
+            font-family: 'Cinzel', serif;
+            font-weight: 700;
+            font-size: 0.95rem;
+            letter-spacing: 0.08em;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 0.5rem;
+        }
+
+        .btn-login:hover {
+            filter: brightness(1.15);
+        }
+
+        .btn-login:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .login-error {
+            color: var(--danger-hover);
+            font-size: 0.85rem;
+            margin-top: 0.75rem;
+            min-height: 1.2em;
+        }
+
+        /* ===== ADMIN VIEW ===== */
+        .admin-section {
+            margin-bottom: 2rem;
+        }
+
+        .admin-section-title {
+            font-family: 'Cinzel', serif;
+            font-size: 1.1rem;
+            color: var(--gold);
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-gold);
+        }
+
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .admin-table th {
+            font-family: 'Cinzel', serif;
+            font-size: 0.8rem;
+            color: var(--gold-dark);
+            text-align: left;
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid var(--border);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .admin-table td {
+            padding: 0.6rem 0.75rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+
+        .admin-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .admin-form .login-field {
+            margin-bottom: 0;
+        }
+
+        .admin-form-full {
+            grid-column: 1 / -1;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-family: 'Cinzel', serif;
+            letter-spacing: 0.05em;
+        }
+
+        .badge-admin {
+            background: rgba(201, 168, 76, 0.2);
+            color: var(--gold);
+            border: 1px solid var(--border-gold);
+        }
+
+        .badge-user {
+            background: rgba(45, 107, 63, 0.2);
+            color: #6dbb82;
+            border: 1px solid rgba(45, 107, 63, 0.3);
+        }
+
         /* ===== MAIN LAYOUT ===== */
         .app-container {
             max-width: 1400px;
@@ -1172,12 +1374,34 @@
                     <div class="logo-subtitle">Powered by Arcane Intelligence</div>
                 </div>
             </div>
-            <nav class="nav-tabs">
+            <nav class="nav-tabs" id="mainNav">
                 <button class="nav-tab active" data-view="forge">&#9876; Forge</button>
                 <button class="nav-tab" data-view="library">&#128218; Library</button>
+                <button class="nav-tab" data-view="admin" id="adminTab" style="display:none;">&#9881; Admin</button>
             </nav>
+            <div class="header-right" id="headerRight" style="display:none;">
+                <div class="user-info">
+                    <div>
+                        <div class="user-info-name" id="headerDisplayName"></div>
+                        <div class="user-info-role" id="headerRole"></div>
+                    </div>
+                </div>
+                <button class="btn-logout" onclick="logout()">Logout</button>
+            </div>
         </div>
     </header>
+
+    <!-- LOGIN VIEW -->
+    <div id="loginView" class="login-backdrop">
+        <div class="login-panel">
+            <div class="logo-text">BEN'S MAGIC FORGE</div>
+            <div class="logo-subtitle">Enter the Sanctum</div>
+            <input type="text" id="loginUsername" class="login-field" placeholder="Username" autocomplete="username">
+            <input type="password" id="loginPassword" class="login-field" placeholder="Password" autocomplete="current-password">
+            <button class="btn-login" id="btnLogin" onclick="handleLogin()">Enter the Forge</button>
+            <div class="login-error" id="loginError"></div>
+        </div>
+    </div>
 
     <!-- MAIN -->
     <main class="app-container">
@@ -1380,6 +1604,40 @@
         <div id="view-detail" class="view">
             <div id="detailContent"></div>
         </div>
+
+        <!-- ADMIN VIEW -->
+        <div id="view-admin" class="view">
+            <div class="panel" style="padding:2rem;">
+                <div class="admin-section">
+                    <div class="admin-section-title">Users</div>
+                    <div id="adminUsersList"></div>
+                </div>
+                <div class="admin-section">
+                    <div class="admin-section-title">Create User</div>
+                    <div class="admin-form">
+                        <input type="text" id="newUsername" class="login-field" placeholder="Username">
+                        <input type="text" id="newDisplayName" class="login-field" placeholder="Display Name">
+                        <input type="password" id="newPassword" class="login-field" placeholder="Password">
+                        <select id="newRole" class="login-field">
+                            <option value="User">User</option>
+                            <option value="Admin">Admin</option>
+                        </select>
+                        <div class="admin-form-full">
+                            <button class="btn-outline" onclick="createUser()">Create User</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="admin-section">
+                    <div class="admin-section-title">Groups</div>
+                    <div id="adminGroupsList"></div>
+                    <div class="admin-form" style="grid-template-columns:1fr 1fr auto;">
+                        <input type="text" id="newGroupName" class="login-field" placeholder="Group Name">
+                        <input type="text" id="newGroupDesc" class="login-field" placeholder="Description">
+                        <button class="btn-outline" onclick="createGroup()">Add Group</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
 
     <!-- Dragon watermark -->
@@ -1441,9 +1699,108 @@
 
     <script>
         const API_BASE = '/api/decks';
+        const AUTH_BASE = '/api/auth';
         let currentDecks = [];
         let deleteTargetId = null;
         let currentDetailDeck = null;
+        let authToken = localStorage.getItem('authToken');
+        let currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+
+        // === Auth-aware fetch ===
+        async function authFetch(url, options = {}) {
+            if (!options.headers) options.headers = {};
+            if (authToken) options.headers['Authorization'] = `Bearer ${authToken}`;
+            const res = await fetch(url, options);
+            if (res.status === 401) {
+                logout();
+                throw new Error('Session expired. Please log in again.');
+            }
+            return res;
+        }
+
+        // === Auth ===
+        function showApp() {
+            document.getElementById('loginView').style.display = 'none';
+            document.querySelector('.app-header').style.display = '';
+            document.querySelector('.app-container').style.display = '';
+            document.getElementById('headerRight').style.display = '';
+            if (currentUser) {
+                document.getElementById('headerDisplayName').textContent = currentUser.displayName;
+                document.getElementById('headerRole').textContent = currentUser.role;
+                if (currentUser.role === 'Admin') {
+                    document.getElementById('adminTab').style.display = '';
+                } else {
+                    document.getElementById('adminTab').style.display = 'none';
+                }
+            }
+        }
+
+        function showLogin() {
+            document.getElementById('loginView').style.display = '';
+            document.querySelector('.app-header').style.display = 'none';
+            document.querySelector('.app-container').style.display = 'none';
+        }
+
+        async function handleLogin() {
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const errorEl = document.getElementById('loginError');
+            const btn = document.getElementById('btnLogin');
+            errorEl.textContent = '';
+
+            if (!username || !password) {
+                errorEl.textContent = 'Please enter username and password';
+                return;
+            }
+
+            btn.disabled = true;
+            try {
+                const res = await fetch(`${AUTH_BASE}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error || 'Login failed');
+                }
+                const data = await res.json();
+                authToken = data.token;
+                currentUser = { username: data.username, displayName: data.displayName, role: data.role };
+                localStorage.setItem('authToken', authToken);
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                document.getElementById('loginUsername').value = '';
+                document.getElementById('loginPassword').value = '';
+                showApp();
+            } catch (err) {
+                errorEl.textContent = err.message;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // Allow Enter key to submit login
+        document.getElementById('loginPassword').addEventListener('keydown', e => {
+            if (e.key === 'Enter') handleLogin();
+        });
+        document.getElementById('loginUsername').addEventListener('keydown', e => {
+            if (e.key === 'Enter') document.getElementById('loginPassword').focus();
+        });
+
+        function logout() {
+            authToken = null;
+            currentUser = null;
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('currentUser');
+            showLogin();
+        }
+
+        // Init: check if already logged in
+        if (authToken && currentUser) {
+            showApp();
+        } else {
+            showLogin();
+        }
 
         // === Navigation ===
         document.querySelectorAll('.nav-tab').forEach(tab => {
@@ -1455,11 +1812,13 @@
 
         function switchView(view) {
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-            document.querySelector(`.nav-tab[data-view="${view}"]`).classList.add('active');
+            const tabEl = document.querySelector(`.nav-tab[data-view="${view}"]`);
+            if (tabEl) tabEl.classList.add('active');
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.getElementById(`view-${view}`).classList.add('active');
 
             if (view === 'library') loadLibrary();
+            if (view === 'admin') loadAdminPanel();
         }
 
         // === Deck Generation ===
@@ -1494,7 +1853,7 @@
             overlay.classList.remove('hidden');
 
             try {
-                const res = await fetch(`${API_BASE}/generate`, {
+                const res = await authFetch(`${API_BASE}/generate`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(request)
@@ -1560,7 +1919,7 @@
         // === Library ===
         async function loadLibrary() {
             try {
-                const res = await fetch(API_BASE);
+                const res = await authFetch(API_BASE);
                 if (!res.ok) throw new Error('Failed to load decks');
                 currentDecks = await res.json();
                 renderLibrary();
@@ -1619,7 +1978,7 @@
         // === Deck Detail ===
         async function viewDeckDetail(id) {
             try {
-                const res = await fetch(`${API_BASE}/${id}`);
+                const res = await authFetch(`${API_BASE}/${id}`);
                 if (!res.ok) throw new Error('Deck not found');
                 const deck = await res.json();
                 currentDetailDeck = deck;
@@ -1761,7 +2120,7 @@
         async function confirmDelete() {
             if (!deleteTargetId) return;
             try {
-                const res = await fetch(`${API_BASE}/${deleteTargetId}`, { method: 'DELETE' });
+                const res = await authFetch(`${API_BASE}/${deleteTargetId}`, { method: 'DELETE' });
                 if (!res.ok) throw new Error('Delete failed');
                 showToast('Deck banished to the void');
                 closeDeleteModal();
@@ -1862,7 +2221,7 @@
         }
 
         // === Deck Export ===
-        function exportDeck(format) {
+        async function exportDeck(format) {
             if (!currentDetailDeck) return;
             const deck = currentDetailDeck;
             const safeName = (deck.deckName || 'deck').replace(/[^a-z0-9]/gi, '_');
@@ -1870,14 +2229,23 @@
             const csvFormats = ['csv', 'moxfield', 'archidekt', 'deckbox', 'deckstats'];
 
             if (csvFormats.includes(format)) {
-                // Use the server-side export for CSV formats
-                const a = document.createElement('a');
-                a.href = `${API_BASE}/${deck.id}/export/csv?format=${format}`;
-                a.download = `${safeName}_${format}.csv`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                showToast(`Deck exported as ${format.charAt(0).toUpperCase() + format.slice(1)} CSV!`);
+                // Use the server-side export for CSV formats (with auth)
+                try {
+                    const res = await authFetch(`${API_BASE}/${deck.id}/export/csv?format=${format}`);
+                    if (!res.ok) throw new Error('Export failed');
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${safeName}_${format}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    showToast(`Deck exported as ${format.charAt(0).toUpperCase() + format.slice(1)} CSV!`);
+                } catch (err) {
+                    showToast(err.message, true);
+                }
                 return;
             }
 
@@ -1911,7 +2279,7 @@
             formData.append('file', file);
 
             try {
-                const res = await fetch(`${API_BASE}/import/csv`, {
+                const res = await authFetch(`${API_BASE}/import/csv`, {
                     method: 'POST',
                     body: formData
                 });
@@ -1945,7 +2313,7 @@
                 </div>`;
             section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             try {
-                const res = await fetch(`${API_BASE}/${deckId}/analyze`, { method: 'POST' });
+                const res = await authFetch(`${API_BASE}/${deckId}/analyze`, { method: 'POST' });
                 if (!res.ok) throw new Error('Analysis failed');
                 const analysis = await res.json();
                 renderAnalysis(section, analysis);
@@ -1986,6 +2354,153 @@
             toast.textContent = msg;
             container.appendChild(toast);
             setTimeout(() => toast.remove(), 4000);
+        }
+
+        // === Admin Panel ===
+        async function loadAdminPanel() {
+            await Promise.all([loadAdminUsers(), loadAdminGroups()]);
+        }
+
+        async function loadAdminUsers() {
+            try {
+                const res = await authFetch(`${AUTH_BASE}/users`);
+                if (!res.ok) throw new Error('Failed to load users');
+                const users = await res.json();
+                const el = document.getElementById('adminUsersList');
+                if (users.length === 0) {
+                    el.innerHTML = '<p style="color:var(--text-muted);">No users found.</p>';
+                    return;
+                }
+                el.innerHTML = `
+                    <table class="admin-table">
+                        <thead><tr><th>Username</th><th>Display Name</th><th>Role</th><th>Created</th><th></th></tr></thead>
+                        <tbody>
+                            ${users.map(u => `
+                                <tr>
+                                    <td>${u.username}</td>
+                                    <td>${u.displayName}</td>
+                                    <td><span class="badge ${u.role === 'Admin' ? 'badge-admin' : 'badge-user'}">${u.role}</span></td>
+                                    <td style="color:var(--text-muted);font-size:0.85rem;">${new Date(u.createdAt).toLocaleDateString()}</td>
+                                    <td>${u.username !== currentUser?.username ? `<button class="btn-delete-card" onclick="deleteUser('${u.id}')" title="Delete user">&#128465;</button>` : ''}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>`;
+            } catch (err) {
+                showToast(err.message, true);
+            }
+        }
+
+        async function loadAdminGroups() {
+            try {
+                const res = await authFetch('/api/groups');
+                if (!res.ok) throw new Error('Failed to load groups');
+                const groups = await res.json();
+                const el = document.getElementById('adminGroupsList');
+                if (groups.length === 0) {
+                    el.innerHTML = '<p style="color:var(--text-muted);margin-bottom:1rem;">No groups yet.</p>';
+                    return;
+                }
+                el.innerHTML = `
+                    <table class="admin-table" style="margin-bottom:1rem;">
+                        <thead><tr><th>Name</th><th>Description</th><th>Created</th><th></th></tr></thead>
+                        <tbody>
+                            ${groups.map(g => `
+                                <tr>
+                                    <td>${g.name}</td>
+                                    <td style="color:var(--text-secondary);">${g.description || ''}</td>
+                                    <td style="color:var(--text-muted);font-size:0.85rem;">${new Date(g.createdAt).toLocaleDateString()}</td>
+                                    <td><button class="btn-delete-card" onclick="deleteGroup('${g.id}')" title="Delete group">&#128465;</button></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>`;
+            } catch (err) {
+                showToast(err.message, true);
+            }
+        }
+
+        async function createUser() {
+            const username = document.getElementById('newUsername').value.trim();
+            const displayName = document.getElementById('newDisplayName').value.trim();
+            const password = document.getElementById('newPassword').value;
+            const role = document.getElementById('newRole').value;
+
+            if (!username || !password || !displayName) {
+                showToast('All fields are required', true);
+                return;
+            }
+
+            try {
+                const res = await authFetch(`${AUTH_BASE}/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, displayName, role, groupIds: [] })
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error || 'Failed to create user');
+                }
+                showToast(`User "${username}" created!`);
+                document.getElementById('newUsername').value = '';
+                document.getElementById('newDisplayName').value = '';
+                document.getElementById('newPassword').value = '';
+                await loadAdminUsers();
+            } catch (err) {
+                showToast(err.message, true);
+            }
+        }
+
+        async function deleteUser(id) {
+            if (!confirm('Are you sure you want to delete this user?')) return;
+            try {
+                const res = await authFetch(`${AUTH_BASE}/users/${id}`, { method: 'DELETE' });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error || 'Failed to delete user');
+                }
+                showToast('User deleted');
+                await loadAdminUsers();
+            } catch (err) {
+                showToast(err.message, true);
+            }
+        }
+
+        async function createGroup() {
+            const name = document.getElementById('newGroupName').value.trim();
+            const description = document.getElementById('newGroupDesc').value.trim();
+
+            if (!name) {
+                showToast('Group name is required', true);
+                return;
+            }
+
+            try {
+                const res = await authFetch('/api/groups', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, description })
+                });
+                if (!res.ok) throw new Error('Failed to create group');
+                showToast(`Group "${name}" created!`);
+                document.getElementById('newGroupName').value = '';
+                document.getElementById('newGroupDesc').value = '';
+                await loadAdminGroups();
+            } catch (err) {
+                showToast(err.message, true);
+            }
+        }
+
+        async function deleteGroup(id) {
+            if (!confirm('Are you sure you want to delete this group?')) return;
+            try {
+                const res = await authFetch(`/api/groups/${id}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error('Failed to delete group');
+                showToast('Group deleted');
+                await loadAdminGroups();
+            } catch (err) {
+                showToast(err.message, true);
+            }
         }
     </script>
 </body>

@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MtgDeckForge.Api.Models;
 using MtgDeckForge.Api.Services;
@@ -6,6 +8,7 @@ namespace MtgDeckForge.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class DecksController : ControllerBase
 {
     private readonly DeckService _deckService;
@@ -19,10 +22,16 @@ public class DecksController : ControllerBase
         _logger = logger;
     }
 
+    private string GetUserId() => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+    private string GetDisplayName() => User.FindFirst("displayName")?.Value ?? User.Identity?.Name ?? "Unknown";
+    private bool IsAdmin() => User.IsInRole("Admin");
+
     [HttpGet]
     public async Task<ActionResult<List<DeckConfiguration>>> GetAll()
     {
-        var decks = await _deckService.GetAllAsync();
+        var decks = IsAdmin()
+            ? await _deckService.GetAllAsync()
+            : await _deckService.GetByUserIdAsync(GetUserId());
         return Ok(decks);
     }
 
@@ -32,6 +41,8 @@ public class DecksController : ControllerBase
         var deck = await _deckService.GetByIdAsync(id);
         if (deck is null)
             return NotFound();
+        if (!IsAdmin() && deck.UserId != GetUserId())
+            return Forbid();
         return Ok(deck);
     }
 
@@ -51,6 +62,8 @@ public class DecksController : ControllerBase
                 string.Join(",", request.Colors), request.Format);
 
             var deck = await _claudeService.GenerateDeckAsync(request);
+            deck.UserId = GetUserId();
+            deck.UserDisplayName = GetDisplayName();
             var saved = await _deckService.CreateAsync(deck);
 
             return CreatedAtAction(nameof(GetById), new { id = saved.Id }, saved);
@@ -70,6 +83,8 @@ public class DecksController : ControllerBase
             var deck = await _deckService.GetByIdAsync(id);
             if (deck is null)
                 return NotFound();
+            if (!IsAdmin() && deck.UserId != GetUserId())
+                return Forbid();
 
             _logger.LogInformation("Analyzing deck {Id}: {Name}", id, deck.DeckName);
             var analysis = await _claudeService.AnalyzeDeckAsync(deck);
@@ -90,6 +105,8 @@ public class DecksController : ControllerBase
         var deck = await _deckService.GetByIdAsync(id);
         if (deck is null)
             return NotFound();
+        if (!IsAdmin() && deck.UserId != GetUserId())
+            return Forbid();
 
         var csv = new System.Text.StringBuilder();
         var safeName = (deck.DeckName ?? "deck").Replace(" ", "_");
@@ -182,6 +199,8 @@ public class DecksController : ControllerBase
 
             var deck = new DeckConfiguration
             {
+                UserId = GetUserId(),
+                UserDisplayName = GetDisplayName(),
                 DeckName = deckName ?? Path.GetFileNameWithoutExtension(file.FileName),
                 Commander = cards.FirstOrDefault(c => c.Category.Equals("Commander", StringComparison.OrdinalIgnoreCase))?.Name ?? "",
                 Strategy = "Imported",
@@ -360,9 +379,13 @@ public class DecksController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(string id)
     {
-        var deleted = await _deckService.DeleteAsync(id);
-        if (!deleted)
+        var deck = await _deckService.GetByIdAsync(id);
+        if (deck is null)
             return NotFound();
+        if (!IsAdmin() && deck.UserId != GetUserId())
+            return Forbid();
+
+        await _deckService.DeleteAsync(id);
         return NoContent();
     }
 }

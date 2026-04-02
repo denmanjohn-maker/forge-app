@@ -20,6 +20,8 @@ public class DeckConfiguration
     public int TotalCards { get; set; }
     public string DeckDescription { get; set; } = null!;
     public List<CardEntry> Cards { get; set; } = new();
+    public string? UserId { get; set; }
+    public string? UserDisplayName { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

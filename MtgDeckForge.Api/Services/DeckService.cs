@@ -47,6 +47,11 @@ public class DeckService
         return deck;
     }
 
+    public async Task<List<DeckConfiguration>> GetByUserIdAsync(string userId) =>
+        await _decksCollection.Find(d => d.UserId == userId)
+            .SortByDescending(d => d.CreatedAt)
+            .ToListAsync();
+
     public async Task<bool> DeleteAsync(string id)
     {
         var result = await _decksCollection.DeleteOneAsync(x => x.Id == id);
