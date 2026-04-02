@@ -2000,10 +2000,13 @@
     <script>
         const API_BASE = '/api/decks';
         const AUTH_BASE = '/api/auth';
+        let currentDecks = [];
+        let totalDecks = 0;
+        let currentSkip = 0;
         const PAGE_SIZE = 12;
-
         let deleteTargetId = null;
         let currentDetailDeck = null;
+        let filterDebounceTimer = null;
         let authToken = localStorage.getItem('authToken');
         let currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
 
@@ -2158,12 +2161,40 @@
         }
 
         // === Library ===
-        async function loadLibrary() {
+        function getFilterParams() {
+            const params = new URLSearchParams();
+            const name = document.getElementById('filterName').value.trim();
+            if (name) params.set('name', name);
+            const activeColors = document.querySelectorAll('.filter-pip.active');
+            if (activeColors.length > 0) {
+                params.set('color', [...activeColors].map(el => el.dataset.color).join(''));
+            }
+            const format = document.getElementById('filterFormat').value;
+            if (format) params.set('format', format);
+            const power = document.getElementById('filterPower').value;
+            if (power) params.set('powerLevel', power);
+            return params;
+        }
+
+        async function loadLibrary(append) {
             try {
-                const res = await authFetch(API_BASE);
+                if (!append) {
+                    currentSkip = 0;
+                    currentDecks = [];
+                }
+                const params = getFilterParams();
+                params.set('skip', currentSkip);
+                params.set('limit', PAGE_SIZE);
+                const res = await authFetch(`${API_BASE}?${params}`);
                 if (!res.ok) throw new Error('Failed to load decks');
                 const data = await res.json();
-                currentDecks = Array.isArray(data) ? data : [];
+                const items = Array.isArray(data) ? data : (data.items || []);
+                totalDecks = data.total != null ? data.total : items.length;
+                if (append) {
+                    currentDecks = currentDecks.concat(items);
+                } else {
+                    currentDecks = items;
+                }
                 renderLibrary();
             } catch (err) {
                 document.getElementById('deckGrid').innerHTML = `
@@ -2216,21 +2247,40 @@
             applyFilters();
         }
 
-        async function fetchAndAppendDecks(reset) {
-            const name   = document.getElementById('filterName')?.value.trim() || '';
-            const format = document.getElementById('filterFormat')?.value || '';
-            const power  = document.getElementById('filterPower')?.value || '';
-            const color  = libActiveColor || '';
+        function loadMoreDecks() {
+            currentSkip += PAGE_SIZE;
+            loadLibrary(true);
+        }
 
-            const params = new URLSearchParams({ skip: libSkip, limit: PAGE_SIZE });
-            if (name)   params.set('name', name);
-            if (color)  params.set('color', color);
-            if (format) params.set('format', format);
-            if (power)  params.set('powerLevel', power);
+        function toggleColorFilter(el) {
+            el.classList.toggle('active');
+            applyFilters();
+        }
 
+        function applyFilters() {
+            loadLibrary();
+        }
+
+        function clearFilters() {
+            document.getElementById('filterName').value = '';
+            document.getElementById('filterFormat').value = '';
+            document.getElementById('filterPower').value = '';
+            document.querySelectorAll('.filter-pip.active').forEach(el => el.classList.remove('active'));
+            loadLibrary();
+        }
+
+        function debouncedSearch() {
+            clearTimeout(filterDebounceTimer);
+            filterDebounceTimer = setTimeout(() => loadLibrary(), 300);
+        }
+
+        function renderLibrary() {
             const grid = document.getElementById('deckGrid');
-            const countEl = document.getElementById('libraryCount');
+            const count = document.getElementById('libraryCount');
+            count.textContent = `${totalDecks} deck${totalDecks !== 1 ? 's' : ''} in your library`;
+
             const loadMoreWrap = document.getElementById('loadMoreWrap');
+            loadMoreWrap.style.display = (currentSkip + PAGE_SIZE < totalDecks) ? '' : 'none';
 
             try {
                 const res = await authFetch(`${API_BASE}?${params}`);
