@@ -1,5 +1,8 @@
+using System.Security.Claims;
 using System.Text;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using MtgDeckForge.Api.Models;
@@ -17,6 +20,9 @@ builder.Services.Configure<ClaudeApiSettings>(
     builder.Configuration.GetSection("ClaudeApi"));
 builder.Services.AddHttpClient<ClaudeService>();
 
+// Scryfall
+builder.Services.AddHttpClient<ScryfallService>();
+
 // JWT Settings
 builder.Services.Configure<JwtSettings>(
     builder.Configuration.GetSection("JwtSettings"));
@@ -27,6 +33,10 @@ builder.Services.AddSingleton<AuthService>();
 
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>()!;
+var jwtSecret = builder.Configuration["JwtSettings:Secret"]
+    ?? Environment.GetEnvironmentVariable("JWT_SECRET")
+    ?? jwtSettings.Secret;
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -39,10 +49,34 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidIssuer = jwtSettings.Issuer,
             ValidAudience = jwtSettings.Audience,
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(jwtSettings.Secret))
+                Encoding.UTF8.GetBytes(jwtSecret))
         };
     });
 builder.Services.AddAuthorization();
+
+// Rate limiting: 20 deck generations per user per 24 hours
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddPolicy("deck-generation", context =>
+    {
+        var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "anonymous";
+        return RateLimitPartition.GetFixedWindowLimiter(userId, _ =>
+            new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 20,
+                Window = TimeSpan.FromHours(24),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            });
+    });
+    options.RejectionStatusCode = 429;
+    options.OnRejected = async (ctx, token) =>
+    {
+        ctx.HttpContext.Response.ContentType = "application/json";
+        await ctx.HttpContext.Response.WriteAsync(
+            "{\"error\":\"Generation limit reached. You may generate up to 20 decks per 24 hours.\"}", token);
+    };
+});
 
 // Controllers + Swagger
 builder.Services.AddControllers();
@@ -74,32 +108,48 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// CORS for development
+// CORS — restrict in production, wide open in development
+var allowedOrigins = builder.Configuration["Cors:AllowedOrigins"]
+    ?? Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS");
+
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
+        if (builder.Environment.IsDevelopment() || string.IsNullOrEmpty(allowedOrigins))
+        {
+            policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+        }
+        else
+        {
+            var origins = allowedOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            policy.WithOrigins(origins).AllowAnyMethod().AllowAnyHeader();
+        }
     });
 });
 
 var app = builder.Build();
 
-// Seed admin user
+// Seed admin user — password from env var, falls back to default only in development
 using (var scope = app.Services.CreateScope())
 {
     var userService = scope.ServiceProvider.GetRequiredService<UserService>();
     var authService = scope.ServiceProvider.GetRequiredService<AuthService>();
     await userService.EnsureIndexesAsync();
-    await userService.SeedAdminUserAsync(authService.HashPassword("Blakd@l3k"));
+
+    var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD")
+        ?? builder.Configuration["AdminPassword"]
+        ?? (app.Environment.IsDevelopment() ? "Blakd@l3k" : null);
+
+    if (adminPassword != null)
+        await userService.SeedAdminUserAsync(authService.HashPassword(adminPassword));
 }
 
 app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseCors();
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();

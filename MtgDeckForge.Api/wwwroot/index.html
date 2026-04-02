@@ -1125,7 +1125,127 @@
             justify-content: center;
         }
 
-        /* Responsive */
+        /* Library filter bar */
+        .library-filters {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding: 1rem 1.25rem;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+
+        .filter-input {
+            background: var(--bg-deep);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: 'Crimson Text', serif;
+            font-size: 0.95rem;
+            padding: 0.45rem 0.85rem;
+            flex: 1;
+            min-width: 160px;
+            transition: border-color 0.2s;
+        }
+        .filter-input:focus { outline: none; border-color: var(--gold-dark); }
+        .filter-input::placeholder { color: var(--text-muted); }
+
+        .filter-select {
+            background: var(--bg-deep);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: 'Cinzel', serif;
+            font-size: 0.75rem;
+            padding: 0.45rem 0.85rem;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        .filter-select:focus { outline: none; border-color: var(--gold-dark); }
+
+        .filter-color-row {
+            display: flex;
+            gap: 0.4rem;
+            align-items: center;
+        }
+
+        .filter-pip {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+            font-family: 'MedievalSharp', cursive;
+            font-size: 0.7rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.45;
+            transition: all 0.2s;
+        }
+        .filter-pip.active { opacity: 1; border-color: var(--gold); box-shadow: 0 0 6px rgba(201,168,76,0.5); }
+        .filter-pip.W { background: radial-gradient(circle at 35% 35%, #FFFEF5, #F0E6C8); color: #6B5B3E; }
+        .filter-pip.U { background: radial-gradient(circle at 35% 35%, #1B8FD4, #0A4F7A); color: #C4E4FF; }
+        .filter-pip.B { background: radial-gradient(circle at 35% 35%, #3A3035, #100B0E); color: #A8959C; }
+        .filter-pip.R { background: radial-gradient(circle at 35% 35%, #E8482A, #8B1A1A); color: #FFCFB8; }
+        .filter-pip.G { background: radial-gradient(circle at 35% 35%, #1DA050, #0A5028); color: #B8F0C8; }
+
+        .btn-filter-clear {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            font-family: 'Cinzel', serif;
+            cursor: pointer;
+            padding: 0.3rem 0.5rem;
+            transition: color 0.2s;
+        }
+        .btn-filter-clear:hover { color: var(--gold); }
+
+        /* Load more button */
+        .load-more-wrap {
+            text-align: center;
+            margin-top: 2rem;
+        }
+
+        /* Edit modal */
+        .edit-modal-body {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            max-height: 70vh;
+            overflow-y: auto;
+            text-align: left;
+        }
+        .edit-field-group { display: flex; flex-direction: column; gap: 0.35rem; }
+        .edit-label {
+            font-family: 'Cinzel', serif;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .edit-input, .edit-textarea, .edit-select {
+            background: var(--bg-deep);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: 'Crimson Text', serif;
+            font-size: 0.95rem;
+            padding: 0.5rem 0.75rem;
+            transition: border-color 0.2s;
+        }
+        .edit-input:focus, .edit-textarea:focus, .edit-select:focus {
+            outline: none;
+            border-color: var(--gold-dark);
+        }
+        .edit-textarea { resize: vertical; min-height: 80px; }
+
+        /* Responsive — tablet */
         @media (max-width: 900px) {
             .forge-layout {
                 grid-template-columns: 1fr;
@@ -1134,13 +1254,17 @@
                 flex-direction: column;
                 height: auto;
                 padding: 1rem 0;
-                gap: 1rem;
+                gap: 0.75rem;
             }
             .nav-tabs {
                 height: auto;
+                width: 100%;
+                justify-content: center;
             }
             .nav-tab {
-                height: 48px;
+                height: 44px;
+                padding: 0 1rem;
+                font-size: 0.8rem;
             }
             .detail-header {
                 flex-direction: column;
@@ -1149,6 +1273,70 @@
             .detail-stats {
                 flex-wrap: wrap;
             }
+            .library-filters {
+                gap: 0.5rem;
+            }
+        }
+
+        /* Responsive — iPhone / small mobile */
+        @media (max-width: 480px) {
+            .app-container { padding: 1rem; }
+
+            .logo-text { font-size: 1.3rem; }
+            .logo-subtitle { display: none; }
+            .logo-dragon { width: 72px; height: 72px; }
+            .header-inner { padding: 0.75rem 0; gap: 0.5rem; }
+
+            .nav-tab { padding: 0 0.6rem; font-size: 0.72rem; letter-spacing: 0; }
+
+            .user-info-role { display: none; }
+            .user-info { padding: 0.3rem 0.6rem; }
+            .user-info-name { font-size: 0.7rem; }
+
+            /* Forge view */
+            .panel-body { padding: 1rem; }
+            .color-option label { width: 44px; height: 44px; font-size: 1.1rem; }
+            .btn-forge { font-size: 0.85rem; padding: 0.9rem 1rem; }
+
+            /* Library */
+            .library-title { font-size: 1.3rem; }
+            .deck-grid { grid-template-columns: 1fr; }
+            .library-filters { padding: 0.75rem; gap: 0.4rem; }
+            .filter-input { min-width: 100%; }
+            .filter-color-row { flex-wrap: wrap; }
+
+            /* Detail */
+            .detail-header h1 { font-size: 1.4rem; }
+            .card-row {
+                grid-template-columns: 2rem 1fr auto;
+                font-size: 1.1rem;
+                gap: 0.5rem;
+            }
+            .card-type-text { display: none; }
+            .detail-stats { gap: 0.75rem; }
+            .stat-box { padding: 0.75rem; min-width: 70px; }
+            .stat-value { font-size: 1.1rem; }
+
+            /* Modal */
+            .modal { padding: 1.5rem 1rem; }
+            .modal-actions { flex-direction: column; }
+            .modal-actions button { width: 100%; }
+
+            /* Buttons row in detail */
+            #detailContent .detail-actions {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            #detailContent .detail-actions button {
+                font-size: 0.7rem;
+                padding: 0.5rem 0.75rem;
+            }
+
+            /* Hide card image tooltip on touch devices */
+            .card-img-tooltip { display: none !important; }
+
+            /* Analysis panel */
+            .analysis-body { padding: 0.75rem; }
         }
 
         /* Loading shimmer for generation */
@@ -1593,13 +1781,45 @@
                     <div class="library-title">&#127984; Deck Library</div>
                     <div class="library-count" id="libraryCount">Loading...</div>
                 </div>
-                <div style="display:flex;gap:0.75rem;">
+                <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
                     <button class="btn-outline" onclick="document.getElementById('csvImportInput').click()">&#8593; Import CSV</button>
                     <button class="btn-outline" onclick="loadLibrary()">&#8635; Refresh</button>
                 </div>
                 <input type="file" id="csvImportInput" accept=".csv" style="display:none;" onchange="importCsvFile(this)">
             </div>
+
+            <!-- Filter bar -->
+            <div class="library-filters">
+                <input type="text" class="filter-input" id="filterName" placeholder="Search by name..." oninput="debouncedSearch()">
+                <div class="filter-color-row">
+                    <span style="font-family:'Cinzel',serif;font-size:0.7rem;color:var(--text-muted);margin-right:0.25rem;">COLOR</span>
+                    <span class="filter-pip W" data-color="W" onclick="toggleColorFilter(this)">W</span>
+                    <span class="filter-pip U" data-color="U" onclick="toggleColorFilter(this)">U</span>
+                    <span class="filter-pip B" data-color="B" onclick="toggleColorFilter(this)">B</span>
+                    <span class="filter-pip R" data-color="R" onclick="toggleColorFilter(this)">R</span>
+                    <span class="filter-pip G" data-color="G" onclick="toggleColorFilter(this)">G</span>
+                </div>
+                <select class="filter-select" id="filterFormat" onchange="applyFilters()">
+                    <option value="">All Formats</option>
+                    <option value="Commander">Commander</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Modern">Modern</option>
+                    <option value="Pioneer">Pioneer</option>
+                </select>
+                <select class="filter-select" id="filterPower" onchange="applyFilters()">
+                    <option value="">All Power Levels</option>
+                    <option value="Casual">Casual</option>
+                    <option value="Focused">Focused</option>
+                    <option value="Optimized">Optimized</option>
+                    <option value="Competitive">cEDH</option>
+                </select>
+                <button class="btn-filter-clear" onclick="clearFilters()">&#10005; Clear</button>
+            </div>
+
             <div id="deckGrid" class="deck-grid"></div>
+            <div class="load-more-wrap" id="loadMoreWrap" style="display:none;">
+                <button class="btn-outline" onclick="loadMoreDecks()">Load More</button>
+            </div>
         </div>
 
         <!-- DETAIL VIEW -->
@@ -1692,6 +1912,84 @@
             <div class="modal-actions">
                 <button class="btn-outline" onclick="closeDeleteModal()">Cancel</button>
                 <button class="btn-danger" id="btnConfirmDelete" onclick="confirmDelete()">&#128293; Banish</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="modal-overlay hidden" id="editModal">
+        <div class="modal" style="max-width:520px;width:95%;">
+            <h3 style="margin-bottom:1.25rem;">&#9998; Edit Deck</h3>
+            <div class="edit-modal-body">
+                <div class="edit-field-group">
+                    <label class="edit-label">Deck Name</label>
+                    <input type="text" class="edit-input" id="editDeckName">
+                </div>
+                <div class="edit-field-group">
+                    <label class="edit-label">Commander</label>
+                    <input type="text" class="edit-input" id="editCommander">
+                </div>
+                <div class="edit-field-group">
+                    <label class="edit-label">Description</label>
+                    <textarea class="edit-textarea" id="editDescription"></textarea>
+                </div>
+                <div class="edit-field-group">
+                    <label class="edit-label">Strategy</label>
+                    <input type="text" class="edit-input" id="editStrategy">
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                    <div class="edit-field-group">
+                        <label class="edit-label">Format</label>
+                        <select class="edit-select" id="editFormat">
+                            <option value="Commander">Commander</option>
+                            <option value="Standard">Standard</option>
+                            <option value="Modern">Modern</option>
+                            <option value="Pioneer">Pioneer</option>
+                        </select>
+                    </div>
+                    <div class="edit-field-group">
+                        <label class="edit-label">Power Level</label>
+                        <select class="edit-select" id="editPowerLevel">
+                            <option value="Casual">Casual</option>
+                            <option value="Focused">Focused</option>
+                            <option value="Optimized">Optimized</option>
+                            <option value="Competitive">cEDH</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="edit-field-group">
+                    <label class="edit-label">Budget Range</label>
+                    <select class="edit-select" id="editBudget">
+                        <option value="Budget (under $50)">Under $50</option>
+                        <option value="Mid-range ($50-$150)">$50–$150</option>
+                        <option value="High ($150-$500)">$150–$500</option>
+                        <option value="No budget limit">No Limit</option>
+                    </select>
+                </div>
+                <div class="edit-field-group">
+                    <label class="edit-label">Colors</label>
+                    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                        <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.9rem;cursor:pointer;">
+                            <input type="checkbox" id="editColorW" value="W"> <span class="mana-pip W" style="width:20px;height:20px;font-size:0.6rem;">W</span>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.9rem;cursor:pointer;">
+                            <input type="checkbox" id="editColorU" value="U"> <span class="mana-pip U" style="width:20px;height:20px;font-size:0.6rem;">U</span>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.9rem;cursor:pointer;">
+                            <input type="checkbox" id="editColorB" value="B"> <span class="mana-pip B" style="width:20px;height:20px;font-size:0.6rem;">B</span>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.9rem;cursor:pointer;">
+                            <input type="checkbox" id="editColorR" value="R"> <span class="mana-pip R" style="width:20px;height:20px;font-size:0.6rem;">R</span>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.9rem;cursor:pointer;">
+                            <input type="checkbox" id="editColorG" value="G"> <span class="mana-pip G" style="width:20px;height:20px;font-size:0.6rem;">G</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions" style="margin-top:1.5rem;">
+                <button class="btn-outline" onclick="closeEditModal()">Cancel</button>
+                <button class="btn-login" style="width:auto;padding:0.6rem 1.5rem;margin:0;" onclick="saveEdit()">Save Changes</button>
             </div>
         </div>
     </div>
