@@ -1125,7 +1125,127 @@
             justify-content: center;
         }
 
-        /* Responsive */
+        /* Library filter bar */
+        .library-filters {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding: 1rem 1.25rem;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+
+        .filter-input {
+            background: var(--bg-deep);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: 'Crimson Text', serif;
+            font-size: 0.95rem;
+            padding: 0.45rem 0.85rem;
+            flex: 1;
+            min-width: 160px;
+            transition: border-color 0.2s;
+        }
+        .filter-input:focus { outline: none; border-color: var(--gold-dark); }
+        .filter-input::placeholder { color: var(--text-muted); }
+
+        .filter-select {
+            background: var(--bg-deep);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: 'Cinzel', serif;
+            font-size: 0.75rem;
+            padding: 0.45rem 0.85rem;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        .filter-select:focus { outline: none; border-color: var(--gold-dark); }
+
+        .filter-color-row {
+            display: flex;
+            gap: 0.4rem;
+            align-items: center;
+        }
+
+        .filter-pip {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+            font-family: 'MedievalSharp', cursive;
+            font-size: 0.7rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.45;
+            transition: all 0.2s;
+        }
+        .filter-pip.active { opacity: 1; border-color: var(--gold); box-shadow: 0 0 6px rgba(201,168,76,0.5); }
+        .filter-pip.W { background: radial-gradient(circle at 35% 35%, #FFFEF5, #F0E6C8); color: #6B5B3E; }
+        .filter-pip.U { background: radial-gradient(circle at 35% 35%, #1B8FD4, #0A4F7A); color: #C4E4FF; }
+        .filter-pip.B { background: radial-gradient(circle at 35% 35%, #3A3035, #100B0E); color: #A8959C; }
+        .filter-pip.R { background: radial-gradient(circle at 35% 35%, #E8482A, #8B1A1A); color: #FFCFB8; }
+        .filter-pip.G { background: radial-gradient(circle at 35% 35%, #1DA050, #0A5028); color: #B8F0C8; }
+
+        .btn-filter-clear {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            font-family: 'Cinzel', serif;
+            cursor: pointer;
+            padding: 0.3rem 0.5rem;
+            transition: color 0.2s;
+        }
+        .btn-filter-clear:hover { color: var(--gold); }
+
+        /* Load more button */
+        .load-more-wrap {
+            text-align: center;
+            margin-top: 2rem;
+        }
+
+        /* Edit modal */
+        .edit-modal-body {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            max-height: 70vh;
+            overflow-y: auto;
+            text-align: left;
+        }
+        .edit-field-group { display: flex; flex-direction: column; gap: 0.35rem; }
+        .edit-label {
+            font-family: 'Cinzel', serif;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .edit-input, .edit-textarea, .edit-select {
+            background: var(--bg-deep);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: 'Crimson Text', serif;
+            font-size: 0.95rem;
+            padding: 0.5rem 0.75rem;
+            transition: border-color 0.2s;
+        }
+        .edit-input:focus, .edit-textarea:focus, .edit-select:focus {
+            outline: none;
+            border-color: var(--gold-dark);
+        }
+        .edit-textarea { resize: vertical; min-height: 80px; }
+
+        /* Responsive — tablet */
         @media (max-width: 900px) {
             .forge-layout {
                 grid-template-columns: 1fr;
@@ -1134,13 +1254,17 @@
                 flex-direction: column;
                 height: auto;
                 padding: 1rem 0;
-                gap: 1rem;
+                gap: 0.75rem;
             }
             .nav-tabs {
                 height: auto;
+                width: 100%;
+                justify-content: center;
             }
             .nav-tab {
-                height: 48px;
+                height: 44px;
+                padding: 0 1rem;
+                font-size: 0.8rem;
             }
             .detail-header {
                 flex-direction: column;
@@ -1149,6 +1273,70 @@
             .detail-stats {
                 flex-wrap: wrap;
             }
+            .library-filters {
+                gap: 0.5rem;
+            }
+        }
+
+        /* Responsive — iPhone / small mobile */
+        @media (max-width: 480px) {
+            .app-container { padding: 1rem; }
+
+            .logo-text { font-size: 1.3rem; }
+            .logo-subtitle { display: none; }
+            .logo-dragon { width: 72px; height: 72px; }
+            .header-inner { padding: 0.75rem 0; gap: 0.5rem; }
+
+            .nav-tab { padding: 0 0.6rem; font-size: 0.72rem; letter-spacing: 0; }
+
+            .user-info-role { display: none; }
+            .user-info { padding: 0.3rem 0.6rem; }
+            .user-info-name { font-size: 0.7rem; }
+
+            /* Forge view */
+            .panel-body { padding: 1rem; }
+            .color-option label { width: 44px; height: 44px; font-size: 1.1rem; }
+            .btn-forge { font-size: 0.85rem; padding: 0.9rem 1rem; }
+
+            /* Library */
+            .library-title { font-size: 1.3rem; }
+            .deck-grid { grid-template-columns: 1fr; }
+            .library-filters { padding: 0.75rem; gap: 0.4rem; }
+            .filter-input { min-width: 100%; }
+            .filter-color-row { flex-wrap: wrap; }
+
+            /* Detail */
+            .detail-header h1 { font-size: 1.4rem; }
+            .card-row {
+                grid-template-columns: 2rem 1fr auto;
+                font-size: 1.1rem;
+                gap: 0.5rem;
+            }
+            .card-type-text { display: none; }
+            .detail-stats { gap: 0.75rem; }
+            .stat-box { padding: 0.75rem; min-width: 70px; }
+            .stat-value { font-size: 1.1rem; }
+
+            /* Modal */
+            .modal { padding: 1.5rem 1rem; }
+            .modal-actions { flex-direction: column; }
+            .modal-actions button { width: 100%; }
+
+            /* Buttons row in detail */
+            #detailContent .detail-actions {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            #detailContent .detail-actions button {
+                font-size: 0.7rem;
+                padding: 0.5rem 0.75rem;
+            }
+
+            /* Hide card image tooltip on touch devices */
+            .card-img-tooltip { display: none !important; }
+
+            /* Analysis panel */
+            .analysis-body { padding: 0.75rem; }
         }
 
         /* Loading shimmer for generation */
@@ -1593,13 +1781,45 @@
                     <div class="library-title">&#127984; Deck Library</div>
                     <div class="library-count" id="libraryCount">Loading...</div>
                 </div>
-                <div style="display:flex;gap:0.75rem;">
+                <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
                     <button class="btn-outline" onclick="document.getElementById('csvImportInput').click()">&#8593; Import CSV</button>
                     <button class="btn-outline" onclick="loadLibrary()">&#8635; Refresh</button>
                 </div>
                 <input type="file" id="csvImportInput" accept=".csv" style="display:none;" onchange="importCsvFile(this)">
             </div>
+
+            <!-- Filter bar -->
+            <div class="library-filters">
+                <input type="text" class="filter-input" id="filterName" placeholder="Search by name..." oninput="debouncedSearch()">
+                <div class="filter-color-row">
+                    <span style="font-family:'Cinzel',serif;font-size:0.7rem;color:var(--text-muted);margin-right:0.25rem;">COLOR</span>
+                    <span class="filter-pip W" data-color="W" onclick="toggleColorFilter(this)">W</span>
+                    <span class="filter-pip U" data-color="U" onclick="toggleColorFilter(this)">U</span>
+                    <span class="filter-pip B" data-color="B" onclick="toggleColorFilter(this)">B</span>
+                    <span class="filter-pip R" data-color="R" onclick="toggleColorFilter(this)">R</span>
+                    <span class="filter-pip G" data-color="G" onclick="toggleColorFilter(this)">G</span>
+                </div>
+                <select class="filter-select" id="filterFormat" onchange="applyFilters()">
+                    <option value="">All Formats</option>
+                    <option value="Commander">Commander</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Modern">Modern</option>
+                    <option value="Pioneer">Pioneer</option>
+                </select>
+                <select class="filter-select" id="filterPower" onchange="applyFilters()">
+                    <option value="">All Power Levels</option>
+                    <option value="Casual">Casual</option>
+                    <option value="Focused">Focused</option>
+                    <option value="Optimized">Optimized</option>
+                    <option value="Competitive">cEDH</option>
+                </select>
+                <button class="btn-filter-clear" onclick="clearFilters()">&#10005; Clear</button>
+            </div>
+
             <div id="deckGrid" class="deck-grid"></div>
+            <div class="load-more-wrap" id="loadMoreWrap" style="display:none;">
+                <button class="btn-outline" onclick="loadMoreDecks()">Load More</button>
+            </div>
         </div>
 
         <!-- DETAIL VIEW -->
@@ -1696,27 +1916,109 @@
         </div>
     </div>
 
+    <!-- Edit Modal -->
+    <div class="modal-overlay hidden" id="editModal">
+        <div class="modal" style="max-width:520px;width:95%;">
+            <h3 style="margin-bottom:1.25rem;">&#9998; Edit Deck</h3>
+            <div class="edit-modal-body">
+                <div class="edit-field-group">
+                    <label class="edit-label">Deck Name</label>
+                    <input type="text" class="edit-input" id="editDeckName">
+                </div>
+                <div class="edit-field-group">
+                    <label class="edit-label">Commander</label>
+                    <input type="text" class="edit-input" id="editCommander">
+                </div>
+                <div class="edit-field-group">
+                    <label class="edit-label">Description</label>
+                    <textarea class="edit-textarea" id="editDescription"></textarea>
+                </div>
+                <div class="edit-field-group">
+                    <label class="edit-label">Strategy</label>
+                    <input type="text" class="edit-input" id="editStrategy">
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                    <div class="edit-field-group">
+                        <label class="edit-label">Format</label>
+                        <select class="edit-select" id="editFormat">
+                            <option value="Commander">Commander</option>
+                            <option value="Standard">Standard</option>
+                            <option value="Modern">Modern</option>
+                            <option value="Pioneer">Pioneer</option>
+                        </select>
+                    </div>
+                    <div class="edit-field-group">
+                        <label class="edit-label">Power Level</label>
+                        <select class="edit-select" id="editPowerLevel">
+                            <option value="Casual">Casual</option>
+                            <option value="Focused">Focused</option>
+                            <option value="Optimized">Optimized</option>
+                            <option value="Competitive">cEDH</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="edit-field-group">
+                    <label class="edit-label">Budget Range</label>
+                    <select class="edit-select" id="editBudget">
+                        <option value="Budget (under $50)">Under $50</option>
+                        <option value="Mid-range ($50-$150)">$50–$150</option>
+                        <option value="High ($150-$500)">$150–$500</option>
+                        <option value="No budget limit">No Limit</option>
+                    </select>
+                </div>
+                <div class="edit-field-group">
+                    <label class="edit-label">Colors</label>
+                    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                        <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.9rem;cursor:pointer;">
+                            <input type="checkbox" id="editColorW" value="W"> <span class="mana-pip W" style="width:20px;height:20px;font-size:0.6rem;">W</span>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.9rem;cursor:pointer;">
+                            <input type="checkbox" id="editColorU" value="U"> <span class="mana-pip U" style="width:20px;height:20px;font-size:0.6rem;">U</span>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.9rem;cursor:pointer;">
+                            <input type="checkbox" id="editColorB" value="B"> <span class="mana-pip B" style="width:20px;height:20px;font-size:0.6rem;">B</span>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.9rem;cursor:pointer;">
+                            <input type="checkbox" id="editColorR" value="R"> <span class="mana-pip R" style="width:20px;height:20px;font-size:0.6rem;">R</span>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.9rem;cursor:pointer;">
+                            <input type="checkbox" id="editColorG" value="G"> <span class="mana-pip G" style="width:20px;height:20px;font-size:0.6rem;">G</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions" style="margin-top:1.5rem;">
+                <button class="btn-outline" onclick="closeEditModal()">Cancel</button>
+                <button class="btn-login" style="width:auto;padding:0.6rem 1.5rem;margin:0;" onclick="saveEdit()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
 
     <script>
         const API_BASE = '/api/decks';
         const AUTH_BASE = '/api/auth';
-        let currentDecks = [];
+        const PAGE_SIZE = 12;
+
         let deleteTargetId = null;
         let currentDetailDeck = null;
         let authToken = localStorage.getItem('authToken');
         let currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+
+        // Library pagination + filter state
+        let libSkip = 0;
+        let libTotal = 0;
+        let libActiveColor = null;
+        let _searchTimer = null;
 
         // === Auth-aware fetch ===
         async function authFetch(url, options = {}) {
             if (!options.headers) options.headers = {};
             if (authToken) options.headers['Authorization'] = `Bearer ${authToken}`;
             const res = await fetch(url, options);
-            if (res.status === 401) {
-                logout();
-                throw new Error('Session expired. Please log in again.');
-            }
+            if (res.status === 401) { logout(); throw new Error('Session expired. Please log in again.'); }
             return res;
         }
 
@@ -1729,11 +2031,7 @@
             if (currentUser) {
                 document.getElementById('headerDisplayName').textContent = currentUser.displayName;
                 document.getElementById('headerRole').textContent = currentUser.role;
-                if (currentUser.role === 'Admin') {
-                    document.getElementById('adminTab').style.display = '';
-                } else {
-                    document.getElementById('adminTab').style.display = 'none';
-                }
+                document.getElementById('adminTab').style.display = currentUser.role === 'Admin' ? '' : 'none';
             }
         }
 
@@ -1749,12 +2047,7 @@
             const errorEl = document.getElementById('loginError');
             const btn = document.getElementById('btnLogin');
             errorEl.textContent = '';
-
-            if (!username || !password) {
-                errorEl.textContent = 'Please enter username and password';
-                return;
-            }
-
+            if (!username || !password) { errorEl.textContent = 'Please enter username and password'; return; }
             btn.disabled = true;
             try {
                 const res = await fetch(`${AUTH_BASE}/login`, {
@@ -1762,10 +2055,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
                 });
-                if (!res.ok) {
-                    const err = await res.json();
-                    throw new Error(err.error || 'Login failed');
-                }
+                if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Login failed'); }
                 const data = await res.json();
                 authToken = data.token;
                 currentUser = { username: data.username, displayName: data.displayName, role: data.role };
@@ -1781,35 +2071,20 @@
             }
         }
 
-        // Allow Enter key to submit login
-        document.getElementById('loginPassword').addEventListener('keydown', e => {
-            if (e.key === 'Enter') handleLogin();
-        });
-        document.getElementById('loginUsername').addEventListener('keydown', e => {
-            if (e.key === 'Enter') document.getElementById('loginPassword').focus();
-        });
+        document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
+        document.getElementById('loginUsername').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginPassword').focus(); });
 
         function logout() {
-            authToken = null;
-            currentUser = null;
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('currentUser');
+            authToken = null; currentUser = null;
+            localStorage.removeItem('authToken'); localStorage.removeItem('currentUser');
             showLogin();
         }
 
-        // Init: check if already logged in
-        if (authToken && currentUser) {
-            showApp();
-        } else {
-            showLogin();
-        }
+        if (authToken && currentUser) { showApp(); } else { showLogin(); }
 
         // === Navigation ===
         document.querySelectorAll('.nav-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                const view = tab.dataset.view;
-                switchView(view);
-            });
+            tab.addEventListener('click', () => switchView(tab.dataset.view));
         });
 
         function switchView(view) {
@@ -1818,7 +2093,6 @@
             if (tabEl) tabEl.classList.add('active');
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.getElementById(`view-${view}`).classList.add('active');
-
             if (view === 'library') loadLibrary();
             if (view === 'admin') loadAdminPanel();
         }
@@ -1826,11 +2100,7 @@
         // === Deck Generation ===
         async function generateDeck() {
             const colors = [...document.querySelectorAll('input[name="colors"]:checked')].map(c => c.value);
-            if (colors.length === 0) {
-                showToast('Select at least one mana color', true);
-                return;
-            }
-
+            if (colors.length === 0) { showToast('Select at least one mana color', true); return; }
             const format = document.querySelector('input[name="format"]:checked').value;
             const powerLevel = document.querySelector('input[name="powerLevel"]:checked').value;
             const budget = document.querySelector('input[name="budget"]:checked').value;
@@ -1838,50 +2108,30 @@
             const commander = document.getElementById('commander').value;
             const notes = document.getElementById('notes').value;
 
-            const request = {
-                colors,
-                format,
-                powerLevel,
-                budgetRange: budget,
-                preferredStrategy: strategy || null,
-                preferredCommander: commander || null,
-                additionalNotes: notes || null
-            };
+            const request = { colors, format, powerLevel, budgetRange: budget,
+                preferredStrategy: strategy || null, preferredCommander: commander || null, additionalNotes: notes || null };
 
             const btn = document.getElementById('btnGenerate');
             const overlay = document.getElementById('generatingOverlay');
-            btn.disabled = true;
-            btn.classList.add('loading');
-            overlay.classList.remove('hidden');
-
+            btn.disabled = true; btn.classList.add('loading'); overlay.classList.remove('hidden');
             try {
                 const res = await authFetch(`${API_BASE}/generate`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(request)
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request)
                 });
-
-                if (!res.ok) {
-                    const err = await res.json();
-                    throw new Error(err.details || err.error || 'Generation failed');
-                }
-
+                if (!res.ok) { const err = await res.json(); throw new Error(err.details || err.error || 'Generation failed'); }
                 const deck = await res.json();
                 showDeckPreview(deck);
                 showToast('Deck forged successfully!');
             } catch (err) {
                 showToast(err.message, true);
             } finally {
-                btn.disabled = false;
-                btn.classList.remove('loading');
-                overlay.classList.add('hidden');
+                btn.disabled = false; btn.classList.remove('loading'); overlay.classList.add('hidden');
             }
         }
 
         function showDeckPreview(deck) {
             const panel = document.getElementById('previewPanel');
             const categories = groupByCategory(deck.cards || []);
-
             panel.innerHTML = `
                 <div class="deck-card-colors" style="margin-bottom:1rem;">
                     ${(deck.colors || []).map(c => `<span class="mana-pip ${c}">${c}</span>`).join('')}
@@ -1891,31 +2141,20 @@
                 ${deck.commander ? `<div style="color:var(--text-secondary);font-style:italic;margin-bottom:0.75rem;">Commander: ${deck.commander}</div>` : ''}
                 ${deck.deckDescription ? `<p style="color:var(--text-secondary);font-size:0.9rem;line-height:1.5;margin-bottom:1rem;">${deck.deckDescription}</p>` : ''}
                 <div style="display:flex;gap:1rem;margin-bottom:1rem;">
-                    <div class="stat-box">
-                        <div class="stat-value">${deck.totalCards || (deck.cards||[]).reduce((s,c)=>s+c.quantity,0)}</div>
-                        <div class="stat-label">Cards</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-value">$${(deck.estimatedTotalPrice || 0).toFixed(0)}</div>
-                        <div class="stat-label">Est. Cost</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-value">${Object.keys(categories).length}</div>
-                        <div class="stat-label">Categories</div>
-                    </div>
+                    <div class="stat-box"><div class="stat-value">${deck.totalCards || (deck.cards||[]).reduce((s,c)=>s+c.quantity,0)}</div><div class="stat-label">Cards</div></div>
+                    <div class="stat-box"><div class="stat-value">$${(deck.estimatedTotalPrice || 0).toFixed(0)}</div><div class="stat-label">Est. Cost</div></div>
+                    <div class="stat-box"><div class="stat-value">${Object.keys(categories).length}</div><div class="stat-label">Categories</div></div>
                 </div>
                 ${Object.entries(categories).map(([cat, cards]) => `
                     <div style="margin-bottom:0.75rem;">
                         <div style="font-family:'Cinzel',serif;font-size:1rem;color:var(--gold-dark);margin-bottom:0.25rem;">${cat} (${cards.reduce((s,c)=>s+c.quantity,0)})</div>
-                        ${cards.slice(0, 5).map(c => `<div style="font-size:1rem;color:var(--text-secondary);padding:0.15rem 0;">${c.quantity}x ${c.name}</div>`).join('')}
+                        ${cards.slice(0,5).map(c => `<div style="font-size:1rem;color:var(--text-secondary);padding:0.15rem 0;">${c.quantity}x ${c.name}</div>`).join('')}
                         ${cards.length > 5 ? `<div style="font-size:1rem;color:var(--text-muted);">... and ${cards.length - 5} more</div>` : ''}
-                    </div>
-                `).join('')}
+                    </div>`).join('')}
                 <div style="display:flex;gap:0.75rem;margin-top:1.25rem;">
                     <button class="btn-outline" onclick="viewDeckDetail('${deck.id}')">View Full Deck</button>
                     <button class="btn-outline" onclick="switchView('library')">Go to Library</button>
-                </div>
-            `;
+                </div>`;
         }
 
         // === Library ===
@@ -1931,51 +2170,120 @@
                     <div class="library-empty" style="grid-column:1/-1;">
                         <p style="color:var(--danger);">Failed to load library: ${err.message}</p>
                     </div>`;
-            }
+            libSkip = 0;
+            document.getElementById('deckGrid').innerHTML = '';
+            await fetchAndAppendDecks(true);
         }
 
-        function renderLibrary() {
-            const grid = document.getElementById('deckGrid');
-            const count = document.getElementById('libraryCount');
-            count.textContent = `${currentDecks.length} deck${currentDecks.length !== 1 ? 's' : ''} in your library`;
+        async function loadMoreDecks() {
+            await fetchAndAppendDecks(false);
+        }
 
-            if (currentDecks.length === 0) {
-                grid.innerHTML = `
-                    <div class="library-empty" style="grid-column:1/-1;">
-                        <svg class="sigil" viewBox="0 0 80 80" fill="none">
-                            <circle cx="40" cy="40" r="36" stroke="currentColor" stroke-width="0.8" opacity="0.18"/>
-                            <path d="M 5 40 C 18 18 62 18 75 40 C 62 62 18 62 5 40 Z" stroke="currentColor" stroke-width="1.2" fill="none" opacity="0.32"/>
-                            <ellipse cx="40" cy="40" rx="5" ry="18" stroke="currentColor" stroke-width="1" fill="none" opacity="0.28"/>
-                            <ellipse cx="40" cy="40" rx="13" ry="13" stroke="currentColor" stroke-width="0.6" fill="none" opacity="0.15"/>
-                            <line x1="40" y1="4" x2="40" y2="22" stroke="currentColor" stroke-width="0.7" opacity="0.18"/>
-                            <line x1="40" y1="58" x2="40" y2="76" stroke="currentColor" stroke-width="0.7" opacity="0.18"/>
-                        </svg>
-                        <h3>The dragon&#8217;s hoard is empty</h3>
-                        <p>Visit the Forge to create your first deck</p>
-                    </div>`;
-                return;
+        async function applyFilters() {
+            libSkip = 0;
+            document.getElementById('deckGrid').innerHTML = '';
+            await fetchAndAppendDecks(true);
+        }
+
+        function debouncedSearch() {
+            clearTimeout(_searchTimer);
+            _searchTimer = setTimeout(applyFilters, 350);
+        }
+
+        function toggleColorFilter(el) {
+            const color = el.dataset.color;
+            if (libActiveColor === color) {
+                libActiveColor = null;
+                el.classList.remove('active');
+            } else {
+                if (libActiveColor) {
+                    document.querySelector(`.filter-pip[data-color="${libActiveColor}"]`)?.classList.remove('active');
+                }
+                libActiveColor = color;
+                el.classList.add('active');
             }
+            applyFilters();
+        }
 
-            grid.innerHTML = currentDecks.map(deck => `
-                <div class="deck-card" onclick="viewDeckDetail('${deck.id}')">
-                    <div class="deck-card-top">
-                        <div class="deck-card-colors">
-                            ${(deck.colors || []).map(c => `<span class="mana-pip ${c}">${c}</span>`).join('')}
+        function clearFilters() {
+            document.getElementById('filterName').value = '';
+            document.getElementById('filterFormat').value = '';
+            document.getElementById('filterPower').value = '';
+            if (libActiveColor) {
+                document.querySelector(`.filter-pip[data-color="${libActiveColor}"]`)?.classList.remove('active');
+                libActiveColor = null;
+            }
+            applyFilters();
+        }
+
+        async function fetchAndAppendDecks(reset) {
+            const name   = document.getElementById('filterName')?.value.trim() || '';
+            const format = document.getElementById('filterFormat')?.value || '';
+            const power  = document.getElementById('filterPower')?.value || '';
+            const color  = libActiveColor || '';
+
+            const params = new URLSearchParams({ skip: libSkip, limit: PAGE_SIZE });
+            if (name)   params.set('name', name);
+            if (color)  params.set('color', color);
+            if (format) params.set('format', format);
+            if (power)  params.set('powerLevel', power);
+
+            const grid = document.getElementById('deckGrid');
+            const countEl = document.getElementById('libraryCount');
+            const loadMoreWrap = document.getElementById('loadMoreWrap');
+
+            try {
+                const res = await authFetch(`${API_BASE}?${params}`);
+                if (!res.ok) throw new Error('Failed to load decks');
+                const paged = await res.json();
+                libTotal = paged.total;
+                libSkip += paged.items.length;
+
+                countEl.textContent = `${paged.total} deck${paged.total !== 1 ? 's' : ''}`;
+
+                if (reset && paged.items.length === 0) {
+                    grid.innerHTML = `
+                        <div class="library-empty" style="grid-column:1/-1;">
+                            <svg class="sigil" viewBox="0 0 80 80" fill="none">
+                                <circle cx="40" cy="40" r="36" stroke="currentColor" stroke-width="0.8" opacity="0.18"/>
+                                <path d="M 5 40 C 18 18 62 18 75 40 C 62 62 18 62 5 40 Z" stroke="currentColor" stroke-width="1.2" fill="none" opacity="0.32"/>
+                                <ellipse cx="40" cy="40" rx="5" ry="18" stroke="currentColor" stroke-width="1" fill="none" opacity="0.28"/>
+                                <ellipse cx="40" cy="40" rx="13" ry="13" stroke="currentColor" stroke-width="0.6" fill="none" opacity="0.15"/>
+                                <line x1="40" y1="4" x2="40" y2="22" stroke="currentColor" stroke-width="0.7" opacity="0.18"/>
+                                <line x1="40" y1="58" x2="40" y2="76" stroke="currentColor" stroke-width="0.7" opacity="0.18"/>
+                            </svg>
+                            <h3>The dragon&#8217;s hoard is empty</h3>
+                            <p>Visit the Forge to create your first deck</p>
+                        </div>`;
+                    loadMoreWrap.style.display = 'none';
+                    return;
+                }
+
+                grid.insertAdjacentHTML('beforeend', paged.items.map(deck => `
+                    <div class="deck-card" onclick="viewDeckDetail('${deck.id}')">
+                        <div class="deck-card-top">
+                            <div class="deck-card-colors">
+                                ${(deck.colors || []).map(c => `<span class="mana-pip ${c}">${c}</span>`).join('')}
+                            </div>
+                            <div class="deck-card-name">${deck.deckName || 'Untitled'}</div>
+                            ${deck.commander ? `<div class="deck-card-commander">${deck.commander}</div>` : ''}
+                            <div class="deck-card-desc">${deck.deckDescription || deck.strategy || ''}</div>
                         </div>
-                        <div class="deck-card-name">${deck.deckName || 'Untitled'}</div>
-                        ${deck.commander ? `<div class="deck-card-commander">${deck.commander}</div>` : ''}
-                        <div class="deck-card-desc">${deck.deckDescription || deck.strategy || ''}</div>
-                    </div>
-                    <div class="deck-card-footer">
-                        <div class="deck-card-meta">
-                            <span>&#127183; ${deck.totalCards || '?'} cards</span>
-                            <span>&#128176; $${(deck.estimatedTotalPrice || 0).toFixed(0)}</span>
-                            <span>${deck.format || ''}</span>
+                        <div class="deck-card-footer">
+                            <div class="deck-card-meta">
+                                <span>&#127183; ${deck.totalCards || '?'} cards</span>
+                                <span>&#128176; $${(deck.estimatedTotalPrice || 0).toFixed(0)}</span>
+                                <span>${deck.format || ''}</span>
+                            </div>
+                            <button class="btn-delete-card" onclick="event.stopPropagation(); openDeleteModal('${deck.id}')">&#128465;</button>
                         </div>
-                        <button class="btn-delete-card" onclick="event.stopPropagation(); openDeleteModal('${deck.id}')">&#128465;</button>
-                    </div>
-                </div>
-            `).join('');
+                    </div>`).join(''));
+
+                loadMoreWrap.style.display = paged.hasMore ? '' : 'none';
+            } catch (err) {
+                if (reset) grid.innerHTML = `<div class="library-empty" style="grid-column:1/-1;"><p style="color:var(--danger);">Failed to load library: ${err.message}</p></div>`;
+                loadMoreWrap.style.display = 'none';
+            }
         }
 
         // === Deck Detail ===
@@ -1997,30 +2305,24 @@
 
         function buildManaCurveHtml(cards) {
             const nonLands = (cards || []).filter(c => c.category !== 'Land' && c.category !== 'Commander');
-            const counts = [0,1,2,3,4,5].map(cmc =>
-                nonLands.filter(c => (c.cmc||0) === cmc).reduce((s,c) => s + c.quantity, 0)
-            );
+            const counts = [0,1,2,3,4,5].map(cmc => nonLands.filter(c => (c.cmc||0) === cmc).reduce((s,c) => s + c.quantity, 0));
             counts.push(nonLands.filter(c => (c.cmc||0) >= 6).reduce((s,c) => s + c.quantity, 0));
             const max = Math.max(...counts, 1);
             const labels = ['0','1','2','3','4','5','6+'];
             const maxBarH = 60;
-            const barsHtml = counts.map((count, i) => {
+            const barsHtml = counts.map((count) => {
                 const h = count > 0 ? Math.max(Math.round((count / max) * maxBarH), 4) : 0;
-                return `
-                    <div style="display:flex;flex-direction:column;align-items:center;flex:1;justify-content:flex-end;gap:2px;">
-                        <div style="font-size:0.75rem;color:var(--text-secondary);min-height:14px;text-align:center;">${count > 0 ? count : ''}</div>
-                        <div style="width:100%;height:${h}px;background:linear-gradient(180deg,var(--gold) 0%,var(--gold-dark) 100%);border-radius:3px 3px 0 0;${count===0?'opacity:0.15':''}"></div>
-                    </div>`;
-            }).join('');
-            const labelsHtml = labels.map(l =>
-                `<div style="font-size:0.75rem;color:var(--text-muted);text-align:center;flex:1;">${l}</div>`
-            ).join('');
-            return `
-                <div style="margin-bottom:2rem;">
-                    <div style="font-family:'Cinzel',serif;font-size:1rem;color:var(--gold);margin-bottom:0.75rem;text-transform:uppercase;letter-spacing:0.05em;">Mana Curve</div>
-                    <div style="display:flex;align-items:flex-end;gap:6px;height:76px;">${barsHtml}</div>
-                    <div style="display:flex;gap:6px;margin-top:4px;">${labelsHtml}</div>
+                return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;justify-content:flex-end;gap:2px;">
+                    <div style="font-size:0.75rem;color:var(--text-secondary);min-height:14px;text-align:center;">${count > 0 ? count : ''}</div>
+                    <div style="width:100%;height:${h}px;background:linear-gradient(180deg,var(--gold) 0%,var(--gold-dark) 100%);border-radius:3px 3px 0 0;${count===0?'opacity:0.15':''}"></div>
                 </div>`;
+            }).join('');
+            const labelsHtml = labels.map(l => `<div style="font-size:0.75rem;color:var(--text-muted);text-align:center;flex:1;">${l}</div>`).join('');
+            return `<div style="margin-bottom:2rem;">
+                <div style="font-family:'Cinzel',serif;font-size:1rem;color:var(--gold);margin-bottom:0.75rem;text-transform:uppercase;letter-spacing:0.05em;">Mana Curve</div>
+                <div style="display:flex;align-items:flex-end;gap:6px;height:76px;">${barsHtml}</div>
+                <div style="display:flex;gap:6px;margin-top:4px;">${labelsHtml}</div>
+            </div>`;
         }
 
         function renderDetail(deck) {
@@ -2029,38 +2331,29 @@
             const nonLandCards = (deck.cards || []).filter(c => c.category !== 'Land');
             const nonLandTotal = nonLandCards.reduce((s,c) => s + c.quantity, 0);
             const avgCmc = nonLandTotal > 0
-                ? (nonLandCards.reduce((s,c) => s + c.cmc * c.quantity, 0) / nonLandTotal).toFixed(2)
-                : '0';
+                ? (nonLandCards.reduce((s,c) => s + c.cmc * c.quantity, 0) / nonLandTotal).toFixed(2) : '0';
+
+            const cachedAnalysisHtml = deck.lastAnalysis
+                ? `<div id="analysisSection">${buildAnalysisHtml(deck.lastAnalysis, deck.lastAnalyzedAt, deck.id)}</div>`
+                : `<div id="analysisSection"></div>`;
 
             document.getElementById('detailContent').innerHTML = `
                 <button class="detail-back" onclick="switchView('library')">&#8592; Back to Library</button>
                 <div class="detail-header">
                     <div>
-                        <div class="detail-colors">
-                            ${(deck.colors || []).map(c => `<span class="mana-pip ${c}">${c}</span>`).join('')}
-                        </div>
+                        <div class="detail-colors">${(deck.colors || []).map(c => `<span class="mana-pip ${c}">${c}</span>`).join('')}</div>
                         <h1>${deck.deckName || 'Untitled Deck'}</h1>
                         ${deck.commander ? `<div class="detail-commander">Commander: ${deck.commander}</div>` : ''}
                         <div class="detail-strategy">${deck.strategy || ''}</div>
                     </div>
                     <div class="detail-stats">
-                        <div class="stat-box">
-                            <div class="stat-value">${totalCards}</div>
-                            <div class="stat-label">Cards</div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="stat-value">$${(deck.estimatedTotalPrice || 0).toFixed(0)}</div>
-                            <div class="stat-label">Est. Cost</div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="stat-value">${avgCmc}</div>
-                            <div class="stat-label">Avg CMC</div>
-                        </div>
+                        <div class="stat-box"><div class="stat-value">${totalCards}</div><div class="stat-label">Cards</div></div>
+                        <div class="stat-box"><div class="stat-value">$${(deck.estimatedTotalPrice || 0).toFixed(0)}</div><div class="stat-label">Est. Cost</div></div>
+                        <div class="stat-box"><div class="stat-value">${avgCmc}</div><div class="stat-label">Avg CMC</div></div>
                     </div>
                 </div>
 
                 ${deck.deckDescription ? `<div class="deck-description-box">${deck.deckDescription}</div>` : ''}
-
                 ${buildManaCurveHtml(deck.cards)}
 
                 ${Object.entries(categories).map(([cat, cards]) => `
@@ -2078,12 +2371,10 @@
                                 </div>
                                 <span class="card-type-text">${c.cardType || ''}</span>
                                 <span class="card-price">$${(c.estimatedPrice || 0).toFixed(2)}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                `).join('')}
+                            </div>`).join('')}
+                    </div>`).join('')}
 
-                <div style="display:flex;gap:1rem;margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--border);flex-wrap:wrap;">
+                <div class="detail-actions" style="display:flex;gap:0.75rem;margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--border);flex-wrap:wrap;">
                     <button class="btn-outline" onclick="exportDeck('mtga')">&#8659; MTGA</button>
                     <button class="btn-outline" onclick="exportDeck('text')">&#8659; Text</button>
                     <button class="btn-outline" onclick="exportDeck('csv')">&#8659; CSV</button>
@@ -2091,20 +2382,19 @@
                     <button class="btn-outline" onclick="exportDeck('archidekt')">&#8659; Archidekt</button>
                     <button class="btn-outline" onclick="exportDeck('deckbox')">&#8659; Deckbox</button>
                     <button class="btn-outline" onclick="exportDeck('deckstats')">&#8659; Deckstats</button>
-                    <button class="btn-outline" onclick="analyzeDeck('${deck.id}')">&#9879; Analyze with AI</button>
+                    <button class="btn-outline" onclick="openEditModal(currentDetailDeck)">&#9998; Edit</button>
+                    <button class="btn-outline" onclick="copyDeck('${deck.id}')">&#10064; Copy</button>
+                    <button class="btn-outline" onclick="reAnalyzeDeck('${deck.id}')">&#9879; ${deck.lastAnalysis ? 'Re-Analyze' : 'Analyze with AI'}</button>
                     <button class="btn-danger" onclick="openDeleteModal('${deck.id}')">&#128293; Banish Deck</button>
                 </div>
 
-                <div id="analysisSection"></div>
-            `;
+                ${cachedAnalysisHtml}`;
 
-            // Attach card image hover listeners after rendering
             document.querySelectorAll('[data-cn]').forEach(el => {
                 el.addEventListener('mouseenter', e => showCardImage(e, el.dataset.cn));
                 el.addEventListener('mouseleave', hideCardImage);
                 el.addEventListener('mousemove', e => {
-                    if (document.getElementById('cardImgTooltip').classList.contains('visible'))
-                        positionTooltip(e);
+                    if (document.getElementById('cardImgTooltip').classList.contains('visible')) positionTooltip(e);
                 });
             });
         }
@@ -2114,12 +2404,10 @@
             deleteTargetId = id;
             document.getElementById('deleteModal').classList.remove('hidden');
         }
-
         function closeDeleteModal() {
             deleteTargetId = null;
             document.getElementById('deleteModal').classList.add('hidden');
         }
-
         async function confirmDelete() {
             if (!deleteTargetId) return;
             try {
@@ -2127,27 +2415,76 @@
                 if (!res.ok) throw new Error('Delete failed');
                 showToast('Deck banished to the void');
                 closeDeleteModal();
-                // If we're on detail view, go back to library
                 if (document.getElementById('view-detail').classList.contains('active')) {
                     switchView('library');
                 } else {
                     loadLibrary();
                 }
-            } catch (err) {
-                showToast(err.message, true);
-            }
+            } catch (err) { showToast(err.message, true); }
+        }
+
+        // === Edit ===
+        function openEditModal(deck) {
+            if (!deck) return;
+            document.getElementById('editDeckName').value    = deck.deckName || '';
+            document.getElementById('editCommander').value   = deck.commander || '';
+            document.getElementById('editDescription').value = deck.deckDescription || '';
+            document.getElementById('editStrategy').value    = deck.strategy || '';
+            document.getElementById('editFormat').value      = deck.format || 'Commander';
+            document.getElementById('editPowerLevel').value  = deck.powerLevel || 'Casual';
+            document.getElementById('editBudget').value      = deck.budgetRange || 'Budget (under $50)';
+            ['W','U','B','R','G'].forEach(c => {
+                document.getElementById(`editColor${c}`).checked = (deck.colors || []).includes(c);
+            });
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+        }
+        async function saveEdit() {
+            if (!currentDetailDeck) return;
+            const colors = ['W','U','B','R','G'].filter(c => document.getElementById(`editColor${c}`).checked);
+            const req = {
+                deckName:        document.getElementById('editDeckName').value.trim(),
+                commander:       document.getElementById('editCommander').value.trim(),
+                deckDescription: document.getElementById('editDescription').value.trim(),
+                strategy:        document.getElementById('editStrategy').value.trim(),
+                format:          document.getElementById('editFormat').value,
+                powerLevel:      document.getElementById('editPowerLevel').value,
+                budgetRange:     document.getElementById('editBudget').value,
+                colors
+            };
+            try {
+                const res = await authFetch(`${API_BASE}/${currentDetailDeck.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(req)
+                });
+                if (!res.ok) throw new Error('Save failed');
+                const updated = await res.json();
+                currentDetailDeck = updated;
+                renderDetail(updated);
+                closeEditModal();
+                showToast('Deck updated!');
+            } catch (err) { showToast(err.message, true); }
+        }
+
+        // === Copy ===
+        async function copyDeck(id) {
+            try {
+                const res = await authFetch(`${API_BASE}/${id}/copy`, { method: 'POST' });
+                if (!res.ok) throw new Error('Copy failed');
+                const copy = await res.json();
+                showToast(`Deck copied as "${copy.deckName}"!`);
+                // Don't navigate away — just notify
+            } catch (err) { showToast(err.message, true); }
         }
 
         // === Helpers ===
         function groupByCategory(cards) {
             const order = ['Commander', 'Creature', 'Instant', 'Sorcery', 'Enchantment', 'Artifact', 'Planeswalker', 'Land'];
             const groups = {};
-            cards.forEach(c => {
-                const cat = c.category || 'Other';
-                if (!groups[cat]) groups[cat] = [];
-                groups[cat].push(c);
-            });
-            // Sort by predefined order
+            cards.forEach(c => { const cat = c.category || 'Other'; if (!groups[cat]) groups[cat] = []; groups[cat].push(c); });
             const sorted = {};
             order.forEach(cat => { if (groups[cat]) sorted[cat] = groups[cat]; });
             Object.keys(groups).forEach(cat => { if (!sorted[cat]) sorted[cat] = groups[cat]; });
@@ -2158,55 +2495,36 @@
         const _cardImageCache = new Map();
         let _imgTooltipTimer = null;
         let _activeHoverCard = null;
+        const _isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
         function showCardImage(event, cardName) {
+            if (_isTouchDevice) return;
             clearTimeout(_imgTooltipTimer);
             _activeHoverCard = cardName;
             _imgTooltipTimer = setTimeout(() => _fetchAndShowImage(event, cardName), 300);
         }
 
         async function _fetchAndShowImage(event, cardName) {
-            // Guard: user already moved off this card
             if (_activeHoverCard !== cardName) return;
-
             const tooltip = document.getElementById('cardImgTooltip');
-            const imgEl  = document.getElementById('cardImgEl');
-
+            const imgEl   = document.getElementById('cardImgEl');
             let url;
             if (_cardImageCache.has(cardName)) {
                 url = _cardImageCache.get(cardName);
             } else {
                 try {
-                    // fuzzy matching handles slight Claude name variations
                     const resp = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(cardName)}`);
                     if (resp.ok) {
                         const data = await resp.json();
                         url = data.image_uris?.normal ?? data.card_faces?.[0]?.image_uris?.normal ?? null;
-                    } else {
-                        url = null;
-                    }
-                } catch {
-                    url = null;
-                }
+                    } else { url = null; }
+                } catch { url = null; }
                 _cardImageCache.set(cardName, url);
             }
-
-            // Guard again after async gap
             if (_activeHoverCard !== cardName || !url) return;
-
-            // Wait for image to load before showing (avoids blank flash)
-            imgEl.onload = () => {
-                if (_activeHoverCard === cardName) {
-                    positionTooltip(event);
-                    tooltip.classList.add('visible');
-                }
-            };
+            imgEl.onload = () => { if (_activeHoverCard === cardName) { positionTooltip(event); tooltip.classList.add('visible'); } };
             imgEl.src = url;
-            // If browser already has it cached, onload won't fire — show immediately
-            if (imgEl.complete && imgEl.naturalHeight > 0) {
-                positionTooltip(event);
-                tooltip.classList.add('visible');
-            }
+            if (imgEl.complete && imgEl.naturalHeight > 0) { positionTooltip(event); tooltip.classList.add('visible'); }
         }
 
         function positionTooltip(event) {
@@ -2214,7 +2532,7 @@
             const x = event.clientX + 18, y = event.clientY - 60;
             const tipW = 476, tipH = 666;
             tooltip.style.left = (x + tipW > window.innerWidth ? x - tipW - 24 : x) + 'px';
-            tooltip.style.top = Math.max(8, Math.min(y, window.innerHeight - tipH - 8)) + 'px';
+            tooltip.style.top  = Math.max(8, Math.min(y, window.innerHeight - tipH - 8)) + 'px';
         }
 
         function hideCardImage() {
@@ -2228,47 +2546,35 @@
             if (!currentDetailDeck) return;
             const deck = currentDetailDeck;
             const safeName = (deck.deckName || 'deck').replace(/[^a-z0-9]/gi, '_');
-            const esc = (s) => `"${(s || '').replace(/"/g, '""')}"`;
             const csvFormats = ['csv', 'moxfield', 'archidekt', 'deckbox', 'deckstats'];
-
             if (csvFormats.includes(format)) {
-                // Use the server-side export for CSV formats (with auth)
                 try {
                     const res = await authFetch(`${API_BASE}/${deck.id}/export/csv?format=${format}`);
                     if (!res.ok) throw new Error('Export failed');
                     const blob = await res.blob();
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `${safeName}_${format}.csv`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
+                    a.href = url; a.download = `${safeName}_${format}.csv`;
+                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
                     URL.revokeObjectURL(url);
                     showToast(`Deck exported as ${format.charAt(0).toUpperCase() + format.slice(1)} CSV!`);
-                } catch (err) {
-                    showToast(err.message, true);
-                }
+                } catch (err) { showToast(err.message, true); }
                 return;
             }
-
             let text = '';
             if (format === 'mtga') {
-                const commander = (deck.cards || []).filter(c => c.category === 'Commander');
-                const mainboard = (deck.cards || []).filter(c => c.category !== 'Commander');
-                if (commander.length > 0) { text += 'Commander\n'; commander.forEach(c => { text += `1 ${c.name}\n`; }); text += '\nDeck\n'; }
-                mainboard.forEach(c => { text += `${c.quantity} ${c.name}\n`; });
+                const cmd = (deck.cards || []).filter(c => c.category === 'Commander');
+                const main = (deck.cards || []).filter(c => c.category !== 'Commander');
+                if (cmd.length > 0) { text += 'Commander\n'; cmd.forEach(c => { text += `1 ${c.name}\n`; }); text += '\nDeck\n'; }
+                main.forEach(c => { text += `${c.quantity} ${c.name}\n`; });
             } else {
                 (deck.cards || []).forEach(c => { text += `${c.quantity} ${c.name}\n`; });
             }
             const blob = new Blob([text], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url;
-            a.download = `${safeName}.txt`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            a.href = url; a.download = `${safeName}.txt`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
             URL.revokeObjectURL(url);
             showToast('Deck exported!');
         }
@@ -2277,33 +2583,21 @@
         async function importCsvFile(input) {
             const file = input.files[0];
             if (!file) return;
-
             const formData = new FormData();
             formData.append('file', file);
-
+            showToast('Importing and enriching cards via Scryfall...');
             try {
-                const res = await authFetch(`${API_BASE}/import/csv`, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (!res.ok) {
-                    const err = await res.json();
-                    throw new Error(err.details || err.error || 'Import failed');
-                }
-
+                const res = await authFetch(`${API_BASE}/import/csv`, { method: 'POST', body: formData });
+                if (!res.ok) { const err = await res.json(); throw new Error(err.details || err.error || 'Import failed'); }
                 const deck = await res.json();
-                showToast(`Imported "${deck.deckName}" with ${deck.totalCards} cards!`);
+                showToast(`Imported "${deck.deckName}" — ${deck.totalCards} cards, $${(deck.estimatedTotalPrice||0).toFixed(0)} est.`);
                 loadLibrary();
-            } catch (err) {
-                showToast(err.message, true);
-            } finally {
-                input.value = '';
-            }
+            } catch (err) { showToast(err.message, true); }
+            finally { input.value = ''; }
         }
 
         // === AI Deck Analysis ===
-        async function analyzeDeck(deckId) {
+        async function reAnalyzeDeck(deckId) {
             const section = document.getElementById('analysisSection');
             if (!section) return;
             section.innerHTML = `
@@ -2319,16 +2613,21 @@
                 const res = await authFetch(`${API_BASE}/${deckId}/analyze`, { method: 'POST' });
                 if (!res.ok) throw new Error('Analysis failed');
                 const analysis = await res.json();
-                renderAnalysis(section, analysis);
+                // Update local copy so cached badge shows correctly
+                if (currentDetailDeck && currentDetailDeck.id === deckId) {
+                    currentDetailDeck.lastAnalysis = analysis;
+                    currentDetailDeck.lastAnalyzedAt = new Date().toISOString();
+                }
+                section.innerHTML = buildAnalysisHtml(analysis, new Date().toISOString(), deckId);
             } catch (err) {
                 section.innerHTML = `<div style="color:var(--danger);font-size:0.9rem;margin-top:1rem;padding:1rem;">Analysis failed: ${err.message}</div>`;
             }
         }
 
-        function renderAnalysis(section, a) {
-            const weaknesses = (a.weaknesses || []).map(w => `<li>${w}</li>`).join('');
+        function buildAnalysisHtml(a, analyzedAt, deckId) {
+            const weaknesses  = (a.weaknesses || []).map(w => `<li>${w}</li>`).join('');
             const suggestions = (a.improvementSuggestions || []).map(s => `<li>${s}</li>`).join('');
-            const upgrades = (a.cardUpgrades || []).map(u => `
+            const upgrades    = (a.cardUpgrades || []).map(u => `
                 <div class="upgrade-row">
                     <div class="upgrade-swap">
                         <span class="upgrade-remove">&#x2715; ${u.removeCard}</span>
@@ -2337,9 +2636,13 @@
                     </div>
                     <div class="upgrade-reason">${u.reason}</div>
                 </div>`).join('');
-            section.innerHTML = `
+            const dateStr = analyzedAt ? `<span style="color:var(--text-muted);font-size:0.75rem;margin-left:0.75rem;">Analyzed ${new Date(analyzedAt).toLocaleDateString()}</span>` : '';
+            return `
                 <div class="analysis-panel">
-                    <div class="analysis-panel-header">&#9879; AI Analysis</div>
+                    <div class="analysis-panel-header" style="display:flex;align-items:center;justify-content:space-between;">
+                        <span>&#9879; AI Analysis${dateStr}</span>
+                        <button class="btn-filter-clear" onclick="reAnalyzeDeck('${deckId}')" style="font-size:0.7rem;">&#8635; Refresh</button>
+                    </div>
                     <div class="analysis-body">
                         <div class="analysis-rating">Overall Rating: ${a.overallRating || 'N/A'}</div>
                         <div class="analysis-synergy">${a.synergyAssessment || ''}</div>
@@ -2370,28 +2673,21 @@
                 if (!res.ok) throw new Error('Failed to load users');
                 const users = await res.json();
                 const el = document.getElementById('adminUsersList');
-                if (users.length === 0) {
-                    el.innerHTML = '<p style="color:var(--text-muted);">No users found.</p>';
-                    return;
-                }
+                if (users.length === 0) { el.innerHTML = '<p style="color:var(--text-muted);">No users found.</p>'; return; }
                 el.innerHTML = `
                     <table class="admin-table">
                         <thead><tr><th>Username</th><th>Display Name</th><th>Role</th><th>Created</th><th></th></tr></thead>
-                        <tbody>
-                            ${users.map(u => `
-                                <tr>
-                                    <td>${u.username}</td>
-                                    <td>${u.displayName}</td>
-                                    <td><span class="badge ${u.role === 'Admin' ? 'badge-admin' : 'badge-user'}">${u.role}</span></td>
-                                    <td style="color:var(--text-muted);font-size:0.85rem;">${new Date(u.createdAt).toLocaleDateString()}</td>
-                                    <td>${u.username !== currentUser?.username ? `<button class="btn-delete-card" onclick="deleteUser('${u.id}')" title="Delete user">&#128465;</button>` : ''}</td>
-                                </tr>
-                            `).join('')}
+                        <tbody>${users.map(u => `
+                            <tr>
+                                <td>${u.username}</td>
+                                <td>${u.displayName}</td>
+                                <td><span class="badge ${u.role === 'Admin' ? 'badge-admin' : 'badge-user'}">${u.role}</span></td>
+                                <td style="color:var(--text-muted);font-size:0.85rem;">${new Date(u.createdAt).toLocaleDateString()}</td>
+                                <td>${u.username !== currentUser?.username ? `<button class="btn-delete-card" onclick="deleteUser('${u.id}')" title="Delete user">&#128465;</button>` : ''}</td>
+                            </tr>`).join('')}
                         </tbody>
                     </table>`;
-            } catch (err) {
-                showToast(err.message, true);
-            }
+            } catch (err) { showToast(err.message, true); }
         }
 
         async function loadAdminGroups() {
@@ -2400,27 +2696,20 @@
                 if (!res.ok) throw new Error('Failed to load groups');
                 const groups = await res.json();
                 const el = document.getElementById('adminGroupsList');
-                if (groups.length === 0) {
-                    el.innerHTML = '<p style="color:var(--text-muted);margin-bottom:1rem;">No groups yet.</p>';
-                    return;
-                }
+                if (groups.length === 0) { el.innerHTML = '<p style="color:var(--text-muted);margin-bottom:1rem;">No groups yet.</p>'; return; }
                 el.innerHTML = `
                     <table class="admin-table" style="margin-bottom:1rem;">
                         <thead><tr><th>Name</th><th>Description</th><th>Created</th><th></th></tr></thead>
-                        <tbody>
-                            ${groups.map(g => `
-                                <tr>
-                                    <td>${g.name}</td>
-                                    <td style="color:var(--text-secondary);">${g.description || ''}</td>
-                                    <td style="color:var(--text-muted);font-size:0.85rem;">${new Date(g.createdAt).toLocaleDateString()}</td>
-                                    <td><button class="btn-delete-card" onclick="deleteGroup('${g.id}')" title="Delete group">&#128465;</button></td>
-                                </tr>
-                            `).join('')}
+                        <tbody>${groups.map(g => `
+                            <tr>
+                                <td>${g.name}</td>
+                                <td style="color:var(--text-secondary);">${g.description || ''}</td>
+                                <td style="color:var(--text-muted);font-size:0.85rem;">${new Date(g.createdAt).toLocaleDateString()}</td>
+                                <td><button class="btn-delete-card" onclick="deleteGroup('${g.id}')" title="Delete group">&#128465;</button></td>
+                            </tr>`).join('')}
                         </tbody>
                     </table>`;
-            } catch (err) {
-                showToast(err.message, true);
-            }
+            } catch (err) { showToast(err.message, true); }
         }
 
         async function createUser() {
@@ -2428,60 +2717,38 @@
             const displayName = document.getElementById('newDisplayName').value.trim();
             const password = document.getElementById('newPassword').value;
             const role = document.getElementById('newRole').value;
-
-            if (!username || !password || !displayName) {
-                showToast('All fields are required', true);
-                return;
-            }
-
+            if (!username || !password || !displayName) { showToast('All fields are required', true); return; }
             try {
                 const res = await authFetch(`${AUTH_BASE}/register`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password, displayName, role, groupIds: [] })
                 });
-                if (!res.ok) {
-                    const err = await res.json();
-                    throw new Error(err.error || 'Failed to create user');
-                }
+                if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Failed to create user'); }
                 showToast(`User "${username}" created!`);
                 document.getElementById('newUsername').value = '';
                 document.getElementById('newDisplayName').value = '';
                 document.getElementById('newPassword').value = '';
                 await loadAdminUsers();
-            } catch (err) {
-                showToast(err.message, true);
-            }
+            } catch (err) { showToast(err.message, true); }
         }
 
         async function deleteUser(id) {
             if (!confirm('Are you sure you want to delete this user?')) return;
             try {
                 const res = await authFetch(`${AUTH_BASE}/users/${id}`, { method: 'DELETE' });
-                if (!res.ok) {
-                    const err = await res.json();
-                    throw new Error(err.error || 'Failed to delete user');
-                }
+                if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Failed to delete user'); }
                 showToast('User deleted');
                 await loadAdminUsers();
-            } catch (err) {
-                showToast(err.message, true);
-            }
+            } catch (err) { showToast(err.message, true); }
         }
 
         async function createGroup() {
             const name = document.getElementById('newGroupName').value.trim();
             const description = document.getElementById('newGroupDesc').value.trim();
-
-            if (!name) {
-                showToast('Group name is required', true);
-                return;
-            }
-
+            if (!name) { showToast('Group name is required', true); return; }
             try {
                 const res = await authFetch('/api/groups', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, description })
                 });
                 if (!res.ok) throw new Error('Failed to create group');
@@ -2489,9 +2756,7 @@
                 document.getElementById('newGroupName').value = '';
                 document.getElementById('newGroupDesc').value = '';
                 await loadAdminGroups();
-            } catch (err) {
-                showToast(err.message, true);
-            }
+            } catch (err) { showToast(err.message, true); }
         }
 
         async function deleteGroup(id) {
@@ -2501,9 +2766,7 @@
                 if (!res.ok) throw new Error('Failed to delete group');
                 showToast('Group deleted');
                 await loadAdminGroups();
-            } catch (err) {
-                showToast(err.message, true);
-            }
+            } catch (err) { showToast(err.message, true); }
         }
     </script>
 </body>

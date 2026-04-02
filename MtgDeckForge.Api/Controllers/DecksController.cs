@@ -1,6 +1,8 @@
 using System.Security.Claims;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using MtgDeckForge.Api.Models;
 using MtgDeckForge.Api.Services;
 
@@ -13,12 +15,14 @@ public class DecksController : ControllerBase
 {
     private readonly DeckService _deckService;
     private readonly ClaudeService _claudeService;
+    private readonly ScryfallService _scryfallService;
     private readonly ILogger<DecksController> _logger;
 
-    public DecksController(DeckService deckService, ClaudeService claudeService, ILogger<DecksController> logger)
+    public DecksController(DeckService deckService, ClaudeService claudeService, ScryfallService scryfallService, ILogger<DecksController> logger)
     {
         _deckService = deckService;
         _claudeService = claudeService;
+        _scryfallService = scryfallService;
         _logger = logger;
     }
 
@@ -27,12 +31,18 @@ public class DecksController : ControllerBase
     private bool IsAdmin() => User.IsInRole("Admin");
 
     [HttpGet]
-    public async Task<ActionResult<List<DeckConfiguration>>> GetAll()
+    public async Task<ActionResult<PagedResult<DeckConfiguration>>> GetAll(
+        [FromQuery] string? name,
+        [FromQuery] string? color,
+        [FromQuery] string? format,
+        [FromQuery] string? powerLevel,
+        [FromQuery] int skip = 0,
+        [FromQuery] int limit = 12)
     {
-        var decks = IsAdmin()
-            ? await _deckService.GetAllAsync()
-            : await _deckService.GetByUserIdAsync(GetUserId());
-        return Ok(decks);
+        limit = Math.Clamp(limit, 1, 100);
+        var result = await _deckService.GetPagedAsync(
+            GetUserId(), IsAdmin(), name, color, format, powerLevel, skip, limit);
+        return Ok(result);
     }
 
     [HttpGet("{id}")]
@@ -55,11 +65,12 @@ public class DecksController : ControllerBase
     }
 
     [HttpPost("generate")]
+    [EnableRateLimiting("deck-generation")]
     public async Task<ActionResult<DeckConfiguration>> Generate([FromBody] DeckGenerationRequest request)
     {
         try
         {
-            _logger.LogInformation("Generating deck with colors: {Colors}, format: {Format}", 
+            _logger.LogInformation("Generating deck with colors: {Colors}, format: {Format}",
                 string.Join(",", request.Colors), request.Format);
 
             var deck = await _claudeService.GenerateDeckAsync(request);
@@ -76,6 +87,60 @@ public class DecksController : ControllerBase
         }
     }
 
+    [HttpPatch("{id}")]
+    public async Task<ActionResult<DeckConfiguration>> Update(string id, [FromBody] DeckUpdateRequest request)
+    {
+        var deck = await _deckService.GetByIdAsync(id);
+        if (deck is null)
+            return NotFound();
+        if (!IsAdmin() && deck.UserId != GetUserId())
+            return Forbid();
+
+        await _deckService.UpdateAsync(id, request);
+        var updated = await _deckService.GetByIdAsync(id);
+        return Ok(updated);
+    }
+
+    [HttpPost("{id}/copy")]
+    public async Task<ActionResult<DeckConfiguration>> Copy(string id)
+    {
+        var source = await _deckService.GetByIdAsync(id);
+        if (source is null)
+            return NotFound();
+        if (!IsAdmin() && source.UserId != GetUserId())
+            return Forbid();
+
+        var copy = new DeckConfiguration
+        {
+            DeckName = $"Copy of {source.DeckName}",
+            Commander = source.Commander,
+            Strategy = source.Strategy,
+            Format = source.Format,
+            Colors = new List<string>(source.Colors),
+            PowerLevel = source.PowerLevel,
+            BudgetRange = source.BudgetRange,
+            EstimatedTotalPrice = source.EstimatedTotalPrice,
+            TotalCards = source.TotalCards,
+            DeckDescription = source.DeckDescription,
+            Cards = source.Cards.Select(c => new CardEntry
+            {
+                Name = c.Name,
+                Quantity = c.Quantity,
+                ManaCost = c.ManaCost,
+                Cmc = c.Cmc,
+                CardType = c.CardType,
+                Category = c.Category,
+                RoleInDeck = c.RoleInDeck,
+                EstimatedPrice = c.EstimatedPrice
+            }).ToList(),
+            UserId = GetUserId(),
+            UserDisplayName = GetDisplayName()
+        };
+
+        var saved = await _deckService.CreateAsync(copy);
+        return CreatedAtAction(nameof(GetById), new { id = saved.Id }, saved);
+    }
+
     [HttpPost("{id}/analyze")]
     public async Task<ActionResult<DeckAnalysis>> Analyze(string id)
     {
@@ -89,6 +154,10 @@ public class DecksController : ControllerBase
 
             _logger.LogInformation("Analyzing deck {Id}: {Name}", id, deck.DeckName);
             var analysis = await _claudeService.AnalyzeDeckAsync(deck);
+
+            // Persist the analysis so it can be recalled without re-querying Claude
+            await _deckService.UpdateAnalysisAsync(id, analysis);
+
             return Ok(analysis);
         }
         catch (Exception ex)
@@ -155,7 +224,7 @@ public class DecksController : ControllerBase
         return File(System.Text.Encoding.UTF8.GetBytes(csv.ToString()), "text/csv", $"{safeName}_{format}.csv");
     }
 
-    // === CSV Import (auto-detects format) ===
+    // === CSV Import (auto-detects format, enriches via Scryfall, generates description) ===
 
     [HttpPost("import/csv")]
     public async Task<ActionResult<DeckConfiguration>> ImportCsv(IFormFile file, [FromForm] string? deckName)
@@ -184,11 +253,11 @@ public class DecksController : ControllerBase
                 var fields = ParseCsvLine(line);
                 var card = detectedFormat switch
                 {
-                    "moxfield" => ParseMoxfield(fields, headerFields),
+                    "moxfield"  => ParseMoxfield(fields, headerFields),
                     "archidekt" => ParseArchidekt(fields, headerFields),
-                    "deckbox" => ParseDeckbox(fields, headerFields),
+                    "deckbox"   => ParseDeckbox(fields, headerFields),
                     "deckstats" => ParseDeckstats(fields, headerFields),
-                    _ => ParseDefault(fields, headerFields)
+                    _           => ParseDefault(fields, headerFields)
                 };
 
                 if (card is not null && !string.IsNullOrEmpty(card.Name))
@@ -198,18 +267,33 @@ public class DecksController : ControllerBase
             if (cards.Count == 0)
                 return BadRequest(new { error = "No valid cards found in CSV" });
 
+            // Enrich cards with Scryfall data (mana cost, CMC, type, price)
+            cards = await _scryfallService.EnrichCardsAsync(cards);
+
+            // Derive color identity from enriched mana costs
+            var colors = _scryfallService.DeriveColors(cards);
+
+            var resolvedDeckName = deckName ?? Path.GetFileNameWithoutExtension(file.FileName);
+            var commander = cards.FirstOrDefault(c => c.Category.Equals("Commander", StringComparison.OrdinalIgnoreCase))?.Name ?? "";
+
+            // Generate a flavorful description via Claude
+            var description = await _claudeService.GenerateImportDescriptionAsync(resolvedDeckName, cards);
+
+            var totalPrice = cards.Sum(c => c.EstimatedPrice * c.Quantity);
+
             var deck = new DeckConfiguration
             {
                 UserId = GetUserId(),
                 UserDisplayName = GetDisplayName(),
-                DeckName = deckName ?? Path.GetFileNameWithoutExtension(file.FileName),
-                Commander = cards.FirstOrDefault(c => c.Category.Equals("Commander", StringComparison.OrdinalIgnoreCase))?.Name ?? "",
+                DeckName = resolvedDeckName,
+                Commander = commander,
                 Strategy = "Imported",
                 Format = "Commander",
+                Colors = colors,
                 Cards = cards,
                 TotalCards = cards.Sum(c => c.Quantity),
-                EstimatedTotalPrice = cards.Sum(c => c.EstimatedPrice * c.Quantity),
-                DeckDescription = $"Imported from {file.FileName} ({detectedFormat} format)"
+                EstimatedTotalPrice = totalPrice,
+                DeckDescription = description
             };
 
             var saved = await _deckService.CreateAsync(deck);
