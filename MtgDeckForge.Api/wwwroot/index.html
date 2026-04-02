@@ -1923,7 +1923,8 @@
             try {
                 const res = await authFetch(API_BASE);
                 if (!res.ok) throw new Error('Failed to load decks');
-                currentDecks = await res.json();
+                const data = await res.json();
+                currentDecks = Array.isArray(data) ? data : [];
                 renderLibrary();
             } catch (err) {
                 document.getElementById('deckGrid').innerHTML = `
