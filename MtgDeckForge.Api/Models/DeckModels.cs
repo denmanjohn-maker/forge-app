@@ -24,6 +24,10 @@ public class DeckConfiguration
     public string? UserDisplayName { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    // Persisted analysis
+    public DeckAnalysis? LastAnalysis { get; set; }
+    public DateTime? LastAnalyzedAt { get; set; }
 }
 
 public class CardEntry
@@ -49,6 +53,19 @@ public class DeckGenerationRequest
     public string? AdditionalNotes { get; set; }
 }
 
+public class DeckUpdateRequest
+{
+    public string? DeckName { get; set; }
+    public string? Commander { get; set; }
+    public string? Strategy { get; set; }
+    public string? DeckDescription { get; set; }
+    public string? Format { get; set; }
+    public string? PowerLevel { get; set; }
+    public string? BudgetRange { get; set; }
+    public List<string>? Colors { get; set; }
+    public List<CardEntry>? Cards { get; set; }
+}
+
 public class DeckAnalysis
 {
     public string SynergyAssessment { get; set; } = null!;
@@ -63,4 +80,13 @@ public class CardUpgrade
     public string RemoveCard { get; set; } = null!;
     public string AddCard { get; set; } = null!;
     public string Reason { get; set; } = null!;
+}
+
+public class PagedResult<T>
+{
+    public List<T> Items { get; set; } = new();
+    public int Total { get; set; }
+    public int Skip { get; set; }
+    public int Limit { get; set; }
+    public bool HasMore => Skip + Items.Count < Total;
 }
