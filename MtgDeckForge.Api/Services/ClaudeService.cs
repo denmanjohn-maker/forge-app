@@ -169,6 +169,49 @@ Provide 3-5 weaknesses, 3-5 improvement suggestions, and 3-5 card upgrade recomm
         return analysis;
     }
 
+    public async Task<string> GenerateImportDescriptionAsync(string deckName, List<CardEntry> cards)
+    {
+        var cardSample = cards
+            .Where(c => c.Category != "Land")
+            .Take(20)
+            .Select(c => $"- {c.Quantity}x {c.Name} ({c.CardType ?? "Unknown"}): {c.RoleInDeck ?? ""}");
+
+        var prompt = $@"You are a Magic: The Gathering expert. Based on the following deck card list, write a concise 2-3 sentence flavorful description of the deck's playstyle and theme. Respond with ONLY the description text, no JSON, no formatting.
+
+Deck Name: {deckName}
+Sample Cards:
+{string.Join("\n", cardSample)}";
+
+        var apiRequest = new
+        {
+            model = _settings.Model,
+            max_tokens = 300,
+            messages = new[] { new { role = "user", content = prompt } }
+        };
+
+        var json = JsonSerializer.Serialize(apiRequest);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        _httpClient.DefaultRequestHeaders.Clear();
+        _httpClient.DefaultRequestHeaders.Add("x-api-key", _settings.ApiKey);
+        _httpClient.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
+
+        try
+        {
+            var response = await _httpClient.PostAsync("https://api.anthropic.com/v1/messages", content);
+            var responseBody = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode) return $"Imported deck: {deckName}";
+
+            var claudeResponse = JsonSerializer.Deserialize<ClaudeResponse>(responseBody);
+            return claudeResponse?.Content?.FirstOrDefault(c => c.Type == "text")?.Text?.Trim()
+                ?? $"Imported deck: {deckName}";
+        }
+        catch
+        {
+            return $"Imported deck: {deckName}";
+        }
+    }
+
     private string BuildPrompt(DeckGenerationRequest request, string colorIdentity)
     {
         var sb = new StringBuilder();
