@@ -18,6 +18,8 @@ public class ClaudeService
         _httpClient = httpClient;
         _settings = settings.Value;
         _logger = logger;
+        _httpClient.DefaultRequestHeaders.Add("x-api-key", _settings.ApiKey);
+        _httpClient.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
     }
 
     public async Task<DeckConfiguration> GenerateDeckAsync(DeckGenerationRequest request)
@@ -52,10 +54,6 @@ public class ClaudeService
 
         var json = JsonSerializer.Serialize(apiRequest);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-        _httpClient.DefaultRequestHeaders.Clear();
-        _httpClient.DefaultRequestHeaders.Add("x-api-key", _settings.ApiKey);
-        _httpClient.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
 
         var response = await _httpClient.PostAsync("https://api.anthropic.com/v1/messages", content);
         var responseBody = await response.Content.ReadAsStringAsync();
@@ -140,10 +138,6 @@ Provide 3-5 weaknesses, 3-5 improvement suggestions, and 3-5 card upgrade recomm
         var json = JsonSerializer.Serialize(apiRequest);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-        _httpClient.DefaultRequestHeaders.Clear();
-        _httpClient.DefaultRequestHeaders.Add("x-api-key", _settings.ApiKey);
-        _httpClient.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
-
         var response = await _httpClient.PostAsync("https://api.anthropic.com/v1/messages", content);
         var responseBody = await response.Content.ReadAsStringAsync();
 
@@ -172,7 +166,7 @@ Provide 3-5 weaknesses, 3-5 improvement suggestions, and 3-5 card upgrade recomm
     public async Task<string> GenerateImportDescriptionAsync(string deckName, List<CardEntry> cards)
     {
         var cardSample = cards
-            .Where(c => c.Category != "Land")
+            .Where(c => c.CardType == null || !c.CardType.Contains("Land", StringComparison.OrdinalIgnoreCase))
             .Take(20)
             .Select(c => $"- {c.Quantity}x {c.Name} ({c.CardType ?? "Unknown"}): {c.RoleInDeck ?? ""}");
 
@@ -191,10 +185,6 @@ Sample Cards:
 
         var json = JsonSerializer.Serialize(apiRequest);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-        _httpClient.DefaultRequestHeaders.Clear();
-        _httpClient.DefaultRequestHeaders.Add("x-api-key", _settings.ApiKey);
-        _httpClient.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
 
         try
         {
