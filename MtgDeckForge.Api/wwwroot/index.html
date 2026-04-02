@@ -2159,6 +2159,17 @@
 
         // === Library ===
         async function loadLibrary() {
+            try {
+                const res = await authFetch(API_BASE);
+                if (!res.ok) throw new Error('Failed to load decks');
+                const data = await res.json();
+                currentDecks = Array.isArray(data) ? data : [];
+                renderLibrary();
+            } catch (err) {
+                document.getElementById('deckGrid').innerHTML = `
+                    <div class="library-empty" style="grid-column:1/-1;">
+                        <p style="color:var(--danger);">Failed to load library: ${err.message}</p>
+                    </div>`;
             libSkip = 0;
             document.getElementById('deckGrid').innerHTML = '';
             await fetchAndAppendDecks(true);
