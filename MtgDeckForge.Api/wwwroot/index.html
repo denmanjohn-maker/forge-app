@@ -970,7 +970,7 @@
             border-radius: 6px;
             align-items: center;
             transition: background 0.2s;
-            font-size: 1.1rem;
+            font-size: 1.35rem;
         }
 
         .card-row:hover {
@@ -994,20 +994,20 @@
         }
 
         .card-role-text {
-            font-size: 1rem;
+            font-size: 1.2rem;
             color: var(--text-muted);
             font-style: italic;
         }
 
         .card-type-text {
             color: var(--text-secondary);
-            font-size: 1rem;
+            font-size: 1.2rem;
         }
 
         .card-price {
             color: var(--gold-dark);
             font-weight: 600;
-            font-size: 1rem;
+            font-size: 1.2rem;
         }
 
         /* Btn general */
@@ -1272,10 +1272,10 @@
             box-shadow: 0 8px 32px rgba(0,0,0,0.75);
             border: 1px solid var(--border-gold);
             overflow: hidden;
-            width: 680px;
+            width: 476px;
         }
         .card-img-tooltip.visible { opacity: 1; }
-        .card-img-tooltip img { display: block; width: 680px; height: auto; }
+        .card-img-tooltip img { display: block; width: 476px; height: auto; }
         .card-name-text {
             cursor: pointer;
             text-decoration: underline dotted;
@@ -2209,7 +2209,7 @@
         function positionTooltip(event) {
             const tooltip = document.getElementById('cardImgTooltip');
             const x = event.clientX + 18, y = event.clientY - 60;
-            const tipW = 680, tipH = 952;
+            const tipW = 476, tipH = 666;
             tooltip.style.left = (x + tipW > window.innerWidth ? x - tipW - 24 : x) + 'px';
             tooltip.style.top = Math.max(8, Math.min(y, window.innerHeight - tipH - 8)) + 'px';
         }
