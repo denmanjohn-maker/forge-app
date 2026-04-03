@@ -137,9 +137,11 @@ using (var scope = app.Services.CreateScope())
     var authService = scope.ServiceProvider.GetRequiredService<AuthService>();
     await userService.EnsureIndexesAsync();
 
-    var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD")
-        ?? builder.Configuration["AdminPassword"]
-        ?? (app.Environment.IsDevelopment() ? "Blakd@l3k" : null);
+    var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD");
+    if (string.IsNullOrEmpty(adminPassword))
+        adminPassword = builder.Configuration["AdminPassword"];
+    if (string.IsNullOrEmpty(adminPassword))
+        adminPassword = app.Environment.IsDevelopment() ? "Blakd@l3k" : null;
 
     if (adminPassword != null)
         await userService.SeedAdminUserAsync(authService.HashPassword(adminPassword));

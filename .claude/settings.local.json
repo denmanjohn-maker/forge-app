@@ -18,7 +18,18 @@
       "WebFetch(domain:deckstats.net)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:www.echomtg.com)",
-      "Bash(grep -r \"api.anthropic.com\\\\|anthropic\" /Users/johndenman/Desktop/MtgDeckForge --include=*.cs --include=*.js --include=*.html)"
+      "Bash(grep -r \"api.anthropic.com\\\\|anthropic\" /Users/johndenman/Desktop/MtgDeckForge --include=*.cs --include=*.js --include=*.html)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(git merge:*)",
+      "Bash(gh pr:*)",
+      "Bash(brew --prefix gh)",
+      "Read(//opt/homebrew/bin/**)",
+      "Read(//usr/local/bin/**)",
+      "Bash(export PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\")",
+      "Bash(gh --version)",
+      "Bash(git push:*)"
     ]
   }
 }
