@@ -1,0 +1,16 @@
+@page "{id}"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@model MtgDeckForge.Api.Pages.Decks.AnalyzeModel
+@{
+    ViewData["Title"] = "Analyze";
+}
+<h2>Deck Analysis</h2>
+@if (Model.AnalysisJson is null)
+{
+    <p>No analysis generated yet.</p>
+    <form method="post"><button type="submit">Run Analysis</button></form>
+}
+else
+{
+    <pre>@Model.AnalysisJson</pre>
+}

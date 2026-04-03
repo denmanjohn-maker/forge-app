@@ -1,0 +1,27 @@
+@page "{id}"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@model MtgDeckForge.Api.Pages.Decks.DetailsModel
+@{
+    ViewData["Title"] = "Deck Details";
+}
+@if (Model.Deck is null)
+{
+    <p>Deck not found.</p>
+}
+else
+{
+    <h2>@Model.Deck.DeckName</h2>
+    <p><strong>Commander:</strong> @Model.Deck.Commander</p>
+    <p><strong>Strategy:</strong> @Model.Deck.Strategy</p>
+    <p><strong>Description:</strong> @Model.Deck.DeckDescription</p>
+    <h3>Cards</h3>
+    <table>
+        <thead><tr><th>Qty</th><th>Name</th><th>Type</th><th>Price</th></tr></thead>
+        <tbody>
+        @foreach (var c in Model.Deck.Cards)
+        {
+            <tr><td>@c.Quantity</td><td>@c.Name</td><td>@c.CardType</td><td>@c.EstimatedPrice.ToString("C")</td></tr>
+        }
+        </tbody>
+    </table>
+}
