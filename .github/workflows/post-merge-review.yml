@@ -71,9 +71,9 @@ jobs:
                   for package_group in ("topLevelPackages", "transitivePackages"):
                       for package in framework.get(package_group, []):
                           vulnerabilities = package.get("vulnerabilities")
-                          if vulnerabilities is None:
-                              vulnerable_count += 1
-                          elif isinstance(vulnerabilities, list) and len(vulnerabilities) > 0:
+                          if vulnerabilities is not None and (
+                              not isinstance(vulnerabilities, list) or len(vulnerabilities) > 0
+                          ):
                               vulnerable_count += 1
           
           if vulnerable_count > 0:
