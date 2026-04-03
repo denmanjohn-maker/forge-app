@@ -29,13 +29,13 @@ jobs:
           dotnet-version: 8.0.x
 
       - name: Restore dependencies
-        run: dotnet restore /home/runner/work/MtgDeckForge/MtgDeckForge/MtgDeckForge.sln
+        run: dotnet restore MtgDeckForge.sln
 
       - name: Build solution (Release)
-        run: dotnet build /home/runner/work/MtgDeckForge/MtgDeckForge/MtgDeckForge.sln --configuration Release --no-restore
+        run: dotnet build MtgDeckForge.sln --configuration Release --no-restore
 
       - name: Run tests
-        run: dotnet test /home/runner/work/MtgDeckForge/MtgDeckForge/MtgDeckForge.sln --configuration Release --no-build --verbosity normal
+        run: dotnet test MtgDeckForge.sln --configuration Release --no-build --verbosity normal
 
       - name: Dependency vulnerability review
-        run: dotnet list /home/runner/work/MtgDeckForge/MtgDeckForge/MtgDeckForge.sln package --vulnerable --include-transitive
+        run: dotnet list MtgDeckForge.sln package --vulnerable --include-transitive
