@@ -88,7 +88,15 @@ public class UserService
     {
         var existing = await GetByUsernameAsync("ben_admin");
         if (existing is not null)
+        {
+            // Update password hash if it has changed (e.g. was seeded with empty password)
+            if (existing.PasswordHash != passwordHash)
+            {
+                existing.PasswordHash = passwordHash;
+                await UpdateUserAsync(existing.Id!, existing);
+            }
             return;
+        }
 
         var admin = new User
         {

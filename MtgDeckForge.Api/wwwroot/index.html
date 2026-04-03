@@ -1553,7 +1553,7 @@
 <body>
 
     <!-- HEADER -->
-    <header class="app-header">
+    <header class="app-header" style="display:none;">
         <div class="header-inner">
             <div class="logo-group">
                 <div class="logo-dragon">
@@ -1594,7 +1594,7 @@
     </div>
 
     <!-- MAIN -->
-    <main class="app-container">
+    <main class="app-container" style="display:none;">
 
         <!-- FORGE VIEW -->
         <div id="view-forge" class="view active">
@@ -2063,8 +2063,16 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
                 });
-                if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Login failed'); }
+                if (!res.ok) {
+                    let msg = 'Login failed';
+                    try {
+                        const err = await res.json();
+                        msg = err.error || msg;
+                    } catch (_) {}
+                    throw new Error(msg);
+                }
                 const data = await res.json();
+                if (!data.token) throw new Error('Login failed: no token received');
                 authToken = data.token;
                 currentUser = { username: data.username, displayName: data.displayName, role: data.role };
                 localStorage.setItem('authToken', authToken);
