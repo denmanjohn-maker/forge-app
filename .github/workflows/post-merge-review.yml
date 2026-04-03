@@ -1,0 +1,41 @@
+name: Post-Merge Review and Verification
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - closed
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  review-and-test:
+    name: Complete review with build and tests
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout merged code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
+
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore /home/runner/work/MtgDeckForge/MtgDeckForge/MtgDeckForge.sln
+
+      - name: Build solution (Release)
+        run: dotnet build /home/runner/work/MtgDeckForge/MtgDeckForge/MtgDeckForge.sln --configuration Release --no-restore
+
+      - name: Run tests
+        run: dotnet test /home/runner/work/MtgDeckForge/MtgDeckForge/MtgDeckForge.sln --configuration Release --no-build --verbosity normal
+
+      - name: Dependency vulnerability review
+        run: dotnet list /home/runner/work/MtgDeckForge/MtgDeckForge/MtgDeckForge.sln package --vulnerable --include-transitive
