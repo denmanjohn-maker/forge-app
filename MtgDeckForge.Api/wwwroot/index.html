@@ -2496,6 +2496,75 @@
             });
         }
 
+        // === Edit ===
+        let editingDeckId = null;
+
+        function openEditModal(deck) {
+            editingDeckId = deck.id;
+            document.getElementById('editDeckName').value = deck.deckName || '';
+            document.getElementById('editCommander').value = deck.commander || '';
+            document.getElementById('editDescription').value = deck.deckDescription || '';
+            document.getElementById('editStrategy').value = deck.strategy || '';
+            document.getElementById('editFormat').value = deck.format || 'Commander';
+            document.getElementById('editPowerLevel').value = deck.powerLevel || 'Casual';
+            document.getElementById('editBudget').value = deck.budgetRange || 'Budget (under $50)';
+            ['W', 'U', 'B', 'R', 'G'].forEach(c => {
+                document.getElementById(`editColor${c}`).checked = (deck.colors || []).includes(c);
+            });
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            editingDeckId = null;
+            document.getElementById('editModal').classList.add('hidden');
+        }
+
+        async function saveEdit() {
+            if (!editingDeckId) return;
+            const colors = ['W', 'U', 'B', 'R', 'G'].filter(c => document.getElementById(`editColor${c}`).checked);
+            const request = {
+                deckName: document.getElementById('editDeckName').value.trim() || null,
+                commander: document.getElementById('editCommander').value.trim() || null,
+                deckDescription: document.getElementById('editDescription').value.trim() || null,
+                strategy: document.getElementById('editStrategy').value.trim() || null,
+                format: document.getElementById('editFormat').value || null,
+                powerLevel: document.getElementById('editPowerLevel').value || null,
+                budgetRange: document.getElementById('editBudget').value || null,
+                colors: colors.length > 0 ? colors : null
+            };
+            try {
+                const res = await authFetch(`${API_BASE}/${editingDeckId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(request)
+                });
+                if (!res.ok) throw new Error('Failed to save changes');
+                const updated = await res.json();
+                closeEditModal();
+                showToast('Deck updated!');
+                if (currentDetailDeck && currentDetailDeck.id === editingDeckId) {
+                    currentDetailDeck = updated;
+                    renderDetail(updated);
+                }
+                loadLibrary();
+            } catch (err) {
+                showToast(err.message, true);
+            }
+        }
+
+        // === Copy ===
+        async function copyDeck(id) {
+            try {
+                const res = await authFetch(`${API_BASE}/${id}/copy`, { method: 'POST' });
+                if (!res.ok) throw new Error('Failed to copy deck');
+                const copy = await res.json();
+                showToast(`Deck copied as "${copy.deckName}"!`);
+                loadLibrary();
+            } catch (err) {
+                showToast(err.message, true);
+            }
+        }
+
         // === Delete ===
         function openDeleteModal(id) {
             deleteTargetId = id;

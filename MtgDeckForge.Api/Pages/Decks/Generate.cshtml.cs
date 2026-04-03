@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using MtgDeckForge.Api.Models;
@@ -50,6 +51,8 @@ public class GenerateModel : PageModel
             await _pricingService.ApplyPricesAsync(deck.Cards);
             deck.TotalCards = deck.Cards.Sum(c => c.Quantity);
             deck.EstimatedTotalPrice = deck.Cards.Sum(c => c.EstimatedPrice * c.Quantity);
+            deck.UserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            deck.UserDisplayName = User.FindFirst("displayName")?.Value ?? User.Identity?.Name ?? "Unknown";
             var created = await _deckService.CreateAsync(deck);
             CreatedDeckId = created.Id;
             return Page();
