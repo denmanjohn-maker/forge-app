@@ -26,7 +26,10 @@
       "Bash(gh pr:*)",
       "Bash(brew --prefix gh)",
       "Read(//opt/homebrew/bin/**)",
-      "Read(//usr/local/bin/**)"
+      "Read(//usr/local/bin/**)",
+      "Bash(export PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\")",
+      "Bash(gh --version)",
+      "Bash(git push:*)"
     ]
   }
 }
