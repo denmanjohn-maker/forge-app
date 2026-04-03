@@ -104,11 +104,6 @@ builder.Services.AddAuthentication(options =>
                 : IdentityConstants.ApplicationScheme;
         };
     })
-    .AddCookie(IdentityConstants.ApplicationScheme, options =>
-    {
-        options.LoginPath = "/Account/Login";
-        options.AccessDeniedPath = "/Account/Login";
-    })
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
@@ -123,6 +118,14 @@ builder.Services.AddAuthentication(options =>
                 Encoding.UTF8.GetBytes(jwtSecret))
         };
     });
+
+// Configure the Identity cookie (already registered by AddIdentity, don't re-add)
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.LoginPath = "/Account/Login";
+    options.AccessDeniedPath = "/Account/Login";
+});
+
 builder.Services.AddAuthorization();
 
 // Rate limiting: 20 deck generations per user per 24 hours
