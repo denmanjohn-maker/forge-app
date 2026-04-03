@@ -11,6 +11,9 @@ on:
 permissions:
   contents: read
 
+env:
+  DOTNET_VERSION: 8.0.x
+
 jobs:
   review-and-test:
     name: Complete review with build and tests
@@ -26,7 +29,7 @@ jobs:
       - name: Setup .NET 8 SDK
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Restore dependencies
         run: dotnet restore MtgDeckForge.sln
@@ -38,7 +41,7 @@ jobs:
         id: test_projects
         shell: bash
         run: |
-          if find . -name "*.csproj" -print | grep -Ei "(^|/).*([._-]?(Test|Tests|UnitTests|IntegrationTests))\.csproj$" > /dev/null; then
+          if find . -name "*.csproj" -print | grep -Ei "(Test|Tests|UnitTests|IntegrationTests)\.csproj$" > /dev/null; then
             echo "has_tests=true" >> "$GITHUB_OUTPUT"
           else
             echo "has_tests=false" >> "$GITHUB_OUTPUT"
