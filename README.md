@@ -1,6 +1,6 @@
 # ⚔️ MTG Deck Forge
 
-A Magic: The Gathering deck configuration generator powered by Claude AI, built with .NET 8, MongoDB, and Docker.
+A Magic: The Gathering deck configuration generator powered by Claude AI, built with .NET 8, MongoDB, SQL LocalDB pricing cache, and Docker.
 
 ![.NET 8](https://img.shields.io/badge/.NET-8.0-purple)
 ![MongoDB](https://img.shields.io/badge/MongoDB-7-green)
@@ -10,8 +10,9 @@ A Magic: The Gathering deck configuration generator powered by Claude AI, built 
 
 - **AI-Powered Deck Generation** — Uses the Anthropic Claude API to generate complete, format-legal deck configurations based on your parameters
 - **Rich Configuration Options** — Choose mana colors, format (Commander/Standard/Modern/Pioneer), power level, budget range, strategy archetype, and more
-- **Persistent Storage** — All generated decks are stored in MongoDB and can be browsed, viewed, and deleted from the Library
-- **MTG-Themed UI** — Dark, atmospheric frontend styled with gold accents, mana color pips, medieval typography, and card-game aesthetics
+- **Persistent Storage** — Decks are stored in MongoDB; authentication and price cache are stored in SQL LocalDB
+- **Razor Pages UI** — Server-rendered login and deck workflows with ASP.NET Core Identity cookie auth
+- **Daily MTGJSON Pricing Import** — Pulls MTGJSON bulk pricing daily and updates local price cache
 - **Full CRUD** — Create (generate), Read (list/detail), Delete deck configurations via REST API
 - **Swagger API Docs** — Available at `/swagger` for testing endpoints directly
 
@@ -140,10 +141,21 @@ For integration with your existing observability stack, you can add Prometheus m
 # Start MongoDB locally
 mongod --dbpath ./data
 
-# Run the API
+# Run the API (Razor Pages + API)
 cd MtgDeckForge.Api
 export ANTHROPIC_API_KEY=sk-ant-xxxxx
 dotnet run
+```
+
+Default login page is at `/Account/Login`.
+
+### Pricing refresh
+
+- Automatic refresh runs daily in a hosted background service.
+- Admin can trigger manual refresh via:
+
+```bash
+curl -X POST http://localhost:5000/api/pricing/refresh --cookie "<auth-cookie>"
 ```
 
 ## Project Structure

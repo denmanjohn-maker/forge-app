@@ -2,9 +2,12 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using MtgDeckForge.Api.Data;
 using MtgDeckForge.Api.Models;
 using MtgDeckForge.Api.Services;
 
@@ -23,6 +26,29 @@ builder.Services.AddHttpClient<ClaudeService>();
 // Scryfall
 builder.Services.AddHttpClient<ScryfallService>();
 
+// MTGJSON settings
+builder.Services.Configure<MtgJsonSettings>(
+    builder.Configuration.GetSection("MtgJson"));
+
+// SQL storage (Identity + pricing LocalDB)
+builder.Services.Configure<SqlStorageSettings>(
+    builder.Configuration.GetSection("SqlStorage"));
+var sqlConnectionString = builder.Configuration["SqlStorage:ConnectionString"]
+    ?? "Server=(localdb)\\MSSQLLocalDB;Database=MtgDeckForgeLocal;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True";
+builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(sqlConnectionString));
+
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+    {
+        options.Password.RequireDigit = true;
+        options.Password.RequireUppercase = false;
+        options.Password.RequireLowercase = true;
+        options.Password.RequireNonAlphanumeric = false;
+        options.Password.RequiredLength = 8;
+        options.User.RequireUniqueEmail = false;
+    })
+    .AddEntityFrameworkStores<AppDbContext>()
+    .AddDefaultTokenProviders();
+
 // JWT Settings
 builder.Services.Configure<JwtSettings>(
     builder.Configuration.GetSection("JwtSettings"));
@@ -30,14 +56,39 @@ builder.Services.Configure<JwtSettings>(
 // Auth services
 builder.Services.AddSingleton<UserService>();
 builder.Services.AddSingleton<AuthService>();
+builder.Services.AddScoped<PricingService>();
+builder.Services.AddHttpClient<MtgJsonPricingImportService>();
+builder.Services.AddHostedService<PricingRefreshHostedService>();
 
 // JWT Authentication
-var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>()!;
+var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
 var jwtSecret = builder.Configuration["JwtSettings:Secret"]
     ?? Environment.GetEnvironmentVariable("JWT_SECRET")
-    ?? jwtSettings.Secret;
+    ?? jwtSettings?.Secret
+    ?? string.Empty;
+var jwtIssuer = jwtSettings?.Issuer ?? "MtgDeckForge";
+var jwtAudience = jwtSettings?.Audience ?? "MtgDeckForge";
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = "smart";
+        options.DefaultChallengeScheme = IdentityConstants.ApplicationScheme;
+    })
+    .AddPolicyScheme("smart", "JWT or Cookie", options =>
+    {
+        options.ForwardDefaultSelector = context =>
+        {
+            var auth = context.Request.Headers.Authorization.ToString();
+            return auth.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+                ? JwtBearerDefaults.AuthenticationScheme
+                : IdentityConstants.ApplicationScheme;
+        };
+    })
+    .AddCookie(IdentityConstants.ApplicationScheme, options =>
+    {
+        options.LoginPath = "/Account/Login";
+        options.AccessDeniedPath = "/Account/Login";
+    })
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
@@ -46,8 +97,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtSettings.Issuer,
-            ValidAudience = jwtSettings.Audience,
+            ValidIssuer = jwtIssuer,
+            ValidAudience = jwtAudience,
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(jwtSecret))
         };
@@ -78,8 +129,9 @@ builder.Services.AddRateLimiter(options =>
     };
 });
 
-// Controllers + Swagger
+// Controllers + Razor + Swagger
 builder.Services.AddControllers();
+builder.Services.AddRazorPages();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -133,6 +185,17 @@ var app = builder.Build();
 // Seed admin user — password from env var, falls back to default only in development
 using (var scope = app.Services.CreateScope())
 {
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await db.Database.EnsureCreatedAsync();
+
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+
+    if (!await roleManager.RoleExistsAsync("Admin"))
+        await roleManager.CreateAsync(new IdentityRole("Admin"));
+    if (!await roleManager.RoleExistsAsync("User"))
+        await roleManager.CreateAsync(new IdentityRole("User"));
+
     var userService = scope.ServiceProvider.GetRequiredService<UserService>();
     var authService = scope.ServiceProvider.GetRequiredService<AuthService>();
     await userService.EnsureIndexesAsync();
@@ -144,7 +207,22 @@ using (var scope = app.Services.CreateScope())
         adminPassword = app.Environment.IsDevelopment() ? "Blakd@l3k" : null;
 
     if (!string.IsNullOrEmpty(adminPassword))
+    {
         await userService.SeedAdminUserAsync(authService.HashPassword(adminPassword));
+
+        var identityAdmin = await userManager.FindByNameAsync("ben_admin");
+        if (identityAdmin is null)
+        {
+            identityAdmin = new ApplicationUser
+            {
+                UserName = "ben_admin",
+                DisplayName = "Ben (Admin)"
+            };
+            var createResult = await userManager.CreateAsync(identityAdmin, adminPassword);
+            if (createResult.Succeeded)
+                await userManager.AddToRoleAsync(identityAdmin, "Admin");
+        }
+    }
 }
 
 app.UseSwagger();
@@ -159,11 +237,9 @@ app.UseAuthorization();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 app.MapControllers();
+app.MapRazorPages();
 
 // Health check endpoint for ECS/ALB
 app.MapGet("/healthz", () => Results.Ok(new { status = "healthy" }));
-
-// Fallback to index.html for SPA routing
-app.MapFallbackToFile("index.html");
 
 app.Run();

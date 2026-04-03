@@ -16,13 +16,15 @@ public class DecksController : ControllerBase
     private readonly DeckService _deckService;
     private readonly ClaudeService _claudeService;
     private readonly ScryfallService _scryfallService;
+    private readonly PricingService _pricingService;
     private readonly ILogger<DecksController> _logger;
 
-    public DecksController(DeckService deckService, ClaudeService claudeService, ScryfallService scryfallService, ILogger<DecksController> logger)
+    public DecksController(DeckService deckService, ClaudeService claudeService, ScryfallService scryfallService, PricingService pricingService, ILogger<DecksController> logger)
     {
         _deckService = deckService;
         _claudeService = claudeService;
         _scryfallService = scryfallService;
+        _pricingService = pricingService;
         _logger = logger;
     }
 
@@ -74,6 +76,9 @@ public class DecksController : ControllerBase
                 string.Join(",", request.Colors), request.Format);
 
             var deck = await _claudeService.GenerateDeckAsync(request);
+            await _pricingService.ApplyPricesAsync(deck.Cards);
+            deck.TotalCards = deck.Cards.Sum(c => c.Quantity);
+            deck.EstimatedTotalPrice = deck.Cards.Sum(c => c.EstimatedPrice * c.Quantity);
             deck.UserId = GetUserId();
             deck.UserDisplayName = GetDisplayName();
             var saved = await _deckService.CreateAsync(deck);
@@ -269,6 +274,7 @@ public class DecksController : ControllerBase
 
             // Enrich cards with Scryfall data (mana cost, CMC, type, price)
             cards = await _scryfallService.EnrichCardsAsync(cards);
+            await _pricingService.ApplyPricesAsync(cards);
 
             // Derive color identity from enriched mana costs
             var colors = _scryfallService.DeriveColors(cards);
