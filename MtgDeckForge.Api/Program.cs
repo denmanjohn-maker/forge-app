@@ -13,6 +13,10 @@ using MtgDeckForge.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Railway (and other PaaS) inject PORT at runtime — honour it
+var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
+builder.WebHost.UseUrls($"http://+:{port}");
+
 // MongoDB
 builder.Services.Configure<MongoDbSettings>(
     builder.Configuration.GetSection("MongoDb"));

@@ -17,13 +17,13 @@ WORKDIR /app
 
 # Add curl for healthcheck
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
-HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-    CMD curl -f http://localhost:5000/healthz || exit 1
-
 COPY --from=build /app/publish .
 
-ENV ASPNETCORE_URLS=http://+:5000
 ENV ASPNETCORE_ENVIRONMENT=Production
 
+# PORT is injected by Railway at runtime; fall back to 5000 for local Docker runs
 EXPOSE 5000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD curl -f http://localhost:${PORT:-5000}/healthz || exit 1
+
 ENTRYPOINT ["dotnet", "MtgDeckForge.Api.dll"]
