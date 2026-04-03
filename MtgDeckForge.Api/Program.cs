@@ -143,7 +143,7 @@ using (var scope = app.Services.CreateScope())
     if (string.IsNullOrEmpty(adminPassword))
         adminPassword = app.Environment.IsDevelopment() ? "Blakd@l3k" : null;
 
-    if (adminPassword != null)
+    if (!string.IsNullOrEmpty(adminPassword))
         await userService.SeedAdminUserAsync(authService.HashPassword(adminPassword));
 }
 
