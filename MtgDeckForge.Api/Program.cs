@@ -35,13 +35,26 @@ builder.Services.Configure<MtgJsonSettings>(
     builder.Configuration.GetSection("MtgJson"));
 
 // SQL storage (Identity + pricing — PostgreSQL)
-// Railway injects DATABASE_URL; fall back to SqlStorage:ConnectionString for local dev.
+// Railway injects DATABASE_URL in URI format; convert to Npgsql key-value format.
 builder.Services.Configure<SqlStorageSettings>(
     builder.Configuration.GetSection("SqlStorage"));
-var sqlConnectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
-    ?? builder.Configuration["SqlStorage:ConnectionString"]
-    ?? throw new InvalidOperationException(
-        "No SQL connection string found. Set DATABASE_URL or SqlStorage:ConnectionString.");
+
+var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+string sqlConnectionString;
+
+if (!string.IsNullOrEmpty(databaseUrl))
+{
+    var uri = new Uri(databaseUrl);
+    var userInfo = uri.UserInfo.Split(':');
+    sqlConnectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true";
+}
+else
+{
+    sqlConnectionString = builder.Configuration["SqlStorage:ConnectionString"]
+        ?? throw new InvalidOperationException(
+            "No SQL connection string found. Set DATABASE_URL or SqlStorage:ConnectionString.");
+}
+
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(sqlConnectionString));
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
