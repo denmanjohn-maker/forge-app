@@ -2002,6 +2002,11 @@
         const AUTH_BASE = '/api/auth';
         let currentDecks = [];
         let deleteTargetId = null;
+        let librarySkip = 0;
+        let libraryTotal = 0;
+        const libraryLimit = 12;
+        let activeColorFilter = '';
+        let searchTimeout = null;
         let currentDetailDeck = null;
         let authToken = localStorage.getItem('authToken');
         let currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
@@ -2217,12 +2222,29 @@
         }
 
         // === Library ===
+        function buildLibraryQuery(skip) {
+            const params = new URLSearchParams();
+            params.set('skip', skip);
+            params.set('limit', libraryLimit);
+            const name = document.getElementById('filterName')?.value.trim();
+            if (name) params.set('name', name);
+            if (activeColorFilter) params.set('color', activeColorFilter);
+            const format = document.getElementById('filterFormat')?.value;
+            if (format) params.set('format', format);
+            const power = document.getElementById('filterPower')?.value;
+            if (power) params.set('powerLevel', power);
+            return params.toString();
+        }
+
         async function loadLibrary() {
+            librarySkip = 0;
             try {
-                const res = await authFetch(API_BASE);
+                const res = await authFetch(`${API_BASE}?${buildLibraryQuery(0)}`);
                 if (!res.ok) throw new Error('Failed to load decks');
                 const data = await res.json();
                 currentDecks = data.items || data;
+                libraryTotal = data.total || currentDecks.length;
+                librarySkip = currentDecks.length;
                 renderLibrary();
             } catch (err) {
                 document.getElementById('deckGrid').innerHTML = `
@@ -2232,10 +2254,56 @@
             }
         }
 
+        async function loadMoreDecks() {
+            try {
+                const res = await authFetch(`${API_BASE}?${buildLibraryQuery(librarySkip)}`);
+                if (!res.ok) throw new Error('Failed to load more decks');
+                const data = await res.json();
+                const newItems = data.items || data;
+                currentDecks = currentDecks.concat(newItems);
+                librarySkip += newItems.length;
+                renderLibrary();
+            } catch (err) {
+                showToast(err.message, true);
+            }
+        }
+
+        function applyFilters() {
+            loadLibrary();
+        }
+
+        function debouncedSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => loadLibrary(), 300);
+        }
+
+        function toggleColorFilter(el) {
+            const color = el.dataset.color;
+            if (activeColorFilter === color) {
+                activeColorFilter = '';
+                el.classList.remove('active');
+            } else {
+                document.querySelectorAll('.filter-pip').forEach(p => p.classList.remove('active'));
+                activeColorFilter = color;
+                el.classList.add('active');
+            }
+            loadLibrary();
+        }
+
+        function clearFilters() {
+            document.getElementById('filterName').value = '';
+            document.getElementById('filterFormat').value = '';
+            document.getElementById('filterPower').value = '';
+            activeColorFilter = '';
+            document.querySelectorAll('.filter-pip').forEach(p => p.classList.remove('active'));
+            loadLibrary();
+        }
+
         function renderLibrary() {
             const grid = document.getElementById('deckGrid');
             const count = document.getElementById('libraryCount');
-            count.textContent = `${currentDecks.length} deck${currentDecks.length !== 1 ? 's' : ''} in your library`;
+            const loadMoreWrap = document.getElementById('loadMoreWrap');
+            count.textContent = `${libraryTotal} deck${libraryTotal !== 1 ? 's' : ''} in your library`;
 
             if (currentDecks.length === 0) {
                 grid.innerHTML = `
@@ -2251,6 +2319,7 @@
                         <h3>The dragon&#8217;s hoard is empty</h3>
                         <p>Visit the Forge to create your first deck</p>
                     </div>`;
+                loadMoreWrap.style.display = 'none';
                 return;
             }
 
@@ -2274,6 +2343,8 @@
                     </div>
                 </div>
             `).join('');
+
+            loadMoreWrap.style.display = librarySkip < libraryTotal ? '' : 'none';
         }
 
         // === Deck Detail ===
@@ -2390,6 +2461,7 @@
                     <button class="btn-outline" onclick="exportDeck('deckbox')">&#8659; Deckbox</button>
                     <button class="btn-outline" onclick="exportDeck('deckstats')">&#8659; Deckstats</button>
                     <button class="btn-outline" onclick="analyzeDeck('${deck.id}')">&#9879; Analyze with AI</button>
+                    <button class="btn-outline" onclick="openEditModal()">&#9998; Edit Deck</button>
                     <button class="btn-danger" onclick="openDeleteModal('${deck.id}')">&#128293; Banish Deck</button>
                 </div>
 
@@ -2431,6 +2503,60 @@
                 } else {
                     loadLibrary();
                 }
+            } catch (err) {
+                showToast(err.message, true);
+            }
+        }
+
+        // === Edit Deck Modal ===
+        function openEditModal() {
+            if (!currentDetailDeck) return;
+            const d = currentDetailDeck;
+            document.getElementById('editDeckName').value = d.deckName || '';
+            document.getElementById('editCommander').value = d.commander || '';
+            document.getElementById('editDescription').value = d.deckDescription || '';
+            document.getElementById('editStrategy').value = d.strategy || '';
+            document.getElementById('editFormat').value = d.format || 'Commander';
+            document.getElementById('editPowerLevel').value = d.powerLevel || 'Casual';
+            document.getElementById('editBudget').value = d.budgetRange || 'Budget (under $50)';
+            ['W','U','B','R','G'].forEach(c => {
+                document.getElementById('editColor' + c).checked = (d.colors || []).includes(c);
+            });
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+        }
+
+        async function saveEdit() {
+            if (!currentDetailDeck) return;
+            const colors = ['W','U','B','R','G'].filter(c => document.getElementById('editColor' + c).checked);
+            const body = {
+                deckName: document.getElementById('editDeckName').value.trim(),
+                commander: document.getElementById('editCommander').value.trim(),
+                deckDescription: document.getElementById('editDescription').value.trim(),
+                strategy: document.getElementById('editStrategy').value.trim(),
+                format: document.getElementById('editFormat').value,
+                powerLevel: document.getElementById('editPowerLevel').value,
+                budgetRange: document.getElementById('editBudget').value,
+                colors
+            };
+            try {
+                const res = await authFetch(`${API_BASE}/${currentDetailDeck.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.details || err.error || 'Update failed');
+                }
+                const updated = await res.json();
+                currentDetailDeck = updated;
+                renderDetail(updated);
+                closeEditModal();
+                showToast('Deck updated!');
             } catch (err) {
                 showToast(err.message, true);
             }
