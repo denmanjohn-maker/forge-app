@@ -1,0 +1,84 @@
+name: Post-Merge Review and Verification
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - closed
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_VERSION: 8.0.x
+
+jobs:
+  review-and-test:
+    name: Complete review with build and tests
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout merged code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
+
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore MtgDeckForge.sln
+
+      - name: Build solution (Release)
+        run: dotnet build MtgDeckForge.sln --configuration Release --no-restore
+
+      - name: Detect test projects
+        id: test_projects
+        shell: bash
+        run: |
+          if find . -name "*.csproj" -print | grep -Eiq "(test|spec).*\.csproj$"; then
+            echo "has_tests=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_tests=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run tests
+        if: steps.test_projects.outputs.has_tests == 'true'
+        run: dotnet test MtgDeckForge.sln --configuration Release --no-build --verbosity normal
+
+      - name: No tests found
+        if: steps.test_projects.outputs.has_tests != 'true'
+        run: echo "::warning::No test projects found in repository; skipping test execution."
+
+      - name: Dependency vulnerability review
+        shell: bash
+        run: |
+          output="$(dotnet list MtgDeckForge.sln package --vulnerable --include-transitive --format json)"
+          echo "$output"
+          python - <<'PY' <<<"$output"
+          import json
+          import sys
+          
+          data = json.load(sys.stdin)
+          vulnerable_count = 0
+          for project in data.get("projects", []):
+              for framework in project.get("frameworks", []):
+                  for package_group in ("topLevelPackages", "transitivePackages"):
+                      for package in framework.get(package_group, []):
+                          vulnerabilities = package.get("vulnerabilities")
+                          if vulnerabilities is not None and (
+                              not isinstance(vulnerabilities, list) or len(vulnerabilities) > 0
+                          ):
+                              vulnerable_count += 1
+          
+          if vulnerable_count > 0:
+              print("::error::Vulnerable packages detected.")
+              sys.exit(1)
+          
+          print("No vulnerable packages found.")
+          PY
