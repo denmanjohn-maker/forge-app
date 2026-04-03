@@ -152,9 +152,8 @@ builder.Services.AddRateLimiter(options =>
     };
 });
 
-// Controllers + Razor + Swagger
+// Controllers + Swagger
 builder.Services.AddControllers();
-builder.Services.AddRazorPages();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -284,7 +283,6 @@ app.UseAuthorization();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 app.MapControllers();
-app.MapRazorPages();
 
 // Health check endpoint for ECS/ALB
 app.MapGet("/healthz", () => Results.Ok(new { status = "healthy" }));
