@@ -84,9 +84,9 @@ public class UserService
         await _usersCollection.Indexes.CreateOneAsync(indexModel);
     }
 
-    public async Task SeedAdminUserAsync(string passwordHash)
+    public async Task SeedAdminUserAsync(string passwordHash, string username = "admin", string displayName = "Administrator")
     {
-        var existing = await GetByUsernameAsync("ben_admin");
+        var existing = await GetByUsernameAsync(username);
         if (existing is not null)
         {
             // Update password hash if it has changed (e.g. was seeded with empty password)
@@ -100,9 +100,9 @@ public class UserService
 
         var admin = new User
         {
-            Username = "ben_admin",
+            Username = username,
             PasswordHash = passwordHash,
-            DisplayName = "Ben (Admin)",
+            DisplayName = displayName,
             Role = "Admin",
             GroupIds = new List<string>()
         };

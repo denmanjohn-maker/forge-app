@@ -1,5 +1,3 @@
-using MtgDeckForge.Api.Services;
-
 namespace MtgDeckForge.Api.Services;
 
 public class PricingRefreshHostedService : BackgroundService

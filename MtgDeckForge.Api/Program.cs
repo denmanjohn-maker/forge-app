@@ -34,7 +34,7 @@ builder.Services.Configure<MtgJsonSettings>(
 builder.Services.Configure<SqlStorageSettings>(
     builder.Configuration.GetSection("SqlStorage"));
 var sqlConnectionString = builder.Configuration["SqlStorage:ConnectionString"]
-    ?? "Server=(localdb)\\MSSQLLocalDB;Database=MtgDeckForgeLocal;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True";
+    ?? "Server=(localdb)\\MSSQLLocalDB;Database=MtgDeckForgeLocal;Trusted_Connection=True;MultipleActiveResultSets=true";
 builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(sqlConnectionString));
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
@@ -186,7 +186,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await db.Database.EnsureCreatedAsync();
+    await db.Database.MigrateAsync();
 
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
@@ -201,6 +201,8 @@ using (var scope = app.Services.CreateScope())
     await userService.EnsureIndexesAsync();
 
     var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD");
+    var adminUsername = builder.Configuration["AdminUsername"] ?? "admin";
+    var adminDisplayName = builder.Configuration["AdminDisplayName"] ?? "Administrator";
     if (string.IsNullOrEmpty(adminPassword))
         adminPassword = builder.Configuration["AdminPassword"];
     if (string.IsNullOrEmpty(adminPassword))
@@ -208,15 +210,15 @@ using (var scope = app.Services.CreateScope())
 
     if (!string.IsNullOrEmpty(adminPassword))
     {
-        await userService.SeedAdminUserAsync(authService.HashPassword(adminPassword));
+        await userService.SeedAdminUserAsync(authService.HashPassword(adminPassword), adminUsername, adminDisplayName);
 
-        var identityAdmin = await userManager.FindByNameAsync("ben_admin");
+        var identityAdmin = await userManager.FindByNameAsync(adminUsername);
         if (identityAdmin is null)
         {
             identityAdmin = new ApplicationUser
             {
-                UserName = "ben_admin",
-                DisplayName = "Ben (Admin)"
+                UserName = adminUsername,
+                DisplayName = adminDisplayName
             };
             var createResult = await userManager.CreateAsync(identityAdmin, adminPassword);
             if (createResult.Succeeded)

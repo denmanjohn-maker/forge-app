@@ -42,6 +42,14 @@ public class MtgJsonPricingImportService
 
             var imported = 0;
             var now = DateTime.UtcNow;
+            var normalizedNames = uuidToUsd.Keys
+                .Where(uuidToName.ContainsKey)
+                .Select(uuid => PricingService.NormalizeCardName(uuidToName[uuid]))
+                .Distinct()
+                .ToList();
+            var existingByName = await _db.CardPrices
+                .Where(x => normalizedNames.Contains(x.NormalizedCardName))
+                .ToDictionaryAsync(x => x.NormalizedCardName, cancellationToken);
 
             foreach (var (uuid, usd) in uuidToUsd)
             {
@@ -49,27 +57,45 @@ public class MtgJsonPricingImportService
                 if (string.IsNullOrWhiteSpace(name)) continue;
 
                 var normalized = PricingService.NormalizeCardName(name);
-                var existing = await _db.CardPrices.FirstOrDefaultAsync(x => x.NormalizedCardName == normalized, cancellationToken);
+                existingByName.TryGetValue(normalized, out var existing);
                 if (existing is null)
                 {
-                    _db.CardPrices.Add(new CardPrice
+                    existing = new CardPrice
                     {
                         CardName = name,
                         NormalizedCardName = normalized,
                         SourceUuid = uuid,
                         PriceUsd = usd,
                         UpdatedAtUtc = now
-                    });
+                    };
+                    _db.CardPrices.Add(existing);
+                    existingByName[normalized] = existing;
+                    imported++;
                 }
                 else
                 {
-                    existing.CardName = name;
-                    existing.SourceUuid = uuid;
-                    existing.PriceUsd = usd;
-                    existing.UpdatedAtUtc = now;
+                    var changed = false;
+                    if (!string.Equals(existing.CardName, name, StringComparison.Ordinal))
+                    {
+                        existing.CardName = name;
+                        changed = true;
+                    }
+                    if (!string.Equals(existing.SourceUuid, uuid, StringComparison.Ordinal))
+                    {
+                        existing.SourceUuid = uuid;
+                        changed = true;
+                    }
+                    if (existing.PriceUsd != usd)
+                    {
+                        existing.PriceUsd = usd;
+                        changed = true;
+                    }
+                    if (changed)
+                    {
+                        existing.UpdatedAtUtc = now;
+                        imported++;
+                    }
                 }
-
-                imported++;
             }
 
             await _db.SaveChangesAsync(cancellationToken);
