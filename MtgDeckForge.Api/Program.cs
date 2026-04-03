@@ -208,6 +208,28 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
 
+    // Safety check: if migrations reported "up to date" but tables don't exist
+    // (stale __EFMigrationsHistory from a previous failed deploy), reset and re-migrate.
+    var conn = db.Database.GetDbConnection();
+    await conn.OpenAsync();
+    using (var cmd = conn.CreateCommand())
+    {
+        cmd.CommandText = "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'AspNetRoles')";
+        var exists = (bool)(await cmd.ExecuteScalarAsync())!;
+        if (!exists)
+        {
+            using var dropCmd = conn.CreateCommand();
+            dropCmd.CommandText = "DROP TABLE IF EXISTS \"__EFMigrationsHistory\"";
+            await dropCmd.ExecuteNonQueryAsync();
+            await conn.CloseAsync();
+            await db.Database.MigrateAsync();
+        }
+        else
+        {
+            await conn.CloseAsync();
+        }
+    }
+
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
