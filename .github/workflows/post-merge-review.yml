@@ -57,10 +57,10 @@ jobs:
         run: |
           output="$(dotnet list MtgDeckForge.sln package --vulnerable --include-transitive)"
           echo "$output"
-          if ! echo "$output" | grep -q "has the following vulnerable packages"; then
+          if echo "$output" | grep -q "has the following vulnerable packages"; then
+            echo "::error::Vulnerable packages detected."
+            exit 1
+          else
             echo "No vulnerable packages found."
             exit 0
           fi
-
-          echo "::error::Vulnerable packages detected."
-          exit 1
