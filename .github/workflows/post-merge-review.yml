@@ -34,8 +34,23 @@ jobs:
       - name: Build solution (Release)
         run: dotnet build MtgDeckForge.sln --configuration Release --no-restore
 
+      - name: Detect test projects
+        id: test_projects
+        shell: bash
+        run: |
+          if find . -name "*.csproj" -print | grep -Ei "(^|/).*(\.Tests|Tests)\.csproj$" > /dev/null; then
+            echo "has_tests=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_tests=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Run tests
+        if: steps.test_projects.outputs.has_tests == 'true'
         run: dotnet test MtgDeckForge.sln --configuration Release --no-build --verbosity normal
+
+      - name: No tests found
+        if: steps.test_projects.outputs.has_tests != 'true'
+        run: echo "::warning::No test projects found in repository; skipping test execution."
 
       - name: Dependency vulnerability review
         run: dotnet list MtgDeckForge.sln package --vulnerable --include-transitive
