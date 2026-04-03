@@ -1125,6 +1125,8 @@
             justify-content: center;
         }
 
+        /* Responsive */
+
         /* Library filter bar */
         .library-filters {
             display: flex;
@@ -1245,7 +1247,6 @@
         }
         .edit-textarea { resize: vertical; min-height: 80px; }
 
-        /* Responsive — tablet */
         @media (max-width: 900px) {
             .forge-layout {
                 grid-template-columns: 1fr;
@@ -1254,17 +1255,13 @@
                 flex-direction: column;
                 height: auto;
                 padding: 1rem 0;
-                gap: 0.75rem;
+                gap: 1rem;
             }
             .nav-tabs {
                 height: auto;
-                width: 100%;
-                justify-content: center;
             }
             .nav-tab {
-                height: 44px;
-                padding: 0 1rem;
-                font-size: 0.8rem;
+                height: 48px;
             }
             .detail-header {
                 flex-direction: column;
@@ -1276,67 +1273,6 @@
             .library-filters {
                 gap: 0.5rem;
             }
-        }
-
-        /* Responsive — iPhone / small mobile */
-        @media (max-width: 480px) {
-            .app-container { padding: 1rem; }
-
-            .logo-text { font-size: 1.3rem; }
-            .logo-subtitle { display: none; }
-            .logo-dragon { width: 72px; height: 72px; }
-            .header-inner { padding: 0.75rem 0; gap: 0.5rem; }
-
-            .nav-tab { padding: 0 0.6rem; font-size: 0.72rem; letter-spacing: 0; }
-
-            .user-info-role { display: none; }
-            .user-info { padding: 0.3rem 0.6rem; }
-            .user-info-name { font-size: 0.7rem; }
-
-            /* Forge view */
-            .panel-body { padding: 1rem; }
-            .color-option label { width: 44px; height: 44px; font-size: 1.1rem; }
-            .btn-forge { font-size: 0.85rem; padding: 0.9rem 1rem; }
-
-            /* Library */
-            .library-title { font-size: 1.3rem; }
-            .deck-grid { grid-template-columns: 1fr; }
-            .library-filters { padding: 0.75rem; gap: 0.4rem; }
-            .filter-input { min-width: 100%; }
-            .filter-color-row { flex-wrap: wrap; }
-
-            /* Detail */
-            .detail-header h1 { font-size: 1.4rem; }
-            .card-row {
-                grid-template-columns: 2rem 1fr auto;
-                font-size: 1.1rem;
-                gap: 0.5rem;
-            }
-            .card-type-text { display: none; }
-            .detail-stats { gap: 0.75rem; }
-            .stat-box { padding: 0.75rem; min-width: 70px; }
-            .stat-value { font-size: 1.1rem; }
-
-            /* Modal */
-            .modal { padding: 1.5rem 1rem; }
-            .modal-actions { flex-direction: column; }
-            .modal-actions button { width: 100%; }
-
-            /* Buttons row in detail */
-            #detailContent .detail-actions {
-                flex-wrap: wrap;
-                gap: 0.5rem;
-            }
-            #detailContent .detail-actions button {
-                font-size: 0.7rem;
-                padding: 0.5rem 0.75rem;
-            }
-
-            /* Hide card image tooltip on touch devices */
-            .card-img-tooltip { display: none !important; }
-
-            /* Analysis panel */
-            .analysis-body { padding: 0.75rem; }
         }
 
         /* Loading shimmer for generation */
@@ -1548,12 +1484,65 @@
             font-style: italic;
         }
 
+
+        /* Responsive — iPhone / small mobile */
+        @media (max-width: 480px) {
+            .app-container { padding: 1rem; }
+
+            .logo-text { font-size: 1.3rem; }
+            .logo-subtitle { display: none; }
+            .logo-dragon { width: 72px; height: 72px; }
+            .header-inner { padding: 0.75rem 0; gap: 0.5rem; }
+
+            .nav-tab { padding: 0 0.6rem; font-size: 0.72rem; letter-spacing: 0; }
+
+            .user-info-role { display: none; }
+            .user-info { padding: 0.3rem 0.6rem; }
+            .user-info-name { font-size: 0.7rem; }
+
+            .panel-body { padding: 1rem; }
+            .color-option label { width: 44px; height: 44px; font-size: 1.1rem; }
+            .btn-forge { font-size: 0.85rem; padding: 0.9rem 1rem; }
+
+            .library-title { font-size: 1.3rem; }
+            .deck-grid { grid-template-columns: 1fr; }
+            .library-filters { padding: 0.75rem; gap: 0.4rem; }
+            .filter-input { min-width: 100%; }
+            .filter-color-row { flex-wrap: wrap; }
+
+            .detail-header h1 { font-size: 1.4rem; }
+            .card-row {
+                grid-template-columns: 2rem 1fr auto;
+                font-size: 1.1rem;
+                gap: 0.5rem;
+            }
+            .card-type-text { display: none; }
+            .detail-stats { gap: 0.75rem; }
+            .stat-box { padding: 0.75rem; min-width: 70px; }
+            .stat-value { font-size: 1.1rem; }
+
+            .modal { padding: 1.5rem 1rem; }
+            .modal-actions { flex-direction: column; }
+            .modal-actions button { width: 100%; }
+
+            #detailContent .detail-actions {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            #detailContent .detail-actions button {
+                font-size: 0.7rem;
+                padding: 0.5rem 0.75rem;
+            }
+
+            .card-img-tooltip { display: none !important; }
+            .analysis-body { padding: 0.75rem; }
+        }
     </style>
 </head>
 <body>
 
     <!-- HEADER -->
-    <header class="app-header" style="display:none;">
+    <header class="app-header">
         <div class="header-inner">
             <div class="logo-group">
                 <div class="logo-dragon">
@@ -1594,7 +1583,7 @@
     </div>
 
     <!-- MAIN -->
-    <main class="app-container" style="display:none;">
+    <main class="app-container">
 
         <!-- FORGE VIEW -->
         <div id="view-forge" class="view active">
@@ -1781,13 +1770,12 @@
                     <div class="library-title">&#127984; Deck Library</div>
                     <div class="library-count" id="libraryCount">Loading...</div>
                 </div>
-                <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+                <div style="display:flex;gap:0.75rem;">
                     <button class="btn-outline" onclick="document.getElementById('csvImportInput').click()">&#8593; Import CSV</button>
                     <button class="btn-outline" onclick="loadLibrary()">&#8635; Refresh</button>
                 </div>
                 <input type="file" id="csvImportInput" accept=".csv" style="display:none;" onchange="importCsvFile(this)">
             </div>
-
             <!-- Filter bar -->
             <div class="library-filters">
                 <input type="text" class="filter-input" id="filterName" placeholder="Search by name..." oninput="debouncedSearch()">
@@ -1996,6 +1984,84 @@
 
     <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
+
+
+    <div class="modal-overlay hidden" id="editModal">
+        <div class="modal" style="max-width:520px;width:95%;">
+            <h3 style="margin-bottom:1.25rem;">&#9998; Edit Deck</h3>
+            <div class="edit-modal-body">
+                <div class="edit-field-group">
+                    <label class="edit-label">Deck Name</label>
+                    <input type="text" class="edit-input" id="editDeckName">
+                </div>
+                <div class="edit-field-group">
+                    <label class="edit-label">Commander</label>
+                    <input type="text" class="edit-input" id="editCommander">
+                </div>
+                <div class="edit-field-group">
+                    <label class="edit-label">Description</label>
+                    <textarea class="edit-textarea" id="editDescription"></textarea>
+                </div>
+                <div class="edit-field-group">
+                    <label class="edit-label">Strategy</label>
+                    <input type="text" class="edit-input" id="editStrategy">
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                    <div class="edit-field-group">
+                        <label class="edit-label">Format</label>
+                        <select class="edit-select" id="editFormat">
+                            <option value="Commander">Commander</option>
+                            <option value="Standard">Standard</option>
+                            <option value="Modern">Modern</option>
+                            <option value="Pioneer">Pioneer</option>
+                        </select>
+                    </div>
+                    <div class="edit-field-group">
+                        <label class="edit-label">Power Level</label>
+                        <select class="edit-select" id="editPowerLevel">
+                            <option value="Casual">Casual</option>
+                            <option value="Focused">Focused</option>
+                            <option value="Optimized">Optimized</option>
+                            <option value="Competitive">cEDH</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="edit-field-group">
+                    <label class="edit-label">Budget Range</label>
+                    <select class="edit-select" id="editBudget">
+                        <option value="Budget (under $50)">Under $50</option>
+                        <option value="Mid-range ($50-$150)">$50-$150</option>
+                        <option value="High ($150-$500)">$150-$500</option>
+                        <option value="No budget limit">No Limit</option>
+                    </select>
+                </div>
+                <div class="edit-field-group">
+                    <label class="edit-label">Colors</label>
+                    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                        <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.9rem;cursor:pointer;">
+                            <input type="checkbox" id="editColorW" value="W"> <span class="mana-pip W" style="width:20px;height:20px;font-size:0.6rem;">W</span>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.9rem;cursor:pointer;">
+                            <input type="checkbox" id="editColorU" value="U"> <span class="mana-pip U" style="width:20px;height:20px;font-size:0.6rem;">U</span>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.9rem;cursor:pointer;">
+                            <input type="checkbox" id="editColorB" value="B"> <span class="mana-pip B" style="width:20px;height:20px;font-size:0.6rem;">B</span>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.9rem;cursor:pointer;">
+                            <input type="checkbox" id="editColorR" value="R"> <span class="mana-pip R" style="width:20px;height:20px;font-size:0.6rem;">R</span>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.9rem;cursor:pointer;">
+                            <input type="checkbox" id="editColorG" value="G"> <span class="mana-pip G" style="width:20px;height:20px;font-size:0.6rem;">G</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions" style="margin-top:1.5rem;">
+                <button class="btn-outline" onclick="closeEditModal()">Cancel</button>
+                <button class="btn-login" style="width:auto;padding:0.6rem 1.5rem;margin:0;" onclick="saveEdit()">Save Changes</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         const API_BASE = '/api/decks';
@@ -2219,73 +2285,15 @@
             await fetchAndAppendDecks(true);
         }
 
-        async function loadMoreDecks() {
-            await fetchAndAppendDecks(false);
-        }
 
-        async function applyFilters() {
-            libSkip = 0;
-            document.getElementById('deckGrid').innerHTML = '';
-            await fetchAndAppendDecks(true);
-        }
 
-        function debouncedSearch() {
-            clearTimeout(_searchTimer);
-            _searchTimer = setTimeout(applyFilters, 350);
-        }
 
-        function toggleColorFilter(el) {
-            const color = el.dataset.color;
-            if (libActiveColor === color) {
-                libActiveColor = null;
-                el.classList.remove('active');
-            } else {
-                if (libActiveColor) {
-                    document.querySelector(`.filter-pip[data-color="${libActiveColor}"]`)?.classList.remove('active');
-                }
-                libActiveColor = color;
-                el.classList.add('active');
-            }
-            applyFilters();
-        }
 
-        function clearFilters() {
-            document.getElementById('filterName').value = '';
-            document.getElementById('filterFormat').value = '';
-            document.getElementById('filterPower').value = '';
-            if (libActiveColor) {
-                document.querySelector(`.filter-pip[data-color="${libActiveColor}"]`)?.classList.remove('active');
-                libActiveColor = null;
-            }
-            applyFilters();
-        }
 
-        function loadMoreDecks() {
-            currentSkip += PAGE_SIZE;
-            loadLibrary(true);
-        }
 
-        function toggleColorFilter(el) {
-            el.classList.toggle('active');
-            applyFilters();
-        }
 
-        function applyFilters() {
-            loadLibrary();
-        }
 
-        function clearFilters() {
-            document.getElementById('filterName').value = '';
-            document.getElementById('filterFormat').value = '';
-            document.getElementById('filterPower').value = '';
-            document.querySelectorAll('.filter-pip.active').forEach(el => el.classList.remove('active'));
-            loadLibrary();
-        }
 
-        function debouncedSearch() {
-            clearTimeout(filterDebounceTimer);
-            filterDebounceTimer = setTimeout(() => loadLibrary(), 300);
-        }
 
         async function loadMoreDecks() {
             try {
@@ -2532,50 +2540,6 @@
         }
 
         // === Edit ===
-        function openEditModal(deck) {
-            if (!deck) return;
-            document.getElementById('editDeckName').value    = deck.deckName || '';
-            document.getElementById('editCommander').value   = deck.commander || '';
-            document.getElementById('editDescription').value = deck.deckDescription || '';
-            document.getElementById('editStrategy').value    = deck.strategy || '';
-            document.getElementById('editFormat').value      = deck.format || 'Commander';
-            document.getElementById('editPowerLevel').value  = deck.powerLevel || 'Casual';
-            document.getElementById('editBudget').value      = deck.budgetRange || 'Budget (under $50)';
-            ['W','U','B','R','G'].forEach(c => {
-                document.getElementById(`editColor${c}`).checked = (deck.colors || []).includes(c);
-            });
-            document.getElementById('editModal').classList.remove('hidden');
-        }
-        function closeEditModal() {
-            document.getElementById('editModal').classList.add('hidden');
-        }
-        async function saveEdit() {
-            if (!currentDetailDeck) return;
-            const colors = ['W','U','B','R','G'].filter(c => document.getElementById(`editColor${c}`).checked);
-            const req = {
-                deckName:        document.getElementById('editDeckName').value.trim(),
-                commander:       document.getElementById('editCommander').value.trim(),
-                deckDescription: document.getElementById('editDescription').value.trim(),
-                strategy:        document.getElementById('editStrategy').value.trim(),
-                format:          document.getElementById('editFormat').value,
-                powerLevel:      document.getElementById('editPowerLevel').value,
-                budgetRange:     document.getElementById('editBudget').value,
-                colors
-            };
-            try {
-                const res = await authFetch(`${API_BASE}/${currentDetailDeck.id}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(req)
-                });
-                if (!res.ok) throw new Error('Save failed');
-                const updated = await res.json();
-                currentDetailDeck = updated;
-                renderDetail(updated);
-                closeEditModal();
-                showToast('Deck updated!');
-            } catch (err) { showToast(err.message, true); }
-        }
 
         // === Copy ===
         async function copyDeck(id) {
