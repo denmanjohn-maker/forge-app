@@ -34,12 +34,15 @@ builder.Services.AddHttpClient<ScryfallService>();
 builder.Services.Configure<MtgJsonSettings>(
     builder.Configuration.GetSection("MtgJson"));
 
-// SQL storage (Identity + pricing LocalDB)
+// SQL storage (Identity + pricing — PostgreSQL)
+// Railway injects DATABASE_URL; fall back to SqlStorage:ConnectionString for local dev.
 builder.Services.Configure<SqlStorageSettings>(
     builder.Configuration.GetSection("SqlStorage"));
-var sqlConnectionString = builder.Configuration["SqlStorage:ConnectionString"]
-    ?? "Server=(localdb)\\MSSQLLocalDB;Database=MtgDeckForgeLocal;Trusted_Connection=True;MultipleActiveResultSets=true";
-builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(sqlConnectionString));
+var sqlConnectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
+    ?? builder.Configuration["SqlStorage:ConnectionString"]
+    ?? throw new InvalidOperationException(
+        "No SQL connection string found. Set DATABASE_URL or SqlStorage:ConnectionString.");
+builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(sqlConnectionString));
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
     {
