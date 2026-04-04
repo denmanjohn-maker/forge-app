@@ -265,7 +265,7 @@
 
         .login-panel {
             background: rgba(18, 18, 26, 0.92);
-            border: 2px solid var(--border-gold);
+            border: 2px solid #8b4513;
             border-radius: 16px;
             padding: 3rem 2.5rem;
             max-width: 420px;
@@ -274,63 +274,130 @@
             position: relative;
             z-index: 2;
             backdrop-filter: blur(12px);
-            box-shadow: 0 0 60px rgba(184, 157, 96, 0.15), 0 0 120px rgba(0, 0, 0, 0.5);
+            box-shadow:
+                0 0 30px rgba(255, 100, 0, 0.2),
+                0 0 60px rgba(255, 60, 0, 0.1),
+                0 0 120px rgba(0, 0, 0, 0.5);
         }
 
-        .login-vines {
+        /* ── Flame border system ── */
+        .login-flames {
             position: absolute;
-            inset: -18px;
+            inset: 0;
             pointer-events: none;
             z-index: 3;
             overflow: visible;
         }
 
-        .login-vines svg {
+        .flame-edge {
             position: absolute;
-            filter: drop-shadow(0 0 3px rgba(34, 85, 34, 0.4));
+            overflow: visible;
         }
 
-        /* Left vine */
-        .vine-left {
-            left: -12px;
-            top: 10%;
-            height: 80%;
-            width: 36px;
+        .flame-edge-left { left: -22px; top: 5%; height: 90%; width: 40px; }
+        .flame-edge-right { right: -22px; top: 5%; height: 90%; width: 40px; }
+        .flame-edge-top { top: -22px; left: 5%; width: 90%; height: 40px; }
+        .flame-edge-bottom { bottom: -22px; left: 5%; width: 90%; height: 40px; }
+
+        .flame-particle {
+            position: absolute;
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            filter: blur(1px);
+            mix-blend-mode: screen;
+            opacity: 0;
         }
 
-        /* Right vine */
-        .vine-right {
-            right: -12px;
-            top: 8%;
-            height: 85%;
-            width: 36px;
+        /* Side flames point outward */
+        .flame-edge-left .flame-particle,
+        .flame-edge-right .flame-particle {
+            width: 12px;
+        }
+        .flame-edge-top .flame-particle,
+        .flame-edge-bottom .flame-particle {
+            height: 12px;
         }
 
-        /* Top vine */
-        .vine-top {
-            top: -12px;
-            left: 12%;
-            width: 76%;
-            height: 32px;
+        /* Flame flicker animations — varied timing for realism */
+        @keyframes flicker1 {
+            0%, 100% { opacity: 0.3; transform: scaleY(0.8) translateY(0); }
+            15% { opacity: 0.9; transform: scaleY(1.3) translateY(-3px); }
+            30% { opacity: 0.5; transform: scaleY(0.9) translateY(-1px); }
+            50% { opacity: 1; transform: scaleY(1.5) translateY(-5px); }
+            65% { opacity: 0.6; transform: scaleY(1.0) translateY(-2px); }
+            80% { opacity: 0.95; transform: scaleY(1.4) translateY(-4px); }
+        }
+        @keyframes flicker2 {
+            0%, 100% { opacity: 0.4; transform: scaleY(0.9) translateY(0); }
+            20% { opacity: 1; transform: scaleY(1.4) translateY(-4px); }
+            40% { opacity: 0.5; transform: scaleY(0.85) translateY(-1px); }
+            55% { opacity: 0.85; transform: scaleY(1.2) translateY(-3px); }
+            75% { opacity: 0.95; transform: scaleY(1.5) translateY(-5px); }
+            90% { opacity: 0.4; transform: scaleY(0.95) translateY(-1px); }
+        }
+        @keyframes flicker3 {
+            0%, 100% { opacity: 0.35; transform: scaleY(0.85) translateY(0); }
+            10% { opacity: 0.7; transform: scaleY(1.1) translateY(-2px); }
+            25% { opacity: 1; transform: scaleY(1.5) translateY(-5px); }
+            45% { opacity: 0.55; transform: scaleY(0.9) translateY(-1px); }
+            60% { opacity: 0.9; transform: scaleY(1.3) translateY(-4px); }
+            85% { opacity: 0.45; transform: scaleY(1.0) translateY(-2px); }
+        }
+        @keyframes flickerSide1 {
+            0%, 100% { opacity: 0.3; transform: scaleX(0.8) translateX(0); }
+            15% { opacity: 0.9; transform: scaleX(1.3) translateX(-3px); }
+            30% { opacity: 0.5; transform: scaleX(0.9) translateX(-1px); }
+            50% { opacity: 1; transform: scaleX(1.5) translateX(-5px); }
+            65% { opacity: 0.6; transform: scaleX(1.0) translateX(-2px); }
+            80% { opacity: 0.95; transform: scaleX(1.4) translateX(-4px); }
+        }
+        @keyframes flickerSide2 {
+            0%, 100% { opacity: 0.4; transform: scaleX(0.9) translateX(0); }
+            20% { opacity: 1; transform: scaleX(1.4) translateX(-4px); }
+            40% { opacity: 0.5; transform: scaleX(0.85) translateX(-1px); }
+            55% { opacity: 0.85; transform: scaleX(1.2) translateX(-3px); }
+            75% { opacity: 0.95; transform: scaleX(1.5) translateX(-5px); }
+        }
+        @keyframes flickerRight1 {
+            0%, 100% { opacity: 0.3; transform: scaleX(0.8) translateX(0); }
+            15% { opacity: 0.9; transform: scaleX(1.3) translateX(3px); }
+            50% { opacity: 1; transform: scaleX(1.5) translateX(5px); }
+            80% { opacity: 0.95; transform: scaleX(1.4) translateX(4px); }
+        }
+        @keyframes flickerRight2 {
+            0%, 100% { opacity: 0.4; transform: scaleX(0.9) translateX(0); }
+            20% { opacity: 1; transform: scaleX(1.4) translateX(4px); }
+            55% { opacity: 0.85; transform: scaleX(1.2) translateX(3px); }
+            75% { opacity: 0.95; transform: scaleX(1.5) translateX(5px); }
+        }
+        @keyframes emberRise {
+            0% { opacity: 0; transform: translateY(0) scale(1); }
+            20% { opacity: 1; }
+            100% { opacity: 0; transform: translateY(-40px) scale(0.3); }
         }
 
-        /* Bottom vine */
-        .vine-bottom {
-            bottom: -12px;
-            left: 10%;
-            width: 80%;
-            height: 32px;
+        .ember {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            border-radius: 50%;
+            background: #ffcc33;
+            filter: blur(0.5px);
+            mix-blend-mode: screen;
+            animation: emberRise linear infinite;
         }
 
-        /* Corner leaves */
-        .vine-corner {
-            width: 44px;
-            height: 44px;
+        /* Glow pulse behind the panel */
+        .flame-glow {
+            position: absolute;
+            inset: -8px;
+            border-radius: 20px;
+            z-index: -1;
+            animation: glowPulse 2s ease-in-out infinite alternate;
         }
-        .vine-corner-tl { top: -16px; left: -16px; }
-        .vine-corner-tr { top: -16px; right: -16px; transform: scaleX(-1); }
-        .vine-corner-bl { bottom: -16px; left: -16px; transform: scaleY(-1); }
-        .vine-corner-br { bottom: -16px; right: -16px; transform: scale(-1, -1); }
+        @keyframes glowPulse {
+            0% { box-shadow: 0 0 20px rgba(255,80,0,0.15), 0 0 40px rgba(255,40,0,0.08); }
+            100% { box-shadow: 0 0 35px rgba(255,80,0,0.25), 0 0 60px rgba(255,40,0,0.12); }
+        }
 
         .login-panel .logo-text {
             font-size: 1.6rem;
@@ -1696,73 +1763,13 @@
             <img src="https://cards.scryfall.io/art_crop/front/e/7/e71c8c39-3fbb-4a42-9cf6-b3224f5a56fc.jpg?1717013745" alt="" loading="eager">
         </div>
         <div class="login-panel">
-            <!-- Decorative vine border -->
-            <div class="login-vines">
-                <!-- Left vine -->
-                <svg class="vine-left" viewBox="0 0 36 300" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M18 0 C18 40, 8 50, 14 80 S24 110, 18 140 S8 170, 14 200 S24 230, 18 260 S12 280, 18 300" stroke="#2d7a2d" stroke-width="2.5" fill="none"/>
-                    <path d="M18 0 C18 40, 28 50, 22 80 S12 110, 18 140 S28 170, 22 200 S12 230, 18 260 S24 280, 18 300" stroke="#1e6b1e" stroke-width="1.5" fill="none" opacity="0.6"/>
-                    <ellipse cx="8" cy="45" rx="8" ry="5" fill="#2d7a2d" opacity="0.8" transform="rotate(-30 8 45)"/>
-                    <ellipse cx="26" cy="95" rx="7" ry="4.5" fill="#3a8a3a" opacity="0.7" transform="rotate(25 26 95)"/>
-                    <ellipse cx="6" cy="150" rx="8" ry="5" fill="#2d7a2d" opacity="0.8" transform="rotate(-20 6 150)"/>
-                    <ellipse cx="28" cy="200" rx="7" ry="4.5" fill="#3a8a3a" opacity="0.7" transform="rotate(30 28 200)"/>
-                    <ellipse cx="7" cy="255" rx="8" ry="5" fill="#2d7a2d" opacity="0.8" transform="rotate(-25 7 255)"/>
-                </svg>
-                <!-- Right vine -->
-                <svg class="vine-right" viewBox="0 0 36 300" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M18 0 C18 40, 28 55, 22 85 S12 115, 18 145 S28 175, 22 205 S12 235, 18 265 S24 285, 18 300" stroke="#2d7a2d" stroke-width="2.5" fill="none"/>
-                    <path d="M18 0 C18 40, 8 55, 14 85 S24 115, 18 145 S8 175, 14 205 S24 235, 18 265 S12 285, 18 300" stroke="#1e6b1e" stroke-width="1.5" fill="none" opacity="0.6"/>
-                    <ellipse cx="28" cy="50" rx="8" ry="5" fill="#2d7a2d" opacity="0.8" transform="rotate(30 28 50)"/>
-                    <ellipse cx="8" cy="105" rx="7" ry="4.5" fill="#3a8a3a" opacity="0.7" transform="rotate(-25 8 105)"/>
-                    <ellipse cx="30" cy="160" rx="8" ry="5" fill="#2d7a2d" opacity="0.8" transform="rotate(20 30 160)"/>
-                    <ellipse cx="10" cy="210" rx="7" ry="4.5" fill="#3a8a3a" opacity="0.7" transform="rotate(-30 10 210)"/>
-                    <ellipse cx="28" cy="265" rx="8" ry="5" fill="#2d7a2d" opacity="0.8" transform="rotate(25 28 265)"/>
-                </svg>
-                <!-- Top vine -->
-                <svg class="vine-top" viewBox="0 0 300 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M0 16 C40 16, 50 6, 80 12 S110 22, 140 16 S170 6, 200 12 S230 22, 260 16 S280 10, 300 16" stroke="#2d7a2d" stroke-width="2.5" fill="none"/>
-                    <ellipse cx="45" cy="6" rx="8" ry="4.5" fill="#3a8a3a" opacity="0.7" transform="rotate(-15 45 6)"/>
-                    <ellipse cx="120" cy="24" rx="7" ry="4" fill="#2d7a2d" opacity="0.8" transform="rotate(10 120 24)"/>
-                    <ellipse cx="190" cy="5" rx="8" ry="4.5" fill="#3a8a3a" opacity="0.7" transform="rotate(-10 190 5)"/>
-                    <ellipse cx="255" cy="23" rx="7" ry="4" fill="#2d7a2d" opacity="0.8" transform="rotate(15 255 23)"/>
-                </svg>
-                <!-- Bottom vine -->
-                <svg class="vine-bottom" viewBox="0 0 300 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M0 16 C40 16, 55 24, 85 18 S115 8, 145 16 S175 24, 205 18 S235 8, 265 16 S285 20, 300 16" stroke="#2d7a2d" stroke-width="2.5" fill="none"/>
-                    <ellipse cx="55" cy="25" rx="8" ry="4.5" fill="#3a8a3a" opacity="0.7" transform="rotate(15 55 25)"/>
-                    <ellipse cx="130" cy="7" rx="7" ry="4" fill="#2d7a2d" opacity="0.8" transform="rotate(-10 130 7)"/>
-                    <ellipse cx="205" cy="26" rx="8" ry="4.5" fill="#3a8a3a" opacity="0.7" transform="rotate(10 205 26)"/>
-                    <ellipse cx="270" cy="8" rx="7" ry="4" fill="#2d7a2d" opacity="0.8" transform="rotate(-15 270 8)"/>
-                </svg>
-                <!-- Corner clusters -->
-                <svg class="vine-corner vine-corner-tl" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M22 44 C22 28, 10 22, 0 22" stroke="#2d7a2d" stroke-width="2.5" fill="none"/>
-                    <path d="M30 44 C28 32, 18 26, 0 28" stroke="#1e6b1e" stroke-width="1.5" fill="none" opacity="0.5"/>
-                    <ellipse cx="8" cy="30" rx="9" ry="6" fill="#2d7a2d" opacity="0.85" transform="rotate(-40 8 30)"/>
-                    <ellipse cx="16" cy="20" rx="7" ry="5" fill="#3a8a3a" opacity="0.7" transform="rotate(-55 16 20)"/>
-                    <circle cx="6" cy="26" r="2.5" fill="#4a9a4a" opacity="0.5"/>
-                </svg>
-                <svg class="vine-corner vine-corner-tr" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M22 44 C22 28, 10 22, 0 22" stroke="#2d7a2d" stroke-width="2.5" fill="none"/>
-                    <path d="M30 44 C28 32, 18 26, 0 28" stroke="#1e6b1e" stroke-width="1.5" fill="none" opacity="0.5"/>
-                    <ellipse cx="8" cy="30" rx="9" ry="6" fill="#2d7a2d" opacity="0.85" transform="rotate(-40 8 30)"/>
-                    <ellipse cx="16" cy="20" rx="7" ry="5" fill="#3a8a3a" opacity="0.7" transform="rotate(-55 16 20)"/>
-                    <circle cx="6" cy="26" r="2.5" fill="#4a9a4a" opacity="0.5"/>
-                </svg>
-                <svg class="vine-corner vine-corner-bl" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M22 44 C22 28, 10 22, 0 22" stroke="#2d7a2d" stroke-width="2.5" fill="none"/>
-                    <path d="M30 44 C28 32, 18 26, 0 28" stroke="#1e6b1e" stroke-width="1.5" fill="none" opacity="0.5"/>
-                    <ellipse cx="8" cy="30" rx="9" ry="6" fill="#2d7a2d" opacity="0.85" transform="rotate(-40 8 30)"/>
-                    <ellipse cx="16" cy="20" rx="7" ry="5" fill="#3a8a3a" opacity="0.7" transform="rotate(-55 16 20)"/>
-                    <circle cx="6" cy="26" r="2.5" fill="#4a9a4a" opacity="0.5"/>
-                </svg>
-                <svg class="vine-corner vine-corner-br" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M22 44 C22 28, 10 22, 0 22" stroke="#2d7a2d" stroke-width="2.5" fill="none"/>
-                    <path d="M30 44 C28 32, 18 26, 0 28" stroke="#1e6b1e" stroke-width="1.5" fill="none" opacity="0.5"/>
-                    <ellipse cx="8" cy="30" rx="9" ry="6" fill="#2d7a2d" opacity="0.85" transform="rotate(-40 8 30)"/>
-                    <ellipse cx="16" cy="20" rx="7" ry="5" fill="#3a8a3a" opacity="0.7" transform="rotate(-55 16 20)"/>
-                    <circle cx="6" cy="26" r="2.5" fill="#4a9a4a" opacity="0.5"/>
-                </svg>
+            <!-- Animated flame border -->
+            <div class="flame-glow"></div>
+            <div class="login-flames">
+                <div class="flame-edge flame-edge-top" id="flamesTop"></div>
+                <div class="flame-edge flame-edge-bottom" id="flamesBottom"></div>
+                <div class="flame-edge flame-edge-left" id="flamesLeft"></div>
+                <div class="flame-edge flame-edge-right" id="flamesRight"></div>
             </div>
             <div class="logo-text">BEN'S MAGIC FORGE</div>
             <div class="logo-subtitle">Enter the Sanctum</div>
@@ -2232,6 +2239,101 @@
             document.getElementById('loginView').style.display = '';
             document.querySelector('.app-header').style.display = 'none';
             document.querySelector('.app-container').style.display = 'none';
+            initFlames();
+        }
+
+        // ── Flame border generator ──
+        function initFlames() {
+            const colors = [
+                'radial-gradient(ellipse at 50% 90%, #fff7aa 0%, #ffcc33 15%, #ff8800 40%, #ff4400 65%, #cc2200 80%, transparent 100%)',
+                'radial-gradient(ellipse at 50% 90%, #ffffcc 0%, #ffdd44 15%, #ff9922 40%, #ee5500 65%, #aa1100 80%, transparent 100%)',
+                'radial-gradient(ellipse at 50% 90%, #fff5e0 0%, #ffbb33 15%, #ff7700 40%, #dd3300 65%, #991100 80%, transparent 100%)'
+            ];
+            const anims = {
+                top: ['flicker1', 'flicker2', 'flicker3'],
+                bottom: ['flicker1', 'flicker2', 'flicker3'],
+                left: ['flickerSide1', 'flickerSide2', 'flickerSide1'],
+                right: ['flickerRight1', 'flickerRight2', 'flickerRight1']
+            };
+
+            ['Top', 'Bottom', 'Left', 'Right'].forEach(side => {
+                const el = document.getElementById('flames' + side);
+                if (!el) return;
+                el.innerHTML = '';
+                const isHoriz = side === 'Top' || side === 'Bottom';
+                const count = isHoriz ? 28 : 22;
+                const sideKey = side.toLowerCase();
+
+                for (let i = 0; i < count; i++) {
+                    const flame = document.createElement('div');
+                    flame.className = 'flame-particle';
+                    const size = 10 + Math.random() * 16;
+                    const pos = (i / count) * 100 + (Math.random() * (100 / count));
+                    const dur = 0.3 + Math.random() * 0.5;
+                    const delay = Math.random() * -1.5;
+                    const color = colors[Math.floor(Math.random() * colors.length)];
+                    const anim = anims[sideKey][Math.floor(Math.random() * anims[sideKey].length)];
+
+                    flame.style.background = color;
+                    flame.style.animationName = anim;
+                    flame.style.animationDuration = dur + 's';
+                    flame.style.animationDelay = delay + 's';
+                    flame.style.animationTimingFunction = 'ease-in-out';
+                    flame.style.animationIterationCount = 'infinite';
+
+                    if (isHoriz) {
+                        flame.style.width = (6 + Math.random() * 10) + 'px';
+                        flame.style.height = size + 'px';
+                        flame.style.left = pos + '%';
+                        flame.style.borderRadius = '50% 50% 50% 50% / 60% 60% 40% 40%';
+                        if (side === 'Top') {
+                            flame.style.bottom = '0';
+                            flame.style.transformOrigin = 'center bottom';
+                        } else {
+                            flame.style.top = '0';
+                            flame.style.transformOrigin = 'center top';
+                            flame.style.transform = 'rotate(180deg)';
+                        }
+                    } else {
+                        flame.style.height = (6 + Math.random() * 10) + 'px';
+                        flame.style.width = size + 'px';
+                        flame.style.top = pos + '%';
+                        flame.style.borderRadius = '40% 60% 60% 40% / 50% 50% 50% 50%';
+                        if (side === 'Left') {
+                            flame.style.right = '0';
+                            flame.style.transformOrigin = 'right center';
+                        } else {
+                            flame.style.left = '0';
+                            flame.style.transformOrigin = 'left center';
+                        }
+                    }
+
+                    el.appendChild(flame);
+                }
+
+                // Add embers (rising sparks)
+                const emberCount = isHoriz ? 8 : 6;
+                for (let i = 0; i < emberCount; i++) {
+                    const ember = document.createElement('div');
+                    ember.className = 'ember';
+                    const pos = 10 + Math.random() * 80;
+                    const dur = 1 + Math.random() * 1.5;
+                    const delay = Math.random() * -3;
+
+                    if (isHoriz) {
+                        ember.style.left = pos + '%';
+                        ember.style.bottom = side === 'Top' ? '0' : 'auto';
+                        ember.style.top = side === 'Bottom' ? '0' : 'auto';
+                    } else {
+                        ember.style.top = pos + '%';
+                        ember.style.right = side === 'Left' ? '0' : 'auto';
+                        ember.style.left = side === 'Right' ? '0' : 'auto';
+                    }
+                    ember.style.animationDuration = dur + 's';
+                    ember.style.animationDelay = delay + 's';
+                    el.appendChild(ember);
+                }
+            });
         }
 
         async function handleLogin() {
@@ -2294,6 +2396,8 @@
         } else {
             showLogin();
         }
+        // Ensure flames render on first paint
+        initFlames();
 
         // === Navigation ===
         document.querySelectorAll('.nav-tab').forEach(tab => {
