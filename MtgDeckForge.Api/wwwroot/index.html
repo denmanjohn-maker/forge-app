@@ -1709,6 +1709,33 @@
 </head>
 <body>
 
+    <!-- Staging "Under Construction" tape — only visible on staging hostname -->
+    <div id="stagingBanner" style="display:none;">
+        <div style="
+            position:fixed; top:0; left:0; right:0; z-index:9999;
+            height:36px;
+            background:repeating-linear-gradient(
+                -45deg,
+                #f5c518 0px, #f5c518 20px,
+                #111 20px, #111 40px
+            );
+            display:flex; align-items:center; justify-content:center;
+            box-shadow:0 2px 8px rgba(0,0,0,0.5);
+            font-family:'Cinzel',serif; font-size:0.8rem; font-weight:700;
+            letter-spacing:0.15em; color:#111; text-transform:uppercase;
+        ">
+            <span style="background:#f5c518; padding:2px 12px; border-radius:2px;">
+                &#9888; Under Construction — Staging Environment &#9888;
+            </span>
+        </div>
+    </div>
+    <script>
+        if (window.location.hostname === 'bens-magic-forge-staging.up.railway.app') {
+            document.getElementById('stagingBanner').style.display = '';
+            document.body.style.paddingTop = '36px';
+        }
+    </script>
+
     <!-- HEADER -->
     <header class="app-header">
         <div class="header-inner">
