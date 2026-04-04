@@ -117,6 +117,36 @@ public class ClaudeService
                     foreach (var card in removable)
                         deck.Cards.Remove(card);
                 }
+                else if (totalCards < 100)
+                {
+                    // Pad with basic lands matching the deck's color identity
+                    var deficit = 100 - totalCards;
+                    var basicLands = GetBasicLandsForColors(request.Colors);
+                    var existingNames = new HashSet<string>(deck.Cards.Select(c => c.Name), StringComparer.OrdinalIgnoreCase);
+
+                    for (var i = 0; i < deficit; i++)
+                    {
+                        var landName = basicLands[i % basicLands.Count];
+
+                        // Commander is singleton — if this land name already exists, skip to next
+                        // But basic lands are allowed as duplicates in Commander, so just add them
+                        deck.Cards.Add(new CardEntry
+                        {
+                            Name = landName,
+                            Quantity = 1,
+                            ManaCost = "",
+                            Cmc = 0,
+                            CardType = "Basic Land",
+                            Category = "Land",
+                            RoleInDeck = "Mana base (auto-added to reach 100 cards)",
+                            EstimatedPrice = 0.25m
+                        });
+                    }
+
+                    _logger.LogWarning(
+                        "Padded Commander deck with {Deficit} basic lands to reach 100 cards.",
+                        deficit);
+                }
             }
 
             deck.TotalCards = deck.Cards.Sum(c => c.Quantity);
@@ -298,6 +328,8 @@ Sample Cards:
         sb.AppendLine("Use real Magic: The Gathering card names. Ensure the deck is legal in the specified format.");
         sb.AppendLine("Category the cards into their primary type. Include a good mana base with appropriate lands.");
         sb.AppendLine("Make sure estimated prices are realistic for current market values.");
+        sb.AppendLine();
+        sb.AppendLine("FINAL CHECK: Before responding, count every entry in your cards array. If you do not have exactly the required number, add or remove cards until you do.");
 
         return sb.ToString();
     }
@@ -330,6 +362,31 @@ Sample Cards:
             return text[braceStart..(braceEnd + 1)];
 
         return text.Trim();
+    }
+
+    private static List<string> GetBasicLandsForColors(List<string> colors)
+    {
+        var lands = new List<string>();
+        foreach (var color in colors)
+        {
+            var land = color.ToUpperInvariant() switch
+            {
+                "W" => "Plains",
+                "U" => "Island",
+                "B" => "Swamp",
+                "R" => "Mountain",
+                "G" => "Forest",
+                _ => null
+            };
+            if (land != null)
+                lands.Add(land);
+        }
+
+        // Fallback for colorless or unrecognized
+        if (lands.Count == 0)
+            lands.Add("Wastes");
+
+        return lands;
     }
 }
 
