@@ -37,7 +37,8 @@
             background: var(--bg-deep);
             color: var(--text-primary);
             min-height: 100vh;
-            overflow-x: hidden;
+            min-height: 100dvh;
+            overflow-x: clip;
         }
 
         /* Subtle texture overlay — castle stone atmosphere */
@@ -60,6 +61,7 @@
             top: 0;
             z-index: 100;
             background: linear-gradient(180deg, rgba(10,10,15,0.98) 0%, rgba(10,10,15,0.95) 100%);
+            -webkit-backdrop-filter: blur(20px);
             backdrop-filter: blur(20px);
             border-bottom: 1px solid var(--border-gold);
             padding: 0 2rem;
@@ -225,6 +227,7 @@
         /* ===== LOGIN VIEW ===== */
         .login-backdrop {
             min-height: 100vh;
+            min-height: 100dvh;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1178,6 +1181,7 @@
         .toast-container {
             position: fixed;
             bottom: 2rem;
+            bottom: max(2rem, env(safe-area-inset-bottom, 0px));
             right: 2rem;
             z-index: 1000;
             display: flex;
@@ -1215,6 +1219,7 @@
             align-items: center;
             justify-content: center;
             z-index: 1000;
+            -webkit-backdrop-filter: blur(4px);
             backdrop-filter: blur(4px);
         }
 
@@ -1460,6 +1465,34 @@
 
             /* Analysis panel */
             .analysis-body { padding: 0.75rem; }
+
+            /* Login background — 2 columns on mobile */
+            .login-bg-grid {
+                grid-template-columns: repeat(2, 1fr);
+                grid-template-rows: repeat(6, 1fr);
+                inset: -20px;
+                transform: rotate(-4deg) scale(1.05);
+            }
+            .login-panel {
+                padding: 2rem 1.5rem;
+            }
+
+            /* Price lookup — stack layout on mobile */
+            #view-prices .panel > div:nth-child(3) {
+                flex-direction: column !important;
+            }
+            #priceCardHeader {
+                flex-direction: column !important;
+                gap: 1rem !important;
+            }
+            #priceCardImage img {
+                width: 140px !important;
+            }
+
+            /* Larger touch targets */
+            .btn-logout { padding: 0.5rem 1rem; font-size: 0.8rem; }
+            .btn-delete-card { padding: 0.4rem 0.65rem; min-height: 44px; }
+            .filter-pip { width: 36px; height: 36px; }
         }
 
         /* Loading shimmer for generation */
