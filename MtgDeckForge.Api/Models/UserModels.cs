@@ -62,3 +62,8 @@ public class UserResponse
     public List<string> GroupIds { get; set; } = new();
     public DateTime CreatedAt { get; set; }
 }
+
+public class ResetPasswordRequest
+{
+    public string NewPassword { get; set; } = null!;
+}

@@ -2845,7 +2845,7 @@
                                     <td>${u.displayName}</td>
                                     <td><span class="badge ${u.role === 'Admin' ? 'badge-admin' : 'badge-user'}">${u.role}</span></td>
                                     <td style="color:var(--text-muted);font-size:0.85rem;">${new Date(u.createdAt).toLocaleDateString()}</td>
-                                    <td>${u.username !== currentUser?.username ? `<button class="btn-delete-card" onclick="deleteUser('${u.id}')" title="Delete user">&#128465;</button>` : ''}</td>
+                                    <td>${u.username !== currentUser?.username ? `<button class="btn-delete-card" onclick="resetUserPassword('${u.id}', '${u.username}')" title="Reset password" style="margin-right:4px;">&#128273;</button><button class="btn-delete-card" onclick="deleteUser('${u.id}')" title="Delete user">&#128465;</button>` : ''}</td>
                                 </tr>
                             `).join('')}
                         </tbody>
@@ -2910,6 +2910,26 @@
                 document.getElementById('newDisplayName').value = '';
                 document.getElementById('newPassword').value = '';
                 await loadAdminUsers();
+            } catch (err) {
+                showToast(err.message, true);
+            }
+        }
+
+        async function resetUserPassword(id, username) {
+            const newPassword = prompt(`Enter new password for ${username}:`);
+            if (!newPassword) return;
+            if (newPassword.length < 4) { showToast('Password must be at least 4 characters', true); return; }
+            try {
+                const res = await authFetch(`${AUTH_BASE}/users/${id}/reset-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ newPassword })
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error || 'Failed to reset password');
+                }
+                showToast(`Password reset for ${username}`);
             } catch (err) {
                 showToast(err.message, true);
             }

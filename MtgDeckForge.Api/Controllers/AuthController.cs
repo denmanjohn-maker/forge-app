@@ -72,6 +72,23 @@ public class AuthController : ControllerBase
     }
 
     [Authorize(Roles = "Admin")]
+    [HttpPost("users/{id}/reset-password")]
+    public async Task<IActionResult> ResetPassword(string id, [FromBody] ResetPasswordRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 4)
+            return BadRequest(new { error = "Password must be at least 4 characters" });
+
+        var user = await _userService.GetByIdAsync(id);
+        if (user is null)
+            return NotFound(new { error = "User not found" });
+
+        user.PasswordHash = _authService.HashPassword(request.NewPassword);
+        await _userService.UpdateUserAsync(id, user);
+
+        return Ok(new { message = "Password reset successfully" });
+    }
+
+    [Authorize(Roles = "Admin")]
     [HttpDelete("users/{id}")]
     public async Task<IActionResult> DeleteUser(string id)
     {
