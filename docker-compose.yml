@@ -1,55 +1,101 @@
 version: '3.8'
 
-# AWS ECS Deployment
-# Prerequisites:
-#   - Image pushed to ECR via deploy/push-to-ecr.sh
-#   - MongoDB Atlas connection string available
-#   - Anthropic API key available
-#
-# Usage (Docker ECS context):
-#   docker context create ecs myecs
-#   docker compose --context myecs up
-#
-# Required environment variables (or set in a .env file):
-#   ECR_REGISTRY    - AWS account ECR registry (e.g. 123456789.dkr.ecr.us-east-1.amazonaws.com)
-#   ECR_REPOSITORY  - ECR repository name (e.g. mtg-deckforge)
-#   IMAGE_TAG       - Image tag to deploy (default: latest)
-#   ANTHROPIC_API_KEY       - Claude API key
-#   MONGODB_CONNECTION_STRING - MongoDB Atlas connection string
+# Production Docker Compose — full stack with monitoring
+# Usage: docker compose up -d --build
+# Requires .env with: ANTHROPIC_API_KEY, ADMIN_PASSWORD, JWT_SECRET, DATABASE_URL (optional)
 
 services:
+  # ─── MongoDB ───────────────────────────────────────────────
+  mongodb:
+    image: mongo:7
+    container_name: mtg-mongodb
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+      - mongo_config:/data/configdb
+    environment:
+      MONGO_INITDB_DATABASE: mtgdeckforge
+    networks:
+      - mtg-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ─── MTG Deck Forge API ────────────────────────────────────
   mtg-api:
-    image: ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mtg-deckforge-api
+    restart: unless-stopped
     env_file:
       - .env
     ports:
       - "5000:5000"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      MongoDb__ConnectionString: "${MONGODB_CONNECTION_STRING}"
+      MongoDb__ConnectionString: "${MONGODB_CONNECTION_STRING:-mongodb://mongodb:27017}"
       MongoDb__DatabaseName: "mtgdeckforge"
       MongoDb__DecksCollectionName: "decks"
       ClaudeApi__ApiKey: "${ANTHROPIC_API_KEY}"
       ClaudeApi__Model: "claude-sonnet-4-20250514"
       ClaudeApi__MaxTokens: "8192"
-    deploy:
-      replicas: 1
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 512M
-      restart_policy:
-        condition: on-failure
-        max_attempts: 3
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/healthz"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
-    logging:
-      driver: awslogs
-      options:
-        awslogs-group: /ecs/mtg-deckforge
-        awslogs-region: ${AWS_REGION:-us-east-1}
-        awslogs-stream-prefix: ecs
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - mtg-network
+
+  # ─── Prometheus ─────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: mtg-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=30d"
+    ports:
+      - "9090:9090"
+    networks:
+      - mtg-network
+    depends_on:
+      - mtg-api
+
+  # ─── Grafana ────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: mtg-grafana
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:-admin}"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "3000:3000"
+    networks:
+      - mtg-network
+    depends_on:
+      - prometheus
+
+volumes:
+  mongo_data:
+    driver: local
+  mongo_config:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  mtg-network:
+    driver: bridge

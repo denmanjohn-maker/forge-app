@@ -1,20 +1,20 @@
 version: '3.8'
 
+# Local development — just MongoDB. Run the API with `dotnet run` on your host.
+# API on http://localhost:5001, MongoDB on port 27018
+
 services:
   # ─── MongoDB ───────────────────────────────────────────────
   mongodb:
     image: mongo:7
-    container_name: mtg-mongodb
+    container_name: mtg-mongodb-local
     restart: unless-stopped
     ports:
       - "27018:27017"
     volumes:
-      - mongo_data:/data/db
-      - mongo_config:/data/configdb
+      - mongo_data_local:/data/db
     environment:
       MONGO_INITDB_DATABASE: mtgdeckforge
-    networks:
-      - mtg-network
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
@@ -22,78 +22,6 @@ services:
       retries: 5
       start_period: 30s
 
-  # ─── MTG Deck Forge API ────────────────────────────────────
-  mtg-api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: mtg-deckforge-api
-    restart: unless-stopped
-    env_file:
-      - .env
-    ports:
-      - "5001:5000"
-    environment:
-      ASPNETCORE_ENVIRONMENT: Development
-      MongoDb__ConnectionString: "mongodb://mongodb:27017"
-      MongoDb__DatabaseName: "mtgdeckforge"
-      MongoDb__DecksCollectionName: "decks"
-      ClaudeApi__ApiKey: "${ANTHROPIC_API_KEY}"
-      ClaudeApi__Model: "claude-sonnet-4-20250514"
-      ClaudeApi__MaxTokens: "8192"
-    depends_on:
-      mongodb:
-        condition: service_healthy
-    networks:
-      - mtg-network
-
-  # ─── Prometheus ─────────────────────────────────────────────
-  prometheus:
-    image: prom/prometheus:v2.53.0
-    container_name: mtg-prometheus
-    restart: unless-stopped
-    volumes:
-      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus_data:/prometheus
-    command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.retention.time=30d"
-    ports:
-      - "9090:9090"
-    networks:
-      - mtg-network
-    depends_on:
-      - mtg-api
-
-  # ─── Grafana ────────────────────────────────────────────────
-  grafana:
-    image: grafana/grafana:11.1.0
-    container_name: mtg-grafana
-    restart: unless-stopped
-    volumes:
-      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
-      - grafana_data:/var/lib/grafana
-    environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:-admin}"
-      GF_USERS_ALLOW_SIGN_UP: "false"
-    ports:
-      - "3000:3000"
-    networks:
-      - mtg-network
-    depends_on:
-      - prometheus
-
 volumes:
-  mongo_data:
+  mongo_data_local:
     driver: local
-  mongo_config:
-    driver: local
-  prometheus_data:
-    driver: local
-  grafana_data:
-    driver: local
-
-networks:
-  mtg-network:
-    driver: bridge
