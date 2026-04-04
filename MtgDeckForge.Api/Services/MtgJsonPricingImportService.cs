@@ -29,77 +29,82 @@ public class MtgJsonPricingImportService
 
         try
         {
-            using var priceRes = await _httpClient.GetAsync(_settings.PricesUrl, cancellationToken);
-            priceRes.EnsureSuccessStatusCode();
-            var pricesJson = await priceRes.Content.ReadAsStringAsync(cancellationToken);
+            _logger.LogInformation("Starting pricing import — streaming printings...");
 
-            using var printingsRes = await _httpClient.GetAsync(_settings.PrintingsUrl, cancellationToken);
-            printingsRes.EnsureSuccessStatusCode();
-            var printingsJson = await printingsRes.Content.ReadAsStringAsync(cancellationToken);
+            // Stream-parse printings to build UUID→Name map
+            var uuidToName = await StreamParseUuidToNameAsync(_settings.PrintingsUrl, cancellationToken);
+            _logger.LogInformation("Parsed {Count} card names from printings", uuidToName.Count);
 
-            var uuidToName = ParseUuidToName(printingsJson);
-            var uuidToUsd = ParseUuidToUsd(pricesJson);
+            // Stream-parse prices to build UUID→USD map
+            var uuidToUsd = await StreamParseUuidToUsdAsync(_settings.PricesUrl, cancellationToken);
+            _logger.LogInformation("Parsed {Count} prices", uuidToUsd.Count);
 
-            var imported = 0;
-            var now = DateTime.UtcNow;
-            var normalizedNames = uuidToUsd.Keys
-                .Where(uuidToName.ContainsKey)
-                .Select(uuid => PricingService.NormalizeCardName(uuidToName[uuid]))
-                .Distinct()
-                .ToList();
-            var existingByName = await _db.CardPrices
-                .Where(x => normalizedNames.Contains(x.NormalizedCardName))
-                .ToDictionaryAsync(x => x.NormalizedCardName, cancellationToken);
-
+            // Build a name→price map (smaller than keeping both UUID maps)
+            var nameToPriceMap = new Dictionary<string, (string name, string uuid, decimal usd)>(StringComparer.OrdinalIgnoreCase);
             foreach (var (uuid, usd) in uuidToUsd)
             {
                 if (!uuidToName.TryGetValue(uuid, out var name)) continue;
                 if (string.IsNullOrWhiteSpace(name)) continue;
-
                 var normalized = PricingService.NormalizeCardName(name);
-                existingByName.TryGetValue(normalized, out var existing);
-                if (existing is null)
-                {
-                    existing = new CardPrice
-                    {
-                        CardName = name,
-                        NormalizedCardName = normalized,
-                        SourceUuid = uuid,
-                        PriceUsd = usd,
-                        UpdatedAtUtc = now
-                    };
-                    _db.CardPrices.Add(existing);
-                    existingByName[normalized] = existing;
-                    imported++;
-                }
-                else
-                {
-                    var changed = false;
-                    if (!string.Equals(existing.CardName, name, StringComparison.Ordinal))
-                    {
-                        existing.CardName = name;
-                        changed = true;
-                    }
-                    if (!string.Equals(existing.SourceUuid, uuid, StringComparison.Ordinal))
-                    {
-                        existing.SourceUuid = uuid;
-                        changed = true;
-                    }
-                    if (existing.PriceUsd != usd)
-                    {
-                        existing.PriceUsd = usd;
-                        changed = true;
-                    }
-                    if (changed)
-                    {
-                        existing.UpdatedAtUtc = now;
-                        imported++;
-                    }
-                }
+                if (!nameToPriceMap.ContainsKey(normalized))
+                    nameToPriceMap[normalized] = (name, uuid, usd);
             }
 
-            await _db.SaveChangesAsync(cancellationToken);
+            // Free the large dictionaries
+            uuidToName.Clear();
+            uuidToUsd.Clear();
 
+            _logger.LogInformation("Matched {Count} unique card prices", nameToPriceMap.Count);
+
+            // Process in batches to avoid tracking too many entities
+            var imported = 0;
+            var now = DateTime.UtcNow;
+            var allNames = nameToPriceMap.Keys.ToList();
+            const int batchSize = 1000;
+
+            for (var i = 0; i < allNames.Count; i += batchSize)
+            {
+                var batchNames = allNames.Skip(i).Take(batchSize).ToList();
+                var existingByName = await _db.CardPrices
+                    .Where(x => batchNames.Contains(x.NormalizedCardName))
+                    .ToDictionaryAsync(x => x.NormalizedCardName, cancellationToken);
+
+                foreach (var normalizedName in batchNames)
+                {
+                    var (name, uuid, usd) = nameToPriceMap[normalizedName];
+                    existingByName.TryGetValue(normalizedName, out var existing);
+                    if (existing is null)
+                    {
+                        _db.CardPrices.Add(new CardPrice
+                        {
+                            CardName = name,
+                            NormalizedCardName = normalizedName,
+                            SourceUuid = uuid,
+                            PriceUsd = usd,
+                            UpdatedAtUtc = now
+                        });
+                        imported++;
+                    }
+                    else
+                    {
+                        var changed = false;
+                        if (!string.Equals(existing.CardName, name, StringComparison.Ordinal))
+                        { existing.CardName = name; changed = true; }
+                        if (!string.Equals(existing.SourceUuid, uuid, StringComparison.Ordinal))
+                        { existing.SourceUuid = uuid; changed = true; }
+                        if (existing.PriceUsd != usd)
+                        { existing.PriceUsd = usd; changed = true; }
+                        if (changed)
+                        { existing.UpdatedAtUtc = now; imported++; }
+                    }
+                }
+
+                await _db.SaveChangesAsync(cancellationToken);
+                _db.ChangeTracker.Clear();
+            }
+
+            // Re-attach and update the run record
+            _db.PricingImportRuns.Attach(run);
             run.Success = true;
             run.ImportedCount = imported;
             run.CompletedAtUtc = DateTime.UtcNow;
@@ -111,19 +116,29 @@ public class MtgJsonPricingImportService
         catch (Exception ex)
         {
             _logger.LogError(ex, "MTGJSON pricing import failed");
-            run.Success = false;
-            run.ImportedCount = 0;
-            run.CompletedAtUtc = DateTime.UtcNow;
-            run.Message = ex.Message;
-            await _db.SaveChangesAsync(cancellationToken);
+            try
+            {
+                _db.ChangeTracker.Clear();
+                _db.PricingImportRuns.Attach(run);
+                run.Success = false;
+                run.ImportedCount = 0;
+                run.CompletedAtUtc = DateTime.UtcNow;
+                run.Message = ex.Message;
+                await _db.SaveChangesAsync(cancellationToken);
+            }
+            catch { /* best effort */ }
             return (false, 0, ex.Message);
         }
     }
 
-    private static Dictionary<string, string> ParseUuidToName(string json)
+    private async Task<Dictionary<string, string>> StreamParseUuidToNameAsync(string url, CancellationToken ct)
     {
-        var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        using var doc = JsonDocument.Parse(json);
+        var dict = new Dictionary<string, string>(200_000, StringComparer.OrdinalIgnoreCase);
+        using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
+        response.EnsureSuccessStatusCode();
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+
         if (!doc.RootElement.TryGetProperty("data", out var data)) return dict;
 
         foreach (var set in data.EnumerateObject())
@@ -143,10 +158,14 @@ public class MtgJsonPricingImportService
         return dict;
     }
 
-    private static Dictionary<string, decimal> ParseUuidToUsd(string json)
+    private async Task<Dictionary<string, decimal>> StreamParseUuidToUsdAsync(string url, CancellationToken ct)
     {
-        var dict = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
-        using var doc = JsonDocument.Parse(json);
+        var dict = new Dictionary<string, decimal>(200_000, StringComparer.OrdinalIgnoreCase);
+        using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
+        response.EnsureSuccessStatusCode();
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+
         if (!doc.RootElement.TryGetProperty("data", out var data)) return dict;
 
         foreach (var item in data.EnumerateObject())
