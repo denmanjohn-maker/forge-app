@@ -265,7 +265,7 @@
 
         .login-panel {
             background: rgba(18, 18, 26, 0.92);
-            border: 1px solid var(--border-gold);
+            border: 2px solid var(--border-gold);
             border-radius: 16px;
             padding: 3rem 2.5rem;
             max-width: 420px;
@@ -276,6 +276,61 @@
             backdrop-filter: blur(12px);
             box-shadow: 0 0 60px rgba(184, 157, 96, 0.15), 0 0 120px rgba(0, 0, 0, 0.5);
         }
+
+        .login-vines {
+            position: absolute;
+            inset: -18px;
+            pointer-events: none;
+            z-index: 3;
+            overflow: visible;
+        }
+
+        .login-vines svg {
+            position: absolute;
+            filter: drop-shadow(0 0 3px rgba(34, 85, 34, 0.4));
+        }
+
+        /* Left vine */
+        .vine-left {
+            left: -12px;
+            top: 10%;
+            height: 80%;
+            width: 36px;
+        }
+
+        /* Right vine */
+        .vine-right {
+            right: -12px;
+            top: 8%;
+            height: 85%;
+            width: 36px;
+        }
+
+        /* Top vine */
+        .vine-top {
+            top: -12px;
+            left: 12%;
+            width: 76%;
+            height: 32px;
+        }
+
+        /* Bottom vine */
+        .vine-bottom {
+            bottom: -12px;
+            left: 10%;
+            width: 80%;
+            height: 32px;
+        }
+
+        /* Corner leaves */
+        .vine-corner {
+            width: 44px;
+            height: 44px;
+        }
+        .vine-corner-tl { top: -16px; left: -16px; }
+        .vine-corner-tr { top: -16px; right: -16px; transform: scaleX(-1); }
+        .vine-corner-bl { bottom: -16px; left: -16px; transform: scaleY(-1); }
+        .vine-corner-br { bottom: -16px; right: -16px; transform: scale(-1, -1); }
 
         .login-panel .logo-text {
             font-size: 1.6rem;
@@ -1641,6 +1696,74 @@
             <img src="https://cards.scryfall.io/art_crop/front/e/7/e71c8c39-3fbb-4a42-9cf6-b3224f5a56fc.jpg?1717013745" alt="" loading="eager">
         </div>
         <div class="login-panel">
+            <!-- Decorative vine border -->
+            <div class="login-vines">
+                <!-- Left vine -->
+                <svg class="vine-left" viewBox="0 0 36 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M18 0 C18 40, 8 50, 14 80 S24 110, 18 140 S8 170, 14 200 S24 230, 18 260 S12 280, 18 300" stroke="#2d7a2d" stroke-width="2.5" fill="none"/>
+                    <path d="M18 0 C18 40, 28 50, 22 80 S12 110, 18 140 S28 170, 22 200 S12 230, 18 260 S24 280, 18 300" stroke="#1e6b1e" stroke-width="1.5" fill="none" opacity="0.6"/>
+                    <ellipse cx="8" cy="45" rx="8" ry="5" fill="#2d7a2d" opacity="0.8" transform="rotate(-30 8 45)"/>
+                    <ellipse cx="26" cy="95" rx="7" ry="4.5" fill="#3a8a3a" opacity="0.7" transform="rotate(25 26 95)"/>
+                    <ellipse cx="6" cy="150" rx="8" ry="5" fill="#2d7a2d" opacity="0.8" transform="rotate(-20 6 150)"/>
+                    <ellipse cx="28" cy="200" rx="7" ry="4.5" fill="#3a8a3a" opacity="0.7" transform="rotate(30 28 200)"/>
+                    <ellipse cx="7" cy="255" rx="8" ry="5" fill="#2d7a2d" opacity="0.8" transform="rotate(-25 7 255)"/>
+                </svg>
+                <!-- Right vine -->
+                <svg class="vine-right" viewBox="0 0 36 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M18 0 C18 40, 28 55, 22 85 S12 115, 18 145 S28 175, 22 205 S12 235, 18 265 S24 285, 18 300" stroke="#2d7a2d" stroke-width="2.5" fill="none"/>
+                    <path d="M18 0 C18 40, 8 55, 14 85 S24 115, 18 145 S8 175, 14 205 S24 235, 18 265 S12 285, 18 300" stroke="#1e6b1e" stroke-width="1.5" fill="none" opacity="0.6"/>
+                    <ellipse cx="28" cy="50" rx="8" ry="5" fill="#2d7a2d" opacity="0.8" transform="rotate(30 28 50)"/>
+                    <ellipse cx="8" cy="105" rx="7" ry="4.5" fill="#3a8a3a" opacity="0.7" transform="rotate(-25 8 105)"/>
+                    <ellipse cx="30" cy="160" rx="8" ry="5" fill="#2d7a2d" opacity="0.8" transform="rotate(20 30 160)"/>
+                    <ellipse cx="10" cy="210" rx="7" ry="4.5" fill="#3a8a3a" opacity="0.7" transform="rotate(-30 10 210)"/>
+                    <ellipse cx="28" cy="265" rx="8" ry="5" fill="#2d7a2d" opacity="0.8" transform="rotate(25 28 265)"/>
+                </svg>
+                <!-- Top vine -->
+                <svg class="vine-top" viewBox="0 0 300 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M0 16 C40 16, 50 6, 80 12 S110 22, 140 16 S170 6, 200 12 S230 22, 260 16 S280 10, 300 16" stroke="#2d7a2d" stroke-width="2.5" fill="none"/>
+                    <ellipse cx="45" cy="6" rx="8" ry="4.5" fill="#3a8a3a" opacity="0.7" transform="rotate(-15 45 6)"/>
+                    <ellipse cx="120" cy="24" rx="7" ry="4" fill="#2d7a2d" opacity="0.8" transform="rotate(10 120 24)"/>
+                    <ellipse cx="190" cy="5" rx="8" ry="4.5" fill="#3a8a3a" opacity="0.7" transform="rotate(-10 190 5)"/>
+                    <ellipse cx="255" cy="23" rx="7" ry="4" fill="#2d7a2d" opacity="0.8" transform="rotate(15 255 23)"/>
+                </svg>
+                <!-- Bottom vine -->
+                <svg class="vine-bottom" viewBox="0 0 300 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M0 16 C40 16, 55 24, 85 18 S115 8, 145 16 S175 24, 205 18 S235 8, 265 16 S285 20, 300 16" stroke="#2d7a2d" stroke-width="2.5" fill="none"/>
+                    <ellipse cx="55" cy="25" rx="8" ry="4.5" fill="#3a8a3a" opacity="0.7" transform="rotate(15 55 25)"/>
+                    <ellipse cx="130" cy="7" rx="7" ry="4" fill="#2d7a2d" opacity="0.8" transform="rotate(-10 130 7)"/>
+                    <ellipse cx="205" cy="26" rx="8" ry="4.5" fill="#3a8a3a" opacity="0.7" transform="rotate(10 205 26)"/>
+                    <ellipse cx="270" cy="8" rx="7" ry="4" fill="#2d7a2d" opacity="0.8" transform="rotate(-15 270 8)"/>
+                </svg>
+                <!-- Corner clusters -->
+                <svg class="vine-corner vine-corner-tl" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22 44 C22 28, 10 22, 0 22" stroke="#2d7a2d" stroke-width="2.5" fill="none"/>
+                    <path d="M30 44 C28 32, 18 26, 0 28" stroke="#1e6b1e" stroke-width="1.5" fill="none" opacity="0.5"/>
+                    <ellipse cx="8" cy="30" rx="9" ry="6" fill="#2d7a2d" opacity="0.85" transform="rotate(-40 8 30)"/>
+                    <ellipse cx="16" cy="20" rx="7" ry="5" fill="#3a8a3a" opacity="0.7" transform="rotate(-55 16 20)"/>
+                    <circle cx="6" cy="26" r="2.5" fill="#4a9a4a" opacity="0.5"/>
+                </svg>
+                <svg class="vine-corner vine-corner-tr" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22 44 C22 28, 10 22, 0 22" stroke="#2d7a2d" stroke-width="2.5" fill="none"/>
+                    <path d="M30 44 C28 32, 18 26, 0 28" stroke="#1e6b1e" stroke-width="1.5" fill="none" opacity="0.5"/>
+                    <ellipse cx="8" cy="30" rx="9" ry="6" fill="#2d7a2d" opacity="0.85" transform="rotate(-40 8 30)"/>
+                    <ellipse cx="16" cy="20" rx="7" ry="5" fill="#3a8a3a" opacity="0.7" transform="rotate(-55 16 20)"/>
+                    <circle cx="6" cy="26" r="2.5" fill="#4a9a4a" opacity="0.5"/>
+                </svg>
+                <svg class="vine-corner vine-corner-bl" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22 44 C22 28, 10 22, 0 22" stroke="#2d7a2d" stroke-width="2.5" fill="none"/>
+                    <path d="M30 44 C28 32, 18 26, 0 28" stroke="#1e6b1e" stroke-width="1.5" fill="none" opacity="0.5"/>
+                    <ellipse cx="8" cy="30" rx="9" ry="6" fill="#2d7a2d" opacity="0.85" transform="rotate(-40 8 30)"/>
+                    <ellipse cx="16" cy="20" rx="7" ry="5" fill="#3a8a3a" opacity="0.7" transform="rotate(-55 16 20)"/>
+                    <circle cx="6" cy="26" r="2.5" fill="#4a9a4a" opacity="0.5"/>
+                </svg>
+                <svg class="vine-corner vine-corner-br" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22 44 C22 28, 10 22, 0 22" stroke="#2d7a2d" stroke-width="2.5" fill="none"/>
+                    <path d="M30 44 C28 32, 18 26, 0 28" stroke="#1e6b1e" stroke-width="1.5" fill="none" opacity="0.5"/>
+                    <ellipse cx="8" cy="30" rx="9" ry="6" fill="#2d7a2d" opacity="0.85" transform="rotate(-40 8 30)"/>
+                    <ellipse cx="16" cy="20" rx="7" ry="5" fill="#3a8a3a" opacity="0.7" transform="rotate(-55 16 20)"/>
+                    <circle cx="6" cy="26" r="2.5" fill="#4a9a4a" opacity="0.5"/>
+                </svg>
+            </div>
             <div class="logo-text">BEN'S MAGIC FORGE</div>
             <div class="logo-subtitle">Enter the Sanctum</div>
             <input type="text" id="loginUsername" class="login-field" placeholder="Username" autocomplete="username">
