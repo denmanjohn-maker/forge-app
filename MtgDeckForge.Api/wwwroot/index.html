@@ -1686,6 +1686,7 @@
             <nav class="nav-tabs" id="mainNav">
                 <button class="nav-tab active" data-view="forge">&#9876; Forge</button>
                 <button class="nav-tab" data-view="library">&#128218; Library</button>
+                <button class="nav-tab" data-view="prices">&#128176; Price Lookup</button>
                 <button class="nav-tab" data-view="admin" id="adminTab" style="display:none;">&#9881; Admin</button>
             </nav>
             <div class="header-right" id="headerRight" style="display:none;">
@@ -1965,6 +1966,64 @@
         <!-- DETAIL VIEW -->
         <div id="view-detail" class="view">
             <div id="detailContent"></div>
+        </div>
+
+        <!-- PRICE LOOKUP VIEW -->
+        <div id="view-prices" class="view">
+            <div class="panel" style="padding:2rem;">
+                <h2 style="color:var(--gold); margin:0 0 0.5rem 0; font-family:'Cinzel',serif;">&#128176; Price Lookup</h2>
+                <p style="color:var(--text-secondary); margin-bottom:1.5rem; font-size:0.95rem;">Search any Magic: The Gathering card to see aggregated pricing from multiple sources.</p>
+
+                <div style="display:flex; gap:0.75rem; margin-bottom:1.5rem;">
+                    <input type="text" id="priceLookupInput" placeholder="Enter card name (e.g., Sol Ring, Black Lotus...)"
+                        style="flex:1; padding:0.75rem 1rem; background:var(--bg-deep); border:1px solid var(--border); border-radius:8px; color:var(--text-primary); font-size:1rem; font-family:'Crimson Text',serif;"
+                        onkeydown="if(event.key==='Enter') priceLookupSearch()">
+                    <button onclick="priceLookupSearch()" id="btnPriceLookup"
+                        style="padding:0.75rem 1.5rem; background:linear-gradient(135deg, var(--gold-dark), var(--gold)); border:none; border-radius:8px; color:#1a1a1a; font-family:'Cinzel',serif; font-weight:700; cursor:pointer; white-space:nowrap;">
+                        Search
+                    </button>
+                </div>
+
+                <div id="priceLookupResults" style="display:none;">
+                    <!-- Card header with image -->
+                    <div id="priceCardHeader" style="display:flex; gap:1.5rem; margin-bottom:1.5rem; padding:1.5rem; background:var(--bg-deep); border:1px solid var(--border); border-radius:12px;">
+                        <div id="priceCardImage" style="flex-shrink:0;">
+                            <!-- Image inserted by JS -->
+                        </div>
+                        <div style="flex:1; min-width:0;">
+                            <h3 id="priceCardName" style="color:var(--gold); margin:0 0 0.5rem 0; font-family:'Cinzel',serif; font-size:1.3rem;"></h3>
+                            <div id="priceCardSet" style="color:var(--text-secondary); margin-bottom:1rem; font-size:0.9rem;"></div>
+                            <div id="priceCardSummary" style="display:flex; gap:1.5rem; flex-wrap:wrap;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Sources table -->
+                    <h3 style="color:var(--text-primary); margin:1.5rem 0 0.75rem 0; font-family:'Cinzel',serif; font-size:1.1rem;">Price Sources</h3>
+                    <div style="overflow-x:auto;">
+                        <table style="width:100%; border-collapse:collapse;">
+                            <thead>
+                                <tr style="border-bottom:2px solid var(--border);">
+                                    <th style="text-align:left; padding:0.75rem; color:var(--gold); font-family:'Cinzel',serif; font-size:0.85rem;">Source</th>
+                                    <th style="text-align:right; padding:0.75rem; color:var(--gold); font-family:'Cinzel',serif; font-size:0.85rem;">USD</th>
+                                    <th style="text-align:left; padding:0.75rem; color:var(--gold); font-family:'Cinzel',serif; font-size:0.85rem;">Updated</th>
+                                    <th style="text-align:left; padding:0.75rem; color:var(--gold); font-family:'Cinzel',serif; font-size:0.85rem;">Link</th>
+                                </tr>
+                            </thead>
+                            <tbody id="priceSourcesBody"></tbody>
+                        </table>
+                    </div>
+
+                    <!-- Additional pricing info -->
+                    <div id="priceExtraInfo" style="margin-top:1rem; display:flex; gap:1rem; flex-wrap:wrap;"></div>
+                </div>
+
+                <div id="priceLookupLoading" style="display:none; text-align:center; padding:2rem; color:var(--text-secondary);">
+                    <div style="font-size:1.5rem; margin-bottom:0.5rem;">&#9876;</div>
+                    Searching pricing sources...
+                </div>
+
+                <div id="priceLookupError" style="display:none; text-align:center; padding:2rem; color:var(--danger-hover);"></div>
+            </div>
         </div>
 
         <!-- ADMIN VIEW -->
@@ -2255,6 +2314,111 @@
             showApp();
         } else {
             showLogin();
+        }
+
+        // === Price Lookup ===
+        async function priceLookupSearch() {
+            const input = document.getElementById('priceLookupInput');
+            const cardName = input.value.trim();
+            if (!cardName) return;
+
+            const resultsDiv = document.getElementById('priceLookupResults');
+            const loadingDiv = document.getElementById('priceLookupLoading');
+            const errorDiv = document.getElementById('priceLookupError');
+            const btn = document.getElementById('btnPriceLookup');
+
+            resultsDiv.style.display = 'none';
+            errorDiv.style.display = 'none';
+            loadingDiv.style.display = '';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch(`${API_BASE}/pricing/lookup?cardName=${encodeURIComponent(cardName)}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.error || `Not found (${res.status})`);
+                }
+
+                const data = await res.json();
+                renderPriceLookup(data);
+            } catch (e) {
+                errorDiv.textContent = e.message;
+                errorDiv.style.display = '';
+            } finally {
+                loadingDiv.style.display = 'none';
+                btn.disabled = false;
+            }
+        }
+
+        function renderPriceLookup(data) {
+            const resultsDiv = document.getElementById('priceLookupResults');
+
+            // Card image
+            const imgDiv = document.getElementById('priceCardImage');
+            if (data.imageUrl) {
+                imgDiv.innerHTML = `<img src="${data.imageUrl}" alt="${data.cardName}" style="width:180px; border-radius:10px; box-shadow:0 4px 20px rgba(0,0,0,0.5);">`;
+            } else {
+                imgDiv.innerHTML = `<div style="width:180px; height:250px; background:var(--bg-deep); border:1px solid var(--border); border-radius:10px; display:flex; align-items:center; justify-content:center; color:var(--text-muted);">No Image</div>`;
+            }
+
+            // Card name & set
+            document.getElementById('priceCardName').textContent = data.cardName;
+            document.getElementById('priceCardSet').textContent = data.set ? `Set: ${data.set}` : '';
+
+            // Summary badges
+            const summaryDiv = document.getElementById('priceCardSummary');
+            summaryDiv.innerHTML = '';
+
+            // Find the main USD price (prefer Scryfall Market, then local)
+            const mainSource = data.sources.find(s => s.source.includes('Market')) || data.sources[0];
+            if (mainSource) {
+                summaryDiv.innerHTML += `
+                    <div style="background:linear-gradient(135deg, #1a3a1a, #0d1f0d); border:1px solid #2d7a2d; border-radius:8px; padding:0.75rem 1.25rem; text-align:center;">
+                        <div style="color:#6abf6a; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:0.25rem;">USD</div>
+                        <div style="color:#4ade80; font-size:1.5rem; font-weight:700; font-family:'Cinzel',serif;">$${mainSource.priceUsd.toFixed(2)}</div>
+                    </div>`;
+            }
+            if (data.eurPrice != null) {
+                summaryDiv.innerHTML += `
+                    <div style="background:linear-gradient(135deg, #1a2a3a, #0d1520); border:1px solid #2d5a8a; border-radius:8px; padding:0.75rem 1.25rem; text-align:center;">
+                        <div style="color:#6aafef; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:0.25rem;">EUR</div>
+                        <div style="color:#60a5fa; font-size:1.5rem; font-weight:700; font-family:'Cinzel',serif;">€${data.eurPrice.toFixed(2)}</div>
+                    </div>`;
+            }
+            if (data.tixPrice != null) {
+                summaryDiv.innerHTML += `
+                    <div style="background:linear-gradient(135deg, #2a2a1a, #1a1a0d); border:1px solid #8a8a2d; border-radius:8px; padding:0.75rem 1.25rem; text-align:center;">
+                        <div style="color:#cfcf6a; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:0.25rem;">MTGO TIX</div>
+                        <div style="color:#facc15; font-size:1.5rem; font-weight:700; font-family:'Cinzel',serif;">${data.tixPrice.toFixed(2)}</div>
+                    </div>`;
+            }
+
+            // Sources table
+            const tbody = document.getElementById('priceSourcesBody');
+            tbody.innerHTML = '';
+            data.sources.forEach(s => {
+                const updated = s.updatedAt ? new Date(s.updatedAt).toLocaleDateString() : '—';
+                const link = s.url ? `<a href="${s.url}" target="_blank" style="color:var(--gold); text-decoration:none;">View ↗</a>` : '—';
+                tbody.innerHTML += `
+                    <tr style="border-bottom:1px solid var(--border);">
+                        <td style="padding:0.75rem; color:var(--text-primary); font-size:0.95rem;">${s.source}</td>
+                        <td style="padding:0.75rem; text-align:right; color:#4ade80; font-weight:700; font-size:1rem;">$${s.priceUsd.toFixed(2)}</td>
+                        <td style="padding:0.75rem; color:var(--text-secondary); font-size:0.85rem;">${updated}</td>
+                        <td style="padding:0.75rem; font-size:0.85rem;">${link}</td>
+                    </tr>`;
+            });
+
+            // Warning if Scryfall failed
+            const extraDiv = document.getElementById('priceExtraInfo');
+            extraDiv.innerHTML = '';
+            if (data.warning) {
+                extraDiv.innerHTML = `<div style="color:var(--gold); font-size:0.85rem; padding:0.5rem; background:rgba(201,168,76,0.1); border-radius:6px;">⚠ ${data.warning}</div>`;
+            }
+
+            resultsDiv.style.display = '';
         }
 
         // === Navigation ===
