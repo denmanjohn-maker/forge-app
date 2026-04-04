@@ -9,9 +9,37 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using MtgDeckForge.Api.Data;
 using MtgDeckForge.Api.Models;
+using MtgDeckForge.Api.Observability;
 using MtgDeckForge.Api.Services;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using Serilog;
+using Serilog.Events;
+
+// ── Serilog bootstrap (captures startup errors) ──
+var logStore = new InMemoryLogStore(1000);
+
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+    .WriteTo.Sink(new InMemoryLogSink(logStore))
+    .WriteTo.OpenTelemetry(options =>
+    {
+        options.Endpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT")
+            ?? "http://localhost:4317";
+        options.Protocol = Serilog.Sinks.OpenTelemetry.OtlpProtocol.Grpc;
+        options.ResourceAttributes = new Dictionary<string, object>
+        {
+            ["service.name"] = "MtgDeckForge"
+        };
+    })
+    .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Host.UseSerilog();
 
 // Railway (and other PaaS) inject PORT at runtime — honour it
 var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
@@ -82,6 +110,16 @@ builder.Services.AddHttpClient<MtgJsonPricingImportService>(client =>
     client.Timeout = TimeSpan.FromMinutes(10);
 });
 builder.Services.AddHostedService<PricingRefreshHostedService>();
+
+// ── Observability ──
+builder.Services.AddSingleton(logStore);
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(r => r.AddService("MtgDeckForge"))
+    .WithMetrics(metrics => metrics
+        .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation()
+        .AddRuntimeInstrumentation()
+        .AddPrometheusExporter());
 
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
@@ -277,6 +315,11 @@ using (var scope = app.Services.CreateScope())
 app.UseSwagger();
 app.UseSwaggerUI();
 
+// Restrict /metrics and /logging to Docker-internal IPs only
+app.UseInternalOnly("/metrics", "/logging");
+
+app.UseSerilogRequestLogging();
+
 app.UseCors();
 app.UseRateLimiter();
 
@@ -286,6 +329,18 @@ app.UseAuthorization();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 app.MapControllers();
+
+// Prometheus metrics endpoint (scraped by Prometheus container)
+app.MapPrometheusScrapingEndpoint("/metrics");
+
+// Recent structured logs endpoint (consumed by Grafana/internal tools)
+app.MapGet("/logging", (InMemoryLogStore store, HttpContext ctx) =>
+{
+    var count = 200;
+    if (ctx.Request.Query.TryGetValue("count", out var countStr) && int.TryParse(countStr, out var c))
+        count = Math.Clamp(c, 1, 1000);
+    return Results.Ok(store.GetRecent(count));
+});
 
 // Health check endpoint for ECS/ALB
 app.MapGet("/healthz", () => Results.Ok(new { status = "healthy" }));

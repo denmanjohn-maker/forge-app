@@ -47,10 +47,51 @@ services:
     networks:
       - mtg-network
 
+  # ─── Prometheus ─────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: mtg-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=30d"
+    ports:
+      - "9090:9090"
+    networks:
+      - mtg-network
+    depends_on:
+      - mtg-api
+
+  # ─── Grafana ────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: mtg-grafana
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:-admin}"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "3000:3000"
+    networks:
+      - mtg-network
+    depends_on:
+      - prometheus
+
 volumes:
   mongo_data:
     driver: local
   mongo_config:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
     driver: local
 
 networks:
