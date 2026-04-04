@@ -2045,7 +2045,7 @@
                 <p style="color:var(--text-secondary); margin-bottom:1.5rem; font-size:0.95rem;">Search any Magic: The Gathering card to see aggregated pricing from multiple sources.</p>
 
                 <div style="display:flex; gap:0.75rem; margin-bottom:1.5rem;">
-                    <input type="text" id="priceLookupInput" placeholder="Enter card name (e.g., Sol Ring, Black Lotus...)"
+                    <input type="text" id="priceLookupInput" placeholder="Search cards (e.g., dragon, sol ring, black lotus...)"
                         style="flex:1; padding:0.75rem 1rem; background:var(--bg-deep); border:1px solid var(--border); border-radius:8px; color:var(--text-primary); font-size:1rem; font-family:'Crimson Text',serif;"
                         onkeydown="if(event.key==='Enter') priceLookupSearch()">
                     <button onclick="priceLookupSearch()" id="btnPriceLookup"
@@ -2054,7 +2054,22 @@
                     </button>
                 </div>
 
+                <div id="priceLookupSearchResults" style="display:none; margin-bottom:1.5rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+                        <h3 style="color:var(--text-primary); margin:0; font-family:'Cinzel',serif; font-size:1rem;">
+                            <span id="priceSearchCount"></span> results
+                        </h3>
+                        <button id="priceSearchMore" onclick="priceLookupLoadMore()" style="display:none; padding:0.4rem 1rem; background:var(--bg-deep); border:1px solid var(--border); border-radius:6px; color:var(--gold); font-family:'Cinzel',serif; font-size:0.8rem; cursor:pointer;">
+                            Load More
+                        </button>
+                    </div>
+                    <div id="priceSearchGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:0.75rem;"></div>
+                </div>
+
                 <div id="priceLookupResults" style="display:none;">
+                    <button onclick="priceBackToSearch()" style="margin-bottom:1rem; padding:0.4rem 1rem; background:var(--bg-deep); border:1px solid var(--border); border-radius:6px; color:var(--gold); font-family:'Cinzel',serif; font-size:0.85rem; cursor:pointer;">
+                        ← Back to results
+                    </button>
                     <!-- Card header with image -->
                     <div id="priceCardHeader" style="display:flex; gap:1.5rem; margin-bottom:1.5rem; padding:1.5rem; background:var(--bg-deep); border:1px solid var(--border); border-radius:12px;">
                         <div id="priceCardImage" style="flex-shrink:0;">
@@ -2408,20 +2423,114 @@
         }
 
         // === Price Lookup ===
+        let priceSearchPage = 1;
+        let priceSearchQuery = '';
+
         async function priceLookupSearch() {
             const input = document.getElementById('priceLookupInput');
             const cardName = input.value.trim();
             if (!cardName) return;
 
+            priceSearchQuery = cardName;
+            priceSearchPage = 1;
+
+            const searchResultsDiv = document.getElementById('priceLookupSearchResults');
             const resultsDiv = document.getElementById('priceLookupResults');
             const loadingDiv = document.getElementById('priceLookupLoading');
             const errorDiv = document.getElementById('priceLookupError');
             const btn = document.getElementById('btnPriceLookup');
 
+            searchResultsDiv.style.display = 'none';
             resultsDiv.style.display = 'none';
             errorDiv.style.display = 'none';
             loadingDiv.style.display = '';
             btn.disabled = true;
+
+            try {
+                const res = await fetch(`/api/pricing/search?q=${encodeURIComponent(cardName)}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.error || `No results found (${res.status})`);
+                }
+
+                const data = await res.json();
+                renderPriceSearchResults(data, false);
+            } catch (e) {
+                errorDiv.textContent = e.message;
+                errorDiv.style.display = '';
+            } finally {
+                loadingDiv.style.display = 'none';
+                btn.disabled = false;
+            }
+        }
+
+        async function priceLookupLoadMore() {
+            priceSearchPage++;
+            const btn = document.getElementById('priceSearchMore');
+            btn.disabled = true;
+            btn.textContent = 'Loading...';
+
+            try {
+                const res = await fetch(`/api/pricing/search?q=${encodeURIComponent(priceSearchQuery)}&page=${priceSearchPage}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    renderPriceSearchResults(data, true);
+                }
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Load More';
+            }
+        }
+
+        function renderPriceSearchResults(data, append) {
+            const searchResultsDiv = document.getElementById('priceLookupSearchResults');
+            const grid = document.getElementById('priceSearchGrid');
+            const countSpan = document.getElementById('priceSearchCount');
+            const moreBtn = document.getElementById('priceSearchMore');
+
+            if (!append) grid.innerHTML = '';
+            countSpan.textContent = data.totalCards;
+            moreBtn.style.display = data.hasMore ? '' : 'none';
+
+            data.results.forEach(card => {
+                const el = document.createElement('div');
+                el.style.cssText = 'cursor:pointer; background:var(--bg-deep); border:1px solid var(--border); border-radius:10px; padding:0.5rem; text-align:center; transition:border-color 0.2s, transform 0.2s;';
+                el.onmouseenter = () => { el.style.borderColor = 'var(--gold)'; el.style.transform = 'translateY(-2px)'; };
+                el.onmouseleave = () => { el.style.borderColor = 'var(--border)'; el.style.transform = 'none'; };
+                el.onclick = () => priceSelectCard(card.name);
+
+                const img = card.imageUrl
+                    ? `<img src="${card.imageUrl}" alt="${card.name}" style="width:100%; border-radius:8px; margin-bottom:0.4rem;" loading="lazy">`
+                    : `<div style="width:100%; aspect-ratio:0.72; background:var(--bg-card); border-radius:8px; margin-bottom:0.4rem; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:0.75rem;">No Image</div>`;
+
+                const price = card.priceUsd != null ? `<div style="color:#4ade80; font-weight:700; font-size:0.85rem;">$${card.priceUsd.toFixed(2)}</div>` : '';
+
+                el.innerHTML = `
+                    ${img}
+                    <div style="color:var(--text-primary); font-size:0.8rem; font-weight:600; line-height:1.2; margin-bottom:0.2rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${card.name}</div>
+                    <div style="color:var(--text-muted); font-size:0.7rem; margin-bottom:0.2rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${card.set || ''}</div>
+                    ${price}
+                `;
+                grid.appendChild(el);
+            });
+
+            searchResultsDiv.style.display = '';
+        }
+
+        async function priceSelectCard(cardName) {
+            const searchResultsDiv = document.getElementById('priceLookupSearchResults');
+            const resultsDiv = document.getElementById('priceLookupResults');
+            const loadingDiv = document.getElementById('priceLookupLoading');
+            const errorDiv = document.getElementById('priceLookupError');
+
+            searchResultsDiv.style.display = 'none';
+            errorDiv.style.display = 'none';
+            loadingDiv.style.display = '';
 
             try {
                 const res = await fetch(`/api/pricing/lookup?cardName=${encodeURIComponent(cardName)}`, {
@@ -2438,10 +2547,15 @@
             } catch (e) {
                 errorDiv.textContent = e.message;
                 errorDiv.style.display = '';
+                searchResultsDiv.style.display = '';
             } finally {
                 loadingDiv.style.display = 'none';
-                btn.disabled = false;
             }
+        }
+
+        function priceBackToSearch() {
+            document.getElementById('priceLookupResults').style.display = 'none';
+            document.getElementById('priceLookupSearchResults').style.display = '';
         }
 
         function renderPriceLookup(data) {

@@ -22,6 +22,69 @@ public class PricingController : ControllerBase
         _httpClientFactory = httpClientFactory;
     }
 
+    [HttpGet("search")]
+    public async Task<IActionResult> Search([FromQuery] string q, [FromQuery] int page = 1, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(q))
+            return BadRequest(new { error = "q is required" });
+
+        var results = new List<object>();
+
+        try
+        {
+            var client = _httpClientFactory.CreateClient();
+            client.DefaultRequestHeaders.Add("User-Agent", "MtgDeckForge/1.0");
+            client.DefaultRequestHeaders.Add("Accept", "application/json");
+
+            var scryfallUrl = $"https://api.scryfall.com/cards/search?q={Uri.EscapeDataString(q)}&page={page}&unique=cards&order=name";
+            var resp = await client.GetAsync(scryfallUrl, ct);
+
+            if (!resp.IsSuccessStatusCode)
+            {
+                var errBody = await resp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>(ct);
+                var detail = errBody.TryGetProperty("details", out var d) ? d.GetString() : "No results found";
+                return NotFound(new { error = detail });
+            }
+
+            var json = await resp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>(ct);
+            var hasMore = json.TryGetProperty("has_more", out var hm) && hm.GetBoolean();
+            var totalCards = json.TryGetProperty("total_cards", out var tc) ? tc.GetInt32() : 0;
+
+            foreach (var card in json.GetProperty("data").EnumerateArray())
+            {
+                var name = card.GetProperty("name").GetString();
+                var set = card.TryGetProperty("set_name", out var sn) ? sn.GetString() : null;
+                var imageUrl = (string?)null;
+                if (card.TryGetProperty("image_uris", out var imgs) && imgs.TryGetProperty("small", out var smallImg))
+                    imageUrl = smallImg.GetString();
+                else if (card.TryGetProperty("card_faces", out var faces) && faces.GetArrayLength() > 0)
+                {
+                    var face = faces[0];
+                    if (face.TryGetProperty("image_uris", out var fImgs) && fImgs.TryGetProperty("small", out var fSmall))
+                        imageUrl = fSmall.GetString();
+                }
+
+                // Quick price from Scryfall
+                decimal? priceUsd = null;
+                if (card.TryGetProperty("prices", out var prices) &&
+                    prices.TryGetProperty("usd", out var usdEl) &&
+                    usdEl.ValueKind == System.Text.Json.JsonValueKind.String &&
+                    decimal.TryParse(usdEl.GetString(), out var usd))
+                {
+                    priceUsd = usd;
+                }
+
+                results.Add(new { name, set, imageUrl, priceUsd });
+            }
+
+            return Ok(new { results, hasMore, totalCards, page });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = $"Search failed: {ex.Message}" });
+        }
+    }
+
     [HttpGet("lookup")]
     public async Task<IActionResult> Lookup([FromQuery] string cardName, CancellationToken ct)
     {
