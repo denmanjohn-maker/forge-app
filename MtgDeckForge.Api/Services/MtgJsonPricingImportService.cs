@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -29,17 +30,14 @@ public class MtgJsonPricingImportService
 
         try
         {
-            _logger.LogInformation("Starting pricing import — streaming printings...");
+            _logger.LogInformation("Starting pricing import — streaming with Utf8JsonReader...");
 
-            // Stream-parse printings to build UUID→Name map
             var uuidToName = await StreamParseUuidToNameAsync(_settings.PrintingsUrl, cancellationToken);
             _logger.LogInformation("Parsed {Count} card names from printings", uuidToName.Count);
 
-            // Stream-parse prices to build UUID→USD map
             var uuidToUsd = await StreamParseUuidToUsdAsync(_settings.PricesUrl, cancellationToken);
             _logger.LogInformation("Parsed {Count} prices", uuidToUsd.Count);
 
-            // Build a name→price map (smaller than keeping both UUID maps)
             var nameToPriceMap = new Dictionary<string, (string name, string uuid, decimal usd)>(StringComparer.OrdinalIgnoreCase);
             foreach (var (uuid, usd) in uuidToUsd)
             {
@@ -50,13 +48,10 @@ public class MtgJsonPricingImportService
                     nameToPriceMap[normalized] = (name, uuid, usd);
             }
 
-            // Free the large dictionaries
             uuidToName.Clear();
             uuidToUsd.Clear();
-
             _logger.LogInformation("Matched {Count} unique card prices", nameToPriceMap.Count);
 
-            // Process in batches to avoid tracking too many entities
             var imported = 0;
             var now = DateTime.UtcNow;
             var allNames = nameToPriceMap.Keys.ToList();
@@ -101,9 +96,10 @@ public class MtgJsonPricingImportService
 
                 await _db.SaveChangesAsync(cancellationToken);
                 _db.ChangeTracker.Clear();
+                _logger.LogInformation("Saved batch {Batch}/{Total}",
+                    i / batchSize + 1, (allNames.Count + batchSize - 1) / batchSize);
             }
 
-            // Re-attach and update the run record
             _db.PricingImportRuns.Attach(run);
             run.Success = true;
             run.ImportedCount = imported;
@@ -131,31 +127,159 @@ public class MtgJsonPricingImportService
         }
     }
 
+    #region Streaming AllPrintings parser
+
+    // Mutable state for the AllPrintings parser, passed between sync chunk-processing calls
+    private class PrintingsParserState
+    {
+        public JsonReaderState ReaderState;
+        public bool InData;
+        public bool InSet;
+        public bool InCardsArray;
+        public bool InCard;
+        public bool AwaitingCardsValue;
+        public string? PendingProp;
+        public string? CurUuid;
+        public string? CurName;
+        public int SetsProcessed;
+    }
+
     private async Task<Dictionary<string, string>> StreamParseUuidToNameAsync(string url, CancellationToken ct)
     {
         var dict = new Dictionary<string, string>(200_000, StringComparer.OrdinalIgnoreCase);
         using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
         response.EnsureSuccessStatusCode();
         await using var stream = await response.Content.ReadAsStreamAsync(ct);
-        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
 
-        if (!doc.RootElement.TryGetProperty("data", out var data)) return dict;
-
-        foreach (var set in data.EnumerateObject())
+        var buffer = ArrayPool<byte>.Shared.Rent(4 * 1024 * 1024);
+        var state = new PrintingsParserState();
+        try
         {
-            if (!set.Value.TryGetProperty("cards", out var cards) || cards.ValueKind != JsonValueKind.Array) continue;
-            foreach (var card in cards.EnumerateArray())
+            int leftover = 0;
+            while (true)
             {
-                if (!card.TryGetProperty("uuid", out var uuidEl)) continue;
-                if (!card.TryGetProperty("name", out var nameEl)) continue;
-                var uuid = uuidEl.GetString();
-                var name = nameEl.GetString();
-                if (string.IsNullOrWhiteSpace(uuid) || string.IsNullOrWhiteSpace(name)) continue;
-                dict[uuid] = name;
+                int bytesRead = await stream.ReadAsync(buffer.AsMemory(leftover, buffer.Length - leftover), ct);
+                bool isFinal = bytesRead == 0;
+                int total = leftover + bytesRead;
+                if (total == 0) break;
+
+                leftover = ProcessPrintingsChunk(buffer.AsSpan(0, total), isFinal, state, dict);
+
+                if (leftover > 0)
+                    Buffer.BlockCopy(buffer, total - leftover, buffer, 0, leftover);
+
+                if (isFinal) break;
+
+                if (leftover >= buffer.Length - 4096)
+                {
+                    var newBuf = ArrayPool<byte>.Shared.Rent(buffer.Length * 2);
+                    Buffer.BlockCopy(buffer, 0, newBuf, 0, leftover);
+                    ArrayPool<byte>.Shared.Return(buffer);
+                    buffer = newBuf;
+                    _logger.LogWarning("Grew printings buffer to {Size}MB", buffer.Length / 1024 / 1024);
+                }
             }
+
+            _logger.LogInformation("Printings parsing complete: {Sets} sets, {Cards} UUIDs", state.SetsProcessed, dict.Count);
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
         }
 
         return dict;
+    }
+
+    // Synchronous chunk processor — Utf8JsonReader is a ref struct, not allowed in async methods (C# 12)
+    private static int ProcessPrintingsChunk(ReadOnlySpan<byte> data, bool isFinal, PrintingsParserState s, Dictionary<string, string> dict)
+    {
+        var reader = new Utf8JsonReader(data, isFinal, s.ReaderState);
+
+        while (reader.Read())
+        {
+            var depth = reader.CurrentDepth;
+            switch (reader.TokenType)
+            {
+                case JsonTokenType.PropertyName:
+                    if (!s.InData && depth == 1 && reader.ValueTextEquals("data"u8))
+                        s.InData = true;
+                    else if (s.InSet && !s.InCardsArray && depth == 3)
+                        s.AwaitingCardsValue = reader.ValueTextEquals("cards"u8);
+                    else if (s.InCard && depth == 5)
+                    {
+                        if (reader.ValueTextEquals("uuid"u8)) s.PendingProp = "uuid";
+                        else if (reader.ValueTextEquals("name"u8)) s.PendingProp = "name";
+                        else s.PendingProp = null;
+                    }
+                    break;
+
+                case JsonTokenType.String:
+                    if (s.PendingProp != null && s.InCard && depth == 5)
+                    {
+                        var val = reader.GetString();
+                        if (s.PendingProp == "uuid") s.CurUuid = val;
+                        else s.CurName = val;
+                        s.PendingProp = null;
+                    }
+                    break;
+
+                case JsonTokenType.StartObject:
+                    if (s.InData && !s.InSet && depth == 2)
+                        s.InSet = true;
+                    else if (s.InCardsArray && !s.InCard && depth == 4)
+                    {
+                        s.InCard = true;
+                        s.CurUuid = null;
+                        s.CurName = null;
+                        s.PendingProp = null;
+                    }
+                    break;
+
+                case JsonTokenType.StartArray:
+                    if (s.AwaitingCardsValue && depth == 3)
+                        s.InCardsArray = true;
+                    s.AwaitingCardsValue = false;
+                    break;
+
+                case JsonTokenType.EndObject:
+                    if (s.InCard && depth == 4)
+                    {
+                        if (!string.IsNullOrEmpty(s.CurUuid) && !string.IsNullOrEmpty(s.CurName))
+                            dict[s.CurUuid] = s.CurName;
+                        s.InCard = false;
+                    }
+                    else if (s.InSet && depth == 2)
+                    {
+                        s.InSet = false;
+                        s.InCardsArray = false;
+                        s.SetsProcessed++;
+                    }
+                    else if (s.InData && depth == 1)
+                        s.InData = false;
+                    break;
+
+                case JsonTokenType.EndArray:
+                    if (s.InCardsArray && depth == 3)
+                        s.InCardsArray = false;
+                    break;
+            }
+        }
+
+        s.ReaderState = reader.CurrentState;
+        return (int)(data.Length - reader.BytesConsumed);
+    }
+
+    #endregion
+
+    #region Streaming AllPricesToday parser
+
+    private class PricesParserState
+    {
+        public JsonReaderState ReaderState;
+        public bool InData;
+        public string? CurrentUuid;
+        public decimal BestPrice;
+        public bool HasPrice;
     }
 
     private async Task<Dictionary<string, decimal>> StreamParseUuidToUsdAsync(string url, CancellationToken ct)
@@ -164,59 +288,106 @@ public class MtgJsonPricingImportService
         using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
         response.EnsureSuccessStatusCode();
         await using var stream = await response.Content.ReadAsStreamAsync(ct);
-        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
 
-        if (!doc.RootElement.TryGetProperty("data", out var data)) return dict;
-
-        foreach (var item in data.EnumerateObject())
+        var buffer = ArrayPool<byte>.Shared.Rent(4 * 1024 * 1024);
+        var state = new PricesParserState();
+        try
         {
-            var uuid = item.Name;
-            var cardPriceNode = item.Value;
-
-            if (TryGetUsd(cardPriceNode, out var usd))
+            int leftover = 0;
+            while (true)
             {
-                dict[uuid] = usd;
-                continue;
-            }
+                int bytesRead = await stream.ReadAsync(buffer.AsMemory(leftover, buffer.Length - leftover), ct);
+                bool isFinal = bytesRead == 0;
+                int total = leftover + bytesRead;
+                if (total == 0) break;
 
-            foreach (var provider in cardPriceNode.EnumerateObject())
-            {
-                if (TryGetUsd(provider.Value, out usd))
+                leftover = ProcessPricesChunk(buffer.AsSpan(0, total), isFinal, state, dict);
+
+                if (leftover > 0)
+                    Buffer.BlockCopy(buffer, total - leftover, buffer, 0, leftover);
+
+                if (isFinal) break;
+
+                if (leftover >= buffer.Length - 4096)
                 {
-                    dict[uuid] = usd;
-                    break;
+                    var newBuf = ArrayPool<byte>.Shared.Rent(buffer.Length * 2);
+                    Buffer.BlockCopy(buffer, 0, newBuf, 0, leftover);
+                    ArrayPool<byte>.Shared.Return(buffer);
+                    buffer = newBuf;
                 }
             }
+
+            _logger.LogInformation("Price parsing complete: {Count} UUIDs with prices", dict.Count);
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
         }
 
         return dict;
     }
 
-    private static bool TryGetUsd(JsonElement node, out decimal usd)
+    // In AllPricesToday, every number inside a UUID object is a price.
+    // Take the first positive one found (typically retail normal).
+    private static int ProcessPricesChunk(ReadOnlySpan<byte> data, bool isFinal, PricesParserState s, Dictionary<string, decimal> dict)
     {
-        usd = 0m;
-        if (node.ValueKind != JsonValueKind.Object) return false;
+        var reader = new Utf8JsonReader(data, isFinal, s.ReaderState);
 
-        if (node.TryGetProperty("paper", out var paper) && paper.ValueKind == JsonValueKind.Object)
+        while (reader.Read())
         {
-            if (paper.TryGetProperty("usd", out var usdNode) && TryParseDecimal(usdNode, out usd)) return true;
-            if (paper.TryGetProperty("normal", out var normalNode) && TryParseDecimal(normalNode, out usd)) return true;
+            var depth = reader.CurrentDepth;
+            switch (reader.TokenType)
+            {
+                case JsonTokenType.PropertyName:
+                    if (!s.InData && depth == 1 && reader.ValueTextEquals("data"u8))
+                        s.InData = true;
+                    else if (s.InData && depth == 2 && s.CurrentUuid == null)
+                    {
+                        s.CurrentUuid = reader.GetString();
+                        s.BestPrice = 0;
+                        s.HasPrice = false;
+                    }
+                    break;
+
+                case JsonTokenType.Number:
+                    if (s.CurrentUuid != null && !s.HasPrice)
+                    {
+                        if (reader.TryGetDecimal(out var price) && price > 0)
+                        {
+                            s.BestPrice = price;
+                            s.HasPrice = true;
+                        }
+                    }
+                    break;
+
+                case JsonTokenType.String:
+                    if (s.CurrentUuid != null && !s.HasPrice && depth > 2)
+                    {
+                        var str = reader.GetString();
+                        if (str != null && decimal.TryParse(str, out var price) && price > 0)
+                        {
+                            s.BestPrice = price;
+                            s.HasPrice = true;
+                        }
+                    }
+                    break;
+
+                case JsonTokenType.EndObject:
+                    if (s.CurrentUuid != null && depth == 2)
+                    {
+                        if (s.HasPrice)
+                            dict[s.CurrentUuid] = s.BestPrice;
+                        s.CurrentUuid = null;
+                    }
+                    else if (s.InData && depth == 1)
+                        s.InData = false;
+                    break;
+            }
         }
 
-        if (node.TryGetProperty("usd", out var directUsd) && TryParseDecimal(directUsd, out usd)) return true;
-        if (node.TryGetProperty("normal", out var directNormal) && TryParseDecimal(directNormal, out usd)) return true;
-
-        return false;
+        s.ReaderState = reader.CurrentState;
+        return (int)(data.Length - reader.BytesConsumed);
     }
 
-    private static bool TryParseDecimal(JsonElement node, out decimal value)
-    {
-        value = 0m;
-        return node.ValueKind switch
-        {
-            JsonValueKind.Number => node.TryGetDecimal(out value),
-            JsonValueKind.String => decimal.TryParse(node.GetString(), out value),
-            _ => false
-        };
-    }
+    #endregion
 }
