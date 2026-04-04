@@ -223,16 +223,58 @@
             align-items: center;
             justify-content: center;
             padding: 2rem;
+            position: relative;
+            overflow: hidden;
+            background: #0a0a0f;
+        }
+
+        .login-bg-grid {
+            position: absolute;
+            inset: -40px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 6px;
+            transform: rotate(-4deg) scale(1.15);
+            opacity: 0.35;
+            filter: saturate(0.7) brightness(0.7);
+            z-index: 0;
+            animation: bgPulse 8s ease-in-out infinite alternate;
+        }
+
+        .login-bg-grid img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+
+        @keyframes bgPulse {
+            0% { opacity: 0.3; filter: saturate(0.6) brightness(0.6); }
+            100% { opacity: 0.4; filter: saturate(0.8) brightness(0.75); }
+        }
+
+        .login-backdrop::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at center, rgba(10,10,15,0.3) 0%, rgba(10,10,15,0.85) 70%, rgba(10,10,15,0.97) 100%);
+            z-index: 1;
+            pointer-events: none;
         }
 
         .login-panel {
-            background: var(--bg-panel);
+            background: rgba(18, 18, 26, 0.92);
             border: 1px solid var(--border-gold);
             border-radius: 16px;
             padding: 3rem 2.5rem;
             max-width: 420px;
             width: 100%;
             text-align: center;
+            position: relative;
+            z-index: 2;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 0 60px rgba(184, 157, 96, 0.15), 0 0 120px rgba(0, 0, 0, 0.5);
         }
 
         .login-panel .logo-text {
@@ -1584,6 +1626,20 @@
 
     <!-- LOGIN VIEW -->
     <div id="loginView" class="login-backdrop">
+        <div class="login-bg-grid" aria-hidden="true">
+            <img src="https://cards.scryfall.io/art_crop/front/8/1/81a40f34-fc26-4d05-9c52-6ffbf1766a3b.jpg?1562859674" alt="" loading="eager">
+            <img src="https://cards.scryfall.io/art_crop/front/d/6/d67be074-cdd4-41d9-ac89-0a0456c4e4b2.jpg?1674057568" alt="" loading="eager">
+            <img src="https://cards.scryfall.io/art_crop/front/b/c/bc6ffc1c-575b-4116-83c9-d13b29886c35.jpg?1730491066" alt="" loading="eager">
+            <img src="https://cards.scryfall.io/art_crop/front/6/d/6dd0b9b0-55f4-4ce7-a916-6f23687f3fe4.jpg?1627709478" alt="" loading="eager">
+            <img src="https://cards.scryfall.io/art_crop/front/d/0/d0d33d52-3d28-4635-b985-51e126289259.jpg?1599707796" alt="" loading="eager">
+            <img src="https://cards.scryfall.io/art_crop/front/2/4/249db4d4-2542-47ee-a216-e13ffbc2319c.jpg?1758104027" alt="" loading="eager">
+            <img src="https://cards.scryfall.io/art_crop/front/3/1/317f1133-7cf8-4b7a-919e-88c45f8c2c3a.jpg?1689995555" alt="" loading="eager">
+            <img src="https://cards.scryfall.io/art_crop/front/c/7/c74ae706-b3b3-4097-a387-6f6c38a9b603.jpg?1689995438" alt="" loading="eager">
+            <img src="https://cards.scryfall.io/art_crop/front/6/a/6a9c39e4-a8cf-42dd-8d0e-45634b335546.jpg?1730489423" alt="" loading="eager">
+            <img src="https://cards.scryfall.io/art_crop/front/d/2/d27cf7b7-7982-46bd-a559-7789c0e74bae.jpg?1673146904" alt="" loading="eager">
+            <img src="https://cards.scryfall.io/art_crop/front/5/c/5cd4154e-7681-444b-a0f2-33e887791ba7.jpg?1612316219" alt="" loading="eager">
+            <img src="https://cards.scryfall.io/art_crop/front/e/7/e71c8c39-3fbb-4a42-9cf6-b3224f5a56fc.jpg?1717013745" alt="" loading="eager">
+        </div>
         <div class="login-panel">
             <div class="logo-text">BEN'S MAGIC FORGE</div>
             <div class="logo-subtitle">Enter the Sanctum</div>
