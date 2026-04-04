@@ -79,6 +79,75 @@ public class DecksController : ControllerBase
             await _pricingService.ApplyPricesAsync(deck.Cards);
             deck.TotalCards = deck.Cards.Sum(c => c.Quantity);
             deck.EstimatedTotalPrice = deck.Cards.Sum(c => c.EstimatedPrice * c.Quantity);
+
+            // Budget enforcement: swap expensive cards if real prices exceed budget
+            var budgetMax = ClaudeService.GetBudgetMax(request.BudgetRange);
+            if (budgetMax.HasValue && deck.EstimatedTotalPrice > budgetMax.Value)
+            {
+                const int maxRetries = 2;
+                for (var attempt = 0; attempt < maxRetries && deck.EstimatedTotalPrice > budgetMax.Value; attempt++)
+                {
+                    var overage = deck.EstimatedTotalPrice - budgetMax.Value;
+                    _logger.LogInformation(
+                        "Deck over budget by ${Overage:F2} (${Total:F2} vs ${Max:F2}). Attempt {Attempt} to fix.",
+                        overage, deck.EstimatedTotalPrice, budgetMax.Value, attempt + 1);
+
+                    // Find the most expensive non-commander, non-basic-land cards to replace
+                    var candidates = deck.Cards
+                        .Where(c => !c.Category.Equals("Commander", StringComparison.OrdinalIgnoreCase)
+                                 && !c.CardType.Contains("Basic Land", StringComparison.OrdinalIgnoreCase))
+                        .OrderByDescending(c => c.EstimatedPrice)
+                        .ToList();
+
+                    // Take enough expensive cards to cover the overage (plus $10 buffer)
+                    var expensiveCards = new List<CardEntry>();
+                    var runningTotal = 0m;
+                    foreach (var card in candidates)
+                    {
+                        if (expensiveCards.Count >= 15) break;
+                        expensiveCards.Add(card);
+                        runningTotal += card.EstimatedPrice;
+                        if (runningTotal >= overage + 10m) break;
+                    }
+
+                    if (expensiveCards.Count == 0) break;
+
+                    var replacements = await _claudeService.SuggestBudgetReplacementsAsync(
+                        deck, expensiveCards, deck.EstimatedTotalPrice, budgetMax.Value);
+
+                    if (replacements.Count == 0) break;
+
+                    // Swap cards: match by index (replacement[i] replaces expensiveCards[i])
+                    var existingNames = new HashSet<string>(
+                        deck.Cards.Select(c => c.Name), StringComparer.OrdinalIgnoreCase);
+
+                    for (var i = 0; i < Math.Min(expensiveCards.Count, replacements.Count); i++)
+                    {
+                        var replacement = replacements[i];
+                        // Skip if the replacement is already in the deck (Commander singleton rule)
+                        if (existingNames.Contains(replacement.Name)) continue;
+
+                        var idx = deck.Cards.IndexOf(expensiveCards[i]);
+                        if (idx >= 0)
+                        {
+                            existingNames.Remove(deck.Cards[idx].Name);
+                            deck.Cards[idx] = replacement;
+                            existingNames.Add(replacement.Name);
+                        }
+                    }
+
+                    // Re-apply real prices to the new cards
+                    await _pricingService.ApplyPricesAsync(deck.Cards);
+                    deck.TotalCards = deck.Cards.Sum(c => c.Quantity);
+                    deck.EstimatedTotalPrice = deck.Cards.Sum(c => c.EstimatedPrice * c.Quantity);
+                }
+
+                if (deck.EstimatedTotalPrice > budgetMax.Value)
+                    _logger.LogWarning(
+                        "Deck still over budget after replacements: ${Total:F2} vs ${Max:F2}",
+                        deck.EstimatedTotalPrice, budgetMax.Value);
+            }
+
             deck.UserId = GetUserId();
             deck.UserDisplayName = GetDisplayName();
             var saved = await _deckService.CreateAsync(deck);

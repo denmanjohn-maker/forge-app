@@ -380,6 +380,119 @@ Sample Cards:
         return text.Trim();
     }
 
+    /// <summary>
+    /// Returns the maximum budget in dollars for a given budget range string, or null if unlimited.
+    /// </summary>
+    public static decimal? GetBudgetMax(string budgetRange)
+    {
+        if (budgetRange.Contains("under $50", StringComparison.OrdinalIgnoreCase)
+            || budgetRange.Equals("Budget", StringComparison.OrdinalIgnoreCase))
+            return 50m;
+
+        if (budgetRange.Contains("$50", StringComparison.OrdinalIgnoreCase)
+            && budgetRange.Contains("$150", StringComparison.OrdinalIgnoreCase))
+            return 150m;
+
+        if (budgetRange.Contains("$150", StringComparison.OrdinalIgnoreCase)
+            && budgetRange.Contains("$500", StringComparison.OrdinalIgnoreCase))
+            return 500m;
+
+        return null; // no limit
+    }
+
+    /// <summary>
+    /// Asks Claude to suggest cheaper replacement cards for over-budget cards.
+    /// Returns a list of (removeCardName, replacement CardEntry) pairs.
+    /// </summary>
+    public async Task<List<CardEntry>> SuggestBudgetReplacementsAsync(
+        DeckConfiguration deck,
+        List<CardEntry> expensiveCards,
+        decimal currentTotal,
+        decimal budgetMax)
+    {
+        var cardListStr = string.Join("\n", expensiveCards
+            .Select(c => $"- {c.Name} (${c.EstimatedPrice:F2}, {c.CardType}, {c.Category}, Role: {c.RoleInDeck})"));
+
+        var deckContext = $@"Deck: {deck.DeckName}
+Format: {deck.Format}
+Colors: {string.Join(", ", deck.Colors)}
+Commander: {deck.Commander}
+Strategy: {deck.Strategy}
+Current total price: ${currentTotal:F2}
+Budget limit: ${budgetMax:F2}
+Amount over budget: ${(currentTotal - budgetMax):F2}";
+
+        var prompt = $@"You are a Magic: The Gathering deck building expert. A generated deck is over budget. 
+I need you to suggest cheaper replacement cards for the most expensive cards listed below.
+
+{deckContext}
+
+Expensive cards to replace:
+{cardListStr}
+
+For EACH card above, suggest a cheaper alternative that:
+1. Fills the same role in the deck (same category/function)
+2. Is legal in {deck.Format} format
+3. Costs significantly less (ideally under $1-2 each)
+4. Is a real Magic: The Gathering card
+
+Respond with ONLY a valid JSON array (no markdown, no explanation) of replacement cards:
+[
+  {{
+    ""name"": ""string - exact replacement card name"",
+    ""quantity"": 1,
+    ""manaCost"": ""string - mana cost like {{2}}{{B}}{{G}}"",
+    ""cmc"": number,
+    ""cardType"": ""string - e.g. Creature - Elf Shaman"",
+    ""category"": ""string - must match the category of the card it replaces"",
+    ""roleInDeck"": ""string - brief explanation"",
+    ""estimatedPrice"": number
+  }}
+]
+
+Return exactly {expensiveCards.Count} replacement cards, one for each expensive card, in the same order.";
+
+        var apiRequest = new
+        {
+            model = _settings.Model,
+            max_tokens = 4096,
+            messages = new[] { new { role = "user", content = prompt } }
+        };
+
+        var json = JsonSerializer.Serialize(apiRequest);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        var response = await _httpClient.PostAsync("https://api.anthropic.com/v1/messages", content);
+        var responseBody = await response.Content.ReadAsStringAsync();
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Claude budget replacement API error: {StatusCode}", response.StatusCode);
+            return [];
+        }
+
+        var claudeResponse = JsonSerializer.Deserialize<ClaudeResponse>(responseBody);
+        var textContent = claudeResponse?.Content?.FirstOrDefault(c => c.Type == "text")?.Text;
+        if (string.IsNullOrEmpty(textContent))
+            return [];
+
+        try
+        {
+            var jsonContent = ExtractJson(textContent);
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                NumberHandling = JsonNumberHandling.AllowReadingFromString
+            };
+            return JsonSerializer.Deserialize<List<CardEntry>>(jsonContent, options) ?? [];
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogWarning(ex, "Failed to parse budget replacement suggestions");
+            return [];
+        }
+    }
+
     private static string GetBudgetGuidance(string budgetRange)
     {
         if (budgetRange.Contains("under $50", StringComparison.OrdinalIgnoreCase)
