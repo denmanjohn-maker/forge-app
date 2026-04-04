@@ -77,7 +77,10 @@ builder.Services.Configure<JwtSettings>(
 builder.Services.AddSingleton<UserService>();
 builder.Services.AddSingleton<AuthService>();
 builder.Services.AddScoped<PricingService>();
-builder.Services.AddHttpClient<MtgJsonPricingImportService>();
+builder.Services.AddHttpClient<MtgJsonPricingImportService>(client =>
+{
+    client.Timeout = TimeSpan.FromMinutes(10);
+});
 builder.Services.AddHostedService<PricingRefreshHostedService>();
 
 // JWT Authentication

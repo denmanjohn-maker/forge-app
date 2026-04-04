@@ -2525,6 +2525,67 @@
             }
         }
 
+        // === Edit ===
+        function openEditModal(deck) {
+            if (!deck) return;
+            document.getElementById('editDeckName').value    = deck.deckName || '';
+            document.getElementById('editCommander').value   = deck.commander || '';
+            document.getElementById('editDescription').value = deck.deckDescription || '';
+            document.getElementById('editStrategy').value    = deck.strategy || '';
+            document.getElementById('editFormat').value      = deck.format || 'Commander';
+            document.getElementById('editPowerLevel').value  = deck.powerLevel || 'Casual';
+            document.getElementById('editBudget').value      = deck.budgetRange || 'Budget (under $50)';
+            ['W','U','B','R','G'].forEach(c => {
+                document.getElementById(`editColor${c}`).checked = (deck.colors || []).includes(c);
+            });
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+        }
+        async function saveEdit() {
+            if (!currentDetailDeck) return;
+            const colors = ['W','U','B','R','G'].filter(c => document.getElementById(`editColor${c}`).checked);
+            const body = {
+                deckName: document.getElementById('editDeckName').value.trim(),
+                commander: document.getElementById('editCommander').value.trim(),
+                deckDescription: document.getElementById('editDescription').value.trim(),
+                strategy: document.getElementById('editStrategy').value.trim(),
+                format: document.getElementById('editFormat').value,
+                powerLevel: document.getElementById('editPowerLevel').value,
+                budgetRange: document.getElementById('editBudget').value,
+                colors
+            };
+            try {
+                const res = await authFetch(`${API_BASE}/${currentDetailDeck.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.details || err.error || 'Update failed');
+                }
+                const updated = await res.json();
+                currentDetailDeck = updated;
+                renderDetail(updated);
+                closeEditModal();
+                showToast('Deck updated!');
+            } catch (err) {
+                showToast(err.message, true);
+            }
+        }
+
+        // === Copy ===
+        async function copyDeck(id) {
+            try {
+                const res = await authFetch(`${API_BASE}/${id}/copy`, { method: 'POST' });
+                if (!res.ok) throw new Error('Copy failed');
+                const copy = await res.json();
+                showToast(`Deck copied as "${copy.deckName}"!`);
+            } catch (err) { showToast(err.message, true); }
+        }
+
         // === Helpers ===
         function groupByCategory(cards) {
             const order = ['Commander', 'Creature', 'Instant', 'Sorcery', 'Enchantment', 'Artifact', 'Planeswalker', 'Land'];
