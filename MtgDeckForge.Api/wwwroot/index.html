@@ -264,113 +264,93 @@
         }
 
         .login-panel {
-            background: rgba(18, 18, 26, 0.92);
-            border: 2px solid #8b4513;
-            border-radius: 16px;
+            background: linear-gradient(145deg, #2a2d33 0%, #1e2024 40%, #252830 100%);
+            border: 4px solid #5a5e66;
+            border-radius: 4px;
             padding: 3rem 2.5rem;
-            max-width: 420px;
+            max-width: 440px;
             width: 100%;
             text-align: center;
             position: relative;
             z-index: 2;
-            backdrop-filter: blur(12px);
             box-shadow:
-                0 0 30px rgba(255, 100, 0, 0.2),
-                0 0 60px rgba(255, 60, 0, 0.1),
-                0 0 120px rgba(0, 0, 0, 0.5);
+                inset 0 1px 0 rgba(255,255,255,0.08),
+                inset 0 -1px 0 rgba(0,0,0,0.3),
+                0 0 0 1px rgba(0,0,0,0.5),
+                0 0 0 6px #3a3d44,
+                0 0 0 7px rgba(0,0,0,0.4),
+                0 0 0 12px #2f3238,
+                0 0 0 13px rgba(0,0,0,0.3),
+                0 12px 40px rgba(0,0,0,0.6);
         }
 
-        /* ── Flame border system ── */
-        .login-panel-wrapper {
-            position: relative;
-            max-width: 420px;
-            width: 100%;
-            z-index: 2;
-        }
-
-        .flame-edge {
+        /* Steel plate texture overlay */
+        .login-panel::before {
+            content: '';
             position: absolute;
+            inset: 0;
+            border-radius: 2px;
+            background:
+                repeating-linear-gradient(
+                    90deg,
+                    transparent 0px,
+                    transparent 3px,
+                    rgba(255,255,255,0.01) 3px,
+                    rgba(255,255,255,0.01) 4px
+                ),
+                repeating-linear-gradient(
+                    0deg,
+                    transparent 0px,
+                    transparent 3px,
+                    rgba(255,255,255,0.008) 3px,
+                    rgba(255,255,255,0.008) 4px
+                );
             pointer-events: none;
-            z-index: 1;
-            overflow: visible;
-        }
-
-        .flame-edge-top { top: -30px; left: 2%; width: 96%; height: 35px; }
-        .flame-edge-bottom { bottom: -30px; left: 2%; width: 96%; height: 35px; }
-        .flame-edge-left { left: -30px; top: 2%; height: 96%; width: 35px; }
-        .flame-edge-right { right: -30px; top: 2%; height: 96%; width: 35px; }
-
-        .flame-tongue {
-            position: absolute;
-            border-radius: 0 50% 50% 50%;
-            filter: blur(1.5px);
-            mix-blend-mode: screen;
-            will-change: transform, opacity;
-        }
-
-        /* Smooth sway — NOT flashing. High base opacity, gentle movement */
-        @keyframes swayUp1 {
-            0%   { transform: scaleY(1)   scaleX(1)   translateY(0)   rotate(-1deg); opacity: 0.75; }
-            25%  { transform: scaleY(1.15) scaleX(0.92) translateY(-2px) rotate(1deg); opacity: 0.85; }
-            50%  { transform: scaleY(0.9)  scaleX(1.05) translateY(1px)  rotate(-0.5deg); opacity: 0.7; }
-            75%  { transform: scaleY(1.2)  scaleX(0.95) translateY(-3px) rotate(1.5deg); opacity: 0.9; }
-            100% { transform: scaleY(1)    scaleX(1)    translateY(0)    rotate(-1deg); opacity: 0.75; }
-        }
-        @keyframes swayUp2 {
-            0%   { transform: scaleY(1.05) scaleX(0.95) translateY(0)    rotate(0.5deg); opacity: 0.8; }
-            30%  { transform: scaleY(0.85) scaleX(1.05) translateY(2px)  rotate(-1deg); opacity: 0.65; }
-            60%  { transform: scaleY(1.25) scaleX(0.9)  translateY(-3px) rotate(1deg); opacity: 0.9; }
-            100% { transform: scaleY(1.05) scaleX(0.95) translateY(0)    rotate(0.5deg); opacity: 0.8; }
-        }
-        @keyframes swayUp3 {
-            0%   { transform: scaleY(0.95) scaleX(1)    translateY(0)    rotate(-0.5deg); opacity: 0.7; }
-            20%  { transform: scaleY(1.1)  scaleX(0.93) translateY(-2px) rotate(1deg); opacity: 0.85; }
-            45%  { transform: scaleY(1.25) scaleX(0.88) translateY(-4px) rotate(-0.5deg); opacity: 0.92; }
-            70%  { transform: scaleY(0.9)  scaleX(1.02) translateY(1px)  rotate(0.5deg); opacity: 0.68; }
-            100% { transform: scaleY(0.95) scaleX(1)    translateY(0)    rotate(-0.5deg); opacity: 0.7; }
-        }
-        @keyframes swaySide1 {
-            0%   { transform: scaleX(1)   scaleY(1)   translateX(0)   rotate(0deg); opacity: 0.75; }
-            25%  { transform: scaleX(1.15) scaleY(0.92) translateX(-2px) rotate(1deg); opacity: 0.85; }
-            50%  { transform: scaleX(0.9)  scaleY(1.05) translateX(1px)  rotate(-0.5deg); opacity: 0.7; }
-            75%  { transform: scaleX(1.2)  scaleY(0.95) translateX(-3px) rotate(1.5deg); opacity: 0.9; }
-            100% { transform: scaleX(1)    scaleY(1)    translateX(0)    rotate(0deg); opacity: 0.75; }
-        }
-        @keyframes swaySide2 {
-            0%   { transform: scaleX(1.05) scaleY(0.95) translateX(0)    rotate(0.5deg); opacity: 0.8; }
-            35%  { transform: scaleX(0.88) scaleY(1.04) translateX(2px)  rotate(-1deg); opacity: 0.65; }
-            65%  { transform: scaleX(1.2)  scaleY(0.9)  translateX(-2px) rotate(0.5deg); opacity: 0.88; }
-            100% { transform: scaleX(1.05) scaleY(0.95) translateX(0)    rotate(0.5deg); opacity: 0.8; }
-        }
-
-        @keyframes emberFloat {
-            0%   { opacity: 0; transform: translateY(0) scale(1); }
-            15%  { opacity: 0.9; }
-            100% { opacity: 0; transform: translateY(-50px) translateX(var(--ember-drift, 5px)) scale(0.2); }
-        }
-
-        .ember-particle {
-            position: absolute;
-            width: 2.5px;
-            height: 2.5px;
-            border-radius: 50%;
-            background: #ffcc44;
-            filter: blur(0.5px);
-            mix-blend-mode: screen;
-            animation: emberFloat linear infinite;
-        }
-
-        /* Glow pulse behind the panel */
-        .flame-glow {
-            position: absolute;
-            inset: -6px;
-            border-radius: 20px;
             z-index: 0;
-            animation: glowPulse 3s ease-in-out infinite alternate;
         }
-        @keyframes glowPulse {
-            0%   { box-shadow: 0 0 15px rgba(255,100,0,0.12), 0 0 35px rgba(255,50,0,0.06); }
-            100% { box-shadow: 0 0 25px rgba(255,100,0,0.2), 0 0 50px rgba(255,50,0,0.1); }
+
+        /* Corner rivets */
+        .steel-rivet {
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 40% 35%, #8a8e96 0%, #5a5e66 50%, #3a3d44 100%);
+            box-shadow:
+                inset 0 1px 2px rgba(255,255,255,0.2),
+                inset 0 -1px 2px rgba(0,0,0,0.4),
+                0 1px 3px rgba(0,0,0,0.5);
+            z-index: 5;
+        }
+        .steel-rivet::after {
+            content: '';
+            position: absolute;
+            top: 4px; left: 5px;
+            width: 4px; height: 1.5px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 50%;
+            transform: rotate(-30deg);
+        }
+        .rivet-tl { top: 12px; left: 12px; }
+        .rivet-tr { top: 12px; right: 12px; }
+        .rivet-bl { bottom: 12px; left: 12px; }
+        .rivet-br { bottom: 12px; right: 12px; }
+
+        /* Steel border plate edges */
+        .steel-edge {
+            position: absolute;
+            background: linear-gradient(180deg, #5a5e66 0%, #4a4e55 50%, #3a3d44 100%);
+            z-index: 1;
+        }
+        .steel-edge-top {
+            top: 0; left: 30px; right: 30px; height: 3px;
+            background: linear-gradient(90deg, #4a4e55, #6a6e76, #4a4e55);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        .steel-edge-bottom {
+            bottom: 0; left: 30px; right: 30px; height: 3px;
+            background: linear-gradient(90deg, #4a4e55, #6a6e76, #4a4e55);
+            box-shadow: 0 -1px 2px rgba(0,0,0,0.3);
         }
 
         .login-panel .logo-text {
@@ -1736,21 +1716,20 @@
             <img src="https://cards.scryfall.io/art_crop/front/5/c/5cd4154e-7681-444b-a0f2-33e887791ba7.jpg?1612316219" alt="" loading="eager">
             <img src="https://cards.scryfall.io/art_crop/front/e/7/e71c8c39-3fbb-4a42-9cf6-b3224f5a56fc.jpg?1717013745" alt="" loading="eager">
         </div>
-        <div class="login-panel-wrapper">
-            <!-- Flame edges positioned outside the panel -->
-            <div class="flame-glow"></div>
-            <div class="flame-edge flame-edge-top" id="flamesTop"></div>
-            <div class="flame-edge flame-edge-bottom" id="flamesBottom"></div>
-            <div class="flame-edge flame-edge-left" id="flamesLeft"></div>
-            <div class="flame-edge flame-edge-right" id="flamesRight"></div>
-            <div class="login-panel">
-                <div class="logo-text">BEN'S MAGIC FORGE</div>
-                <div class="logo-subtitle">Enter the Sanctum</div>
-                <input type="text" id="loginUsername" class="login-field" placeholder="Username" autocomplete="username">
-                <input type="password" id="loginPassword" class="login-field" placeholder="Password" autocomplete="current-password">
-                <button class="btn-login" id="btnLogin" onclick="handleLogin()">Enter the Forge</button>
-                <div class="login-error" id="loginError"></div>
-            </div>
+        <div class="login-panel">
+            <!-- Steel rivets -->
+            <div class="steel-rivet rivet-tl"></div>
+            <div class="steel-rivet rivet-tr"></div>
+            <div class="steel-rivet rivet-bl"></div>
+            <div class="steel-rivet rivet-br"></div>
+            <div class="steel-edge steel-edge-top"></div>
+            <div class="steel-edge steel-edge-bottom"></div>
+            <div class="logo-text">BEN'S MAGIC FORGE</div>
+            <div class="logo-subtitle">Enter the Sanctum</div>
+            <input type="text" id="loginUsername" class="login-field" placeholder="Username" autocomplete="username">
+            <input type="password" id="loginPassword" class="login-field" placeholder="Password" autocomplete="current-password">
+            <button class="btn-login" id="btnLogin" onclick="handleLogin()">Enter the Forge</button>
+            <div class="login-error" id="loginError"></div>
         </div>
     </div>
 
@@ -2213,102 +2192,9 @@
             document.getElementById('loginView').style.display = '';
             document.querySelector('.app-header').style.display = 'none';
             document.querySelector('.app-container').style.display = 'none';
-            initFlames();
         }
 
-        // ── Flame border generator ──
-        function initFlames() {
-            // Realistic flame gradient colors — warm core fading to transparent tips
-            const colors = [
-                'radial-gradient(ellipse at 50% 85%, #fffbe6 0%, #ffe066 12%, #ff9900 30%, #e64a00 55%, #8b1a00 75%, transparent 100%)',
-                'radial-gradient(ellipse at 50% 85%, #fff8dc 0%, #ffd43b 12%, #ff8c00 30%, #d63600 55%, #7a1200 75%, transparent 100%)',
-                'radial-gradient(ellipse at 50% 85%, #fffacd 0%, #ffcc33 12%, #ff7700 30%, #cc2800 55%, #6b0f00 75%, transparent 100%)',
-                'radial-gradient(ellipse at 50% 85%, #ffffff 0%, #ffe88a 10%, #ffaa22 28%, #ee5500 52%, #991500 72%, transparent 100%)'
-            ];
-            const vertAnims = ['swayUp1', 'swayUp2', 'swayUp3'];
-            const sideAnims = ['swaySide1', 'swaySide2'];
 
-            ['Top', 'Bottom', 'Left', 'Right'].forEach(side => {
-                const el = document.getElementById('flames' + side);
-                if (!el) return;
-                el.innerHTML = '';
-                const isHoriz = side === 'Top' || side === 'Bottom';
-                const count = isHoriz ? 32 : 26;
-                const anims = isHoriz ? vertAnims : sideAnims;
-
-                for (let i = 0; i < count; i++) {
-                    const flame = document.createElement('div');
-                    flame.className = 'flame-tongue';
-                    const color = colors[Math.floor(Math.random() * colors.length)];
-                    // Longer durations = smoother sway (0.8–2s, not 0.3s)
-                    const dur = 0.8 + Math.random() * 1.2;
-                    const delay = -(Math.random() * 3);
-                    const anim = anims[Math.floor(Math.random() * anims.length)];
-                    const pos = (i / count) * 100 + (Math.random() * (90 / count));
-
-                    flame.style.background = color;
-                    flame.style.animation = `${anim} ${dur}s ease-in-out ${delay}s infinite`;
-
-                    if (isHoriz) {
-                        const w = 5 + Math.random() * 8;
-                        const h = 14 + Math.random() * 18;
-                        flame.style.width = w + 'px';
-                        flame.style.height = h + 'px';
-                        flame.style.left = pos + '%';
-                        flame.style.borderRadius = '50% 50% 20% 20%';
-                        if (side === 'Top') {
-                            flame.style.bottom = '-2px';
-                            flame.style.transformOrigin = 'center bottom';
-                        } else {
-                            flame.style.top = '-2px';
-                            flame.style.transformOrigin = 'center top';
-                            flame.style.transform = 'rotate(180deg)';
-                        }
-                    } else {
-                        const w = 14 + Math.random() * 18;
-                        const h = 5 + Math.random() * 8;
-                        flame.style.width = w + 'px';
-                        flame.style.height = h + 'px';
-                        flame.style.top = pos + '%';
-                        if (side === 'Left') {
-                            flame.style.right = '-2px';
-                            flame.style.transformOrigin = 'right center';
-                            flame.style.borderRadius = '20% 50% 50% 20%';
-                        } else {
-                            flame.style.left = '-2px';
-                            flame.style.transformOrigin = 'left center';
-                            flame.style.borderRadius = '50% 20% 20% 50%';
-                        }
-                    }
-
-                    el.appendChild(flame);
-                }
-
-                // Ember sparks — fewer, subtler
-                const emberCount = isHoriz ? 5 : 4;
-                for (let i = 0; i < emberCount; i++) {
-                    const ember = document.createElement('div');
-                    ember.className = 'ember-particle';
-                    const pos = 10 + Math.random() * 80;
-                    const dur = 1.5 + Math.random() * 2;
-                    const delay = -(Math.random() * 4);
-                    const drift = -8 + Math.random() * 16;
-                    ember.style.setProperty('--ember-drift', drift + 'px');
-                    ember.style.animation = `emberFloat ${dur}s linear ${delay}s infinite`;
-
-                    if (isHoriz) {
-                        ember.style.left = pos + '%';
-                        if (side === 'Top') ember.style.bottom = '0';
-                        else ember.style.top = '0';
-                    } else {
-                        ember.style.top = pos + '%';
-                        if (side === 'Left') ember.style.right = '0';
-                        else ember.style.left = '0';
-                    }
-                    el.appendChild(ember);
-                }
-            });
-        }
 
         async function handleLogin() {
             const username = document.getElementById('loginUsername').value.trim();
@@ -2370,8 +2256,6 @@
         } else {
             showLogin();
         }
-        // Ensure flames render on first paint
-        initFlames();
 
         // === Navigation ===
         document.querySelectorAll('.nav-tab').forEach(tab => {
