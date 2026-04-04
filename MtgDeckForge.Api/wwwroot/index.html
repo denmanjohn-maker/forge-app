@@ -1421,6 +1421,10 @@
             .user-info { padding: 0.3rem 0.6rem; }
             .user-info-name { font-size: 0.7rem; }
 
+            .staging-banner-text { font-size: 0.6rem; letter-spacing: 0.05em; }
+            .staging-full { display: none !important; }
+            .staging-short { display: inline !important; }
+
             /* Forge view */
             .panel-body { padding: 1rem; }
             .color-option label { width: 44px; height: 44px; font-size: 1.1rem; }
@@ -1724,8 +1728,9 @@
             font-family:'Cinzel',serif; font-size:0.8rem; font-weight:700;
             letter-spacing:0.15em; color:#111; text-transform:uppercase;
         ">
-            <span style="background:#f5c518; padding:2px 12px; border-radius:2px;">
-                &#9888; Under Construction — Staging Environment &#9888;
+            <span style="background:#f5c518; padding:2px 12px; border-radius:2px;" class="staging-banner-text">
+                <span class="staging-full">&#9888; Under Construction — Staging Environment &#9888;</span>
+                <span class="staging-short" style="display:none;">Under Construction</span>
             </span>
         </div>
     </div>
