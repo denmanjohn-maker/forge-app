@@ -362,7 +362,12 @@ app.MapGet("/healthz", () => Results.Ok(new { status = "healthy" }));
 // Version endpoint
 app.MapGet("/api/version", () =>
 {
-    var version = Environment.GetEnvironmentVariable("BUILD_VERSION") ?? "dev";
+    var version = Environment.GetEnvironmentVariable("BUILD_VERSION");
+    if (string.IsNullOrEmpty(version) || version == "dev")
+    {
+        var buildTime = File.GetLastWriteTimeUtc(typeof(Program).Assembly.Location);
+        version = buildTime.ToString("yyyy.MM.dd.HHmm");
+    }
     return Results.Ok(new { version });
 });
 

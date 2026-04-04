@@ -29,8 +29,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        BUILD_VERSION: "${BUILD_VERSION:-dev}"
     container_name: mtg-deckforge-api
     restart: unless-stopped
     env_file:

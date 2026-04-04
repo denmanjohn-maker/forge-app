@@ -21,9 +21,6 @@ COPY --from=build /app/publish .
 
 ENV ASPNETCORE_ENVIRONMENT=Production
 
-ARG BUILD_VERSION=dev
-ENV BUILD_VERSION=${BUILD_VERSION}
-
 # PORT is injected by Railway at runtime; fall back to 5000 for local Docker runs
 EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
