@@ -371,9 +371,17 @@ Sample Cards:
                 return text[jsonStart..jsonEnd].Trim();
         }
 
-        // Try to find raw JSON object
+        // Try to find raw JSON object or array
         var braceStart = text.IndexOf('{');
         var braceEnd = text.LastIndexOf('}');
+        var bracketStart = text.IndexOf('[');
+        var bracketEnd = text.LastIndexOf(']');
+
+        // Pick whichever delimiter comes first (array or object)
+        if (bracketStart >= 0 && bracketEnd > bracketStart
+            && (braceStart < 0 || bracketStart < braceStart))
+            return text[bracketStart..(bracketEnd + 1)];
+
         if (braceStart >= 0 && braceEnd > braceStart)
             return text[braceStart..(braceEnd + 1)];
 
