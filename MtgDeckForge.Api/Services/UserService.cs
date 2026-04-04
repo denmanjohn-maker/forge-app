@@ -20,7 +20,7 @@ public class UserService
     // === Users ===
 
     public async Task<User?> GetByUsernameAsync(string username) =>
-        await _usersCollection.Find(u => u.Username == username).FirstOrDefaultAsync();
+        await _usersCollection.Find(u => u.Username.ToLower() == username.ToLower()).FirstOrDefaultAsync();
 
     public async Task<User?> GetByIdAsync(string id) =>
         await _usersCollection.Find(u => u.Id == id).FirstOrDefaultAsync();
