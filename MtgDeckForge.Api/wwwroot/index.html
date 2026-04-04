@@ -1743,7 +1743,7 @@
     <script>
         fetch('/api/version').then(r => r.json()).then(d => {
             var el = document.getElementById('appVersion');
-            if (el && d.version && d.version !== 'dev') el.textContent = 'v' + d.version;
+            if (el && d.version) el.textContent = "Ben's Magic Forge — " + d.version;
         }).catch(() => {});
     </script>
 
@@ -1756,7 +1756,7 @@
                 </div>
                 <div>
                     <div class="logo-text">BEN'S MAGIC FORGE</div>
-                    <div class="logo-subtitle">Powered by Arcane Intelligence <span id="appVersion" style="opacity:0.5;font-size:0.7em;"></span></div>
+                    <div class="logo-subtitle">Powered by Arcane Intelligence</div>
                 </div>
             </div>
             <nav class="nav-tabs" id="mainNav">
@@ -3584,5 +3584,8 @@
             }
         }
     </script>
+    <footer style="text-align:center; padding:1.5rem 1rem; opacity:0.4; font-size:0.75rem; color:#d4b36d; border-top:1px solid rgba(212,179,109,0.15); margin-top:2rem;">
+        <span id="appVersion"></span>
+    </footer>
 </body>
 </html>
