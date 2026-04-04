@@ -89,6 +89,43 @@ public class ClaudeService
         deck.PowerLevel = request.PowerLevel;
         deck.BudgetRange = request.BudgetRange;
 
+        // Enforce correct card count for Commander format
+        if (request.Format.Equals("Commander", StringComparison.OrdinalIgnoreCase))
+        {
+            var totalCards = deck.Cards.Sum(c => c.Quantity);
+            if (totalCards != 100)
+            {
+                _logger.LogWarning(
+                    "Commander deck generated with {ActualCount} cards instead of 100. Adjusting.",
+                    totalCards);
+
+                // Ensure all cards are singleton (quantity 1) as Commander requires
+                foreach (var card in deck.Cards)
+                    card.Quantity = 1;
+
+                totalCards = deck.Cards.Count;
+
+                if (totalCards > 100)
+                {
+                    // Remove excess non-land, non-commander cards from the end
+                    var excessCount = totalCards - 100;
+                    var removable = deck.Cards
+                        .Where(c => !c.Category.Equals("Commander", StringComparison.OrdinalIgnoreCase)
+                                 && !c.Category.Equals("Land", StringComparison.OrdinalIgnoreCase))
+                        .TakeLast(excessCount)
+                        .ToList();
+                    foreach (var card in removable)
+                        deck.Cards.Remove(card);
+                }
+            }
+
+            deck.TotalCards = deck.Cards.Sum(c => c.Quantity);
+        }
+        else
+        {
+            deck.TotalCards = deck.Cards.Sum(c => c.Quantity);
+        }
+
         return deck;
     }
 
@@ -223,8 +260,18 @@ Sample Cards:
             sb.AppendLine($"- Additional Notes: {request.AdditionalNotes}");
 
         sb.AppendLine();
-        sb.AppendLine("For Commander format, generate exactly 100 cards (including the commander and basic lands).");
-        sb.AppendLine("For other formats, generate 60 cards.");
+        if (request.Format.Equals("Commander", StringComparison.OrdinalIgnoreCase))
+        {
+            sb.AppendLine("CRITICAL REQUIREMENT: Commander decks must contain EXACTLY 100 cards total.");
+            sb.AppendLine("Commander is a singleton format — every card must have quantity 1. No exceptions, not even basic lands.");
+            sb.AppendLine("The 100 cards must include: 1 commander + 99 other cards (creatures, spells, artifacts, enchantments, and lands).");
+            sb.AppendLine("Include approximately 35-38 lands. The cards array MUST have exactly 100 entries, each with quantity 1.");
+            sb.AppendLine("Set totalCards to exactly 100.");
+        }
+        else
+        {
+            sb.AppendLine("Generate exactly 60 cards for this format.");
+        }
         sb.AppendLine();
         sb.AppendLine("Respond with ONLY a valid JSON object (no markdown, no explanation) matching this exact schema:");
         sb.AppendLine(@"{
