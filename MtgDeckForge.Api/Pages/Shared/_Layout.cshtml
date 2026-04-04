@@ -21,6 +21,7 @@
     <a asp-page="/Index">Home</a>
     <a asp-page="/Decks/Index">Decks</a>
     <a asp-page="/Decks/Generate">Generate</a>
+    <span style="margin-left:auto; opacity:0.5; font-size:0.8em;">@(Environment.GetEnvironmentVariable("BUILD_VERSION") is string v && v != "dev" ? "v" + v : "")</span>
     @if (User.Identity?.IsAuthenticated == true)
     {
         <span>Signed in as @User.Identity.Name</span>

@@ -29,6 +29,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        BUILD_VERSION: "${BUILD_VERSION:-dev}"
     container_name: mtg-deckforge-api
     restart: unless-stopped
     env_file:
@@ -42,7 +44,7 @@ services:
       MongoDb__DecksCollectionName: "decks"
       ClaudeApi__ApiKey: "${ANTHROPIC_API_KEY}"
       ClaudeApi__Model: "claude-sonnet-4-20250514"
-      ClaudeApi__MaxTokens: "8192"
+      ClaudeApi__MaxTokens: "16384"
     depends_on:
       mongodb:
         condition: service_healthy

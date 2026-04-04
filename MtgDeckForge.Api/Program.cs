@@ -359,4 +359,11 @@ app.MapGet("/logging", (InMemoryLogStore store, HttpContext ctx) =>
 // Health check endpoint for ECS/ALB
 app.MapGet("/healthz", () => Results.Ok(new { status = "healthy" }));
 
+// Version endpoint
+app.MapGet("/api/version", () =>
+{
+    var version = Environment.GetEnvironmentVariable("BUILD_VERSION") ?? "dev";
+    return Results.Ok(new { version });
+});
+
 app.Run();

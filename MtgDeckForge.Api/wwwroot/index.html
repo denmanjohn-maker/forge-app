@@ -1740,6 +1740,12 @@
             document.body.style.paddingTop = '36px';
         }
     </script>
+    <script>
+        fetch('/api/version').then(r => r.json()).then(d => {
+            var el = document.getElementById('appVersion');
+            if (el && d.version && d.version !== 'dev') el.textContent = 'v' + d.version;
+        }).catch(() => {});
+    </script>
 
     <!-- HEADER -->
     <header class="app-header">
@@ -1750,7 +1756,7 @@
                 </div>
                 <div>
                     <div class="logo-text">BEN'S MAGIC FORGE</div>
-                    <div class="logo-subtitle">Powered by Arcane Intelligence</div>
+                    <div class="logo-subtitle">Powered by Arcane Intelligence <span id="appVersion" style="opacity:0.5;font-size:0.7em;"></span></div>
                 </div>
             </div>
             <nav class="nav-tabs" id="mainNav">
