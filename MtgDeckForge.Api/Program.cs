@@ -322,6 +322,13 @@ using (var scope = app.Services.CreateScope())
 app.UseSwagger();
 app.UseSwaggerUI();
 
+// Forward headers from Railway reverse proxy (required for iOS Safari compatibility)
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor
+        | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
+});
+
 // Restrict /metrics and /logging to Docker-internal IPs only
 app.UseInternalOnly("/metrics", "/logging");
 

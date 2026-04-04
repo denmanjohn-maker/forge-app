@@ -2260,8 +2260,9 @@
         async function authFetch(url, options = {}) {
             if (!options.headers) options.headers = {};
             if (authToken) options.headers['Authorization'] = `Bearer ${authToken}`;
-            // iOS Safari drops long requests — use AbortController with generous timeout
+            // Extract custom timeout, then remove it so fetch() doesn't see unknown props
             const timeoutMs = options._timeout || 180000; // 3 min default
+            delete options._timeout;
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
             if (!options.signal) options.signal = controller.signal;
