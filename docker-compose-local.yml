@@ -1,7 +1,7 @@
 version: '3.8'
 
-# Local development — just MongoDB. Run the API with `dotnet run` on your host.
-# API on http://localhost:5001, MongoDB on port 27018
+# Local development — spin up dependencies, run API with `dotnet run` on host.
+# MongoDB on :27018, PostgreSQL on :5433, Grafana on :3000, Prometheus on :9090
 
 services:
   # ─── MongoDB ───────────────────────────────────────────────
@@ -15,6 +15,8 @@ services:
       - mongo_data_local:/data/db
     environment:
       MONGO_INITDB_DATABASE: mtgdeckforge
+    networks:
+      - mtg-local
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
@@ -22,6 +24,73 @@ services:
       retries: 5
       start_period: 30s
 
+  # ─── PostgreSQL ─────────────────────────────────────────────
+  postgres:
+    image: postgres:16
+    container_name: mtg-postgres-local
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data_local:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: mtgforge
+      POSTGRES_PASSWORD: mtgforge_local
+      POSTGRES_DB: mtgdeckforge
+    networks:
+      - mtg-local
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mtgforge -d mtgdeckforge"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ─── Prometheus ─────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: mtg-prometheus-local
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus/prometheus-local.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data_local:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=7d"
+    ports:
+      - "9090:9090"
+    networks:
+      - mtg-local
+
+  # ─── Grafana ────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: mtg-grafana-local
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data_local:/var/lib/grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "3000:3000"
+    networks:
+      - mtg-local
+    depends_on:
+      - prometheus
+
 volumes:
   mongo_data_local:
     driver: local
+  postgres_data_local:
+    driver: local
+  prometheus_data_local:
+    driver: local
+  grafana_data_local:
+    driver: local
+
+networks:
+  mtg-local:
+    driver: bridge
