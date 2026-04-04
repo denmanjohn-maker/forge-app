@@ -2333,7 +2333,7 @@
             btn.disabled = true;
 
             try {
-                const res = await fetch(`${API_BASE}/pricing/lookup?cardName=${encodeURIComponent(cardName)}`, {
+                const res = await fetch(`/api/pricing/lookup?cardName=${encodeURIComponent(cardName)}`, {
                     headers: { 'Authorization': `Bearer ${authToken}` }
                 });
 
