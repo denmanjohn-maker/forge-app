@@ -70,6 +70,9 @@ public class ClaudeService
         if (string.IsNullOrEmpty(textContent))
             throw new Exception("No text content in Claude response");
 
+        if (claudeResponse?.StopReason == "max_tokens")
+            _logger.LogWarning("Claude response was truncated (hit max_tokens limit). Attempting JSON repair.");
+
         // Extract JSON from the response (Claude may wrap it in markdown code blocks)
         var jsonContent = ExtractJson(textContent);
         
@@ -78,8 +81,18 @@ public class ClaudeService
             PropertyNameCaseInsensitive = true,
             NumberHandling = JsonNumberHandling.AllowReadingFromString
         };
-        
-        var deck = JsonSerializer.Deserialize<DeckConfiguration>(jsonContent, options);
+
+        DeckConfiguration? deck;
+        try
+        {
+            deck = JsonSerializer.Deserialize<DeckConfiguration>(jsonContent, options);
+        }
+        catch (JsonException ex) when (claudeResponse?.StopReason == "max_tokens")
+        {
+            _logger.LogWarning(ex, "Truncated JSON detected, attempting repair");
+            jsonContent = RepairTruncatedDeckJson(jsonContent);
+            deck = JsonSerializer.Deserialize<DeckConfiguration>(jsonContent, options);
+        }
         
         if (deck == null)
             throw new Exception("Failed to deserialize deck configuration from Claude response");
@@ -279,6 +292,8 @@ Sample Cards:
         sb.AppendLine($"- Format: {request.Format}");
         sb.AppendLine($"- Power Level: {request.PowerLevel}");
         sb.AppendLine($"- Budget: {request.BudgetRange}");
+        sb.AppendLine();
+        sb.AppendLine(GetBudgetGuidance(request.BudgetRange));
 
         if (!string.IsNullOrEmpty(request.PreferredStrategy))
             sb.AppendLine($"- Preferred Strategy: {request.PreferredStrategy}");
@@ -328,8 +343,9 @@ Sample Cards:
         sb.AppendLine("Use real Magic: The Gathering card names. Ensure the deck is legal in the specified format.");
         sb.AppendLine("Category the cards into their primary type. Include a good mana base with appropriate lands.");
         sb.AppendLine("Make sure estimated prices are realistic for current market values.");
+        sb.AppendLine("IMPORTANT: The estimatedTotalPrice field MUST equal the sum of all individual card estimatedPrice values, and MUST fall within the budget range specified above.");
         sb.AppendLine();
-        sb.AppendLine("FINAL CHECK: Before responding, count every entry in your cards array. If you do not have exactly the required number, add or remove cards until you do.");
+        sb.AppendLine("FINAL CHECK: Before responding, count every entry in your cards array. If you do not have exactly the required number, add or remove cards until you do. Verify the total price stays within the budget range.");
 
         return sb.ToString();
     }
@@ -364,6 +380,81 @@ Sample Cards:
         return text.Trim();
     }
 
+    private static string GetBudgetGuidance(string budgetRange)
+    {
+        if (budgetRange.Contains("under $50", StringComparison.OrdinalIgnoreCase)
+            || budgetRange.Equals("Budget", StringComparison.OrdinalIgnoreCase))
+        {
+            return @"BUDGET CONSTRAINT (STRICT): The total deck price MUST be under $50. 
+Use budget-friendly reprints and commons/uncommons. No card should exceed $2-3. 
+Avoid expensive staples — choose affordable alternatives. Most cards should be under $1.";
+        }
+
+        if (budgetRange.Contains("$50", StringComparison.OrdinalIgnoreCase)
+            && budgetRange.Contains("$150", StringComparison.OrdinalIgnoreCase))
+        {
+            return @"BUDGET CONSTRAINT (STRICT): The total deck price MUST be between $50 and $150.
+Most cards should be $0.25-$3. A few key cards can be $5-$10. No single card over $15.
+Use good-quality cards but avoid the most expensive versions of staples.";
+        }
+
+        if (budgetRange.Contains("$150", StringComparison.OrdinalIgnoreCase)
+            && budgetRange.Contains("$500", StringComparison.OrdinalIgnoreCase))
+        {
+            return @"BUDGET CONSTRAINT: The total deck price MUST be between $150 and $500.
+You can include powerful staples and quality lands. A few cards can be $20-$40.
+Build a strong, optimized deck while staying within the price range.";
+        }
+
+        if (budgetRange.Contains("no budget", StringComparison.OrdinalIgnoreCase)
+            || budgetRange.Contains("no limit", StringComparison.OrdinalIgnoreCase))
+        {
+            return "No budget restriction. Use the best cards available regardless of price.";
+        }
+
+        return $"Stay within the specified budget: {budgetRange}.";
+    }
+
+    /// <summary>
+    /// Attempts to repair truncated JSON from Claude by removing the incomplete last card entry
+    /// and closing the cards array and root object.
+    /// </summary>
+    private static string RepairTruncatedDeckJson(string json)
+    {
+        // Find the last complete card object (last '}' followed by a comma or within the array)
+        var lastCompleteObject = -1;
+        var depth = 0;
+        var inString = false;
+        var escape = false;
+
+        for (var i = 0; i < json.Length; i++)
+        {
+            var c = json[i];
+            if (escape) { escape = false; continue; }
+            if (c == '\\' && inString) { escape = true; continue; }
+            if (c == '"') { inString = !inString; continue; }
+            if (inString) continue;
+
+            if (c == '{') depth++;
+            else if (c == '}')
+            {
+                depth--;
+                // depth == 1 means we just closed a card object (inside the root object's cards array)
+                if (depth == 1)
+                    lastCompleteObject = i;
+            }
+        }
+
+        if (lastCompleteObject > 0)
+        {
+            // Truncate after the last complete card object, close the array and root object
+            var repaired = json[..(lastCompleteObject + 1)] + "\n  ]\n}";
+            return repaired;
+        }
+
+        return json;
+    }
+
     private static List<string> GetBasicLandsForColors(List<string> colors)
     {
         var lands = new List<string>();
@@ -395,6 +486,9 @@ public class ClaudeResponse
 {
     [JsonPropertyName("content")]
     public List<ClaudeContent>? Content { get; set; }
+
+    [JsonPropertyName("stop_reason")]
+    public string? StopReason { get; set; }
 }
 
 public class ClaudeContent
