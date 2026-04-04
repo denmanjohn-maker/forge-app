@@ -281,122 +281,96 @@
         }
 
         /* ── Flame border system ── */
-        .login-flames {
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-            z-index: 3;
-            overflow: visible;
+        .login-panel-wrapper {
+            position: relative;
+            max-width: 420px;
+            width: 100%;
+            z-index: 2;
         }
 
         .flame-edge {
             position: absolute;
+            pointer-events: none;
+            z-index: 1;
             overflow: visible;
         }
 
-        .flame-edge-left { left: -22px; top: 5%; height: 90%; width: 40px; }
-        .flame-edge-right { right: -22px; top: 5%; height: 90%; width: 40px; }
-        .flame-edge-top { top: -22px; left: 5%; width: 90%; height: 40px; }
-        .flame-edge-bottom { bottom: -22px; left: 5%; width: 90%; height: 40px; }
+        .flame-edge-top { top: -30px; left: 2%; width: 96%; height: 35px; }
+        .flame-edge-bottom { bottom: -30px; left: 2%; width: 96%; height: 35px; }
+        .flame-edge-left { left: -30px; top: 2%; height: 96%; width: 35px; }
+        .flame-edge-right { right: -30px; top: 2%; height: 96%; width: 35px; }
 
-        .flame-particle {
+        .flame-tongue {
             position: absolute;
-            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-            filter: blur(1px);
+            border-radius: 0 50% 50% 50%;
+            filter: blur(1.5px);
             mix-blend-mode: screen;
-            opacity: 0;
+            will-change: transform, opacity;
         }
 
-        /* Side flames point outward */
-        .flame-edge-left .flame-particle,
-        .flame-edge-right .flame-particle {
-            width: 12px;
+        /* Smooth sway — NOT flashing. High base opacity, gentle movement */
+        @keyframes swayUp1 {
+            0%   { transform: scaleY(1)   scaleX(1)   translateY(0)   rotate(-1deg); opacity: 0.75; }
+            25%  { transform: scaleY(1.15) scaleX(0.92) translateY(-2px) rotate(1deg); opacity: 0.85; }
+            50%  { transform: scaleY(0.9)  scaleX(1.05) translateY(1px)  rotate(-0.5deg); opacity: 0.7; }
+            75%  { transform: scaleY(1.2)  scaleX(0.95) translateY(-3px) rotate(1.5deg); opacity: 0.9; }
+            100% { transform: scaleY(1)    scaleX(1)    translateY(0)    rotate(-1deg); opacity: 0.75; }
         }
-        .flame-edge-top .flame-particle,
-        .flame-edge-bottom .flame-particle {
-            height: 12px;
+        @keyframes swayUp2 {
+            0%   { transform: scaleY(1.05) scaleX(0.95) translateY(0)    rotate(0.5deg); opacity: 0.8; }
+            30%  { transform: scaleY(0.85) scaleX(1.05) translateY(2px)  rotate(-1deg); opacity: 0.65; }
+            60%  { transform: scaleY(1.25) scaleX(0.9)  translateY(-3px) rotate(1deg); opacity: 0.9; }
+            100% { transform: scaleY(1.05) scaleX(0.95) translateY(0)    rotate(0.5deg); opacity: 0.8; }
         }
-
-        /* Flame flicker animations — varied timing for realism */
-        @keyframes flicker1 {
-            0%, 100% { opacity: 0.3; transform: scaleY(0.8) translateY(0); }
-            15% { opacity: 0.9; transform: scaleY(1.3) translateY(-3px); }
-            30% { opacity: 0.5; transform: scaleY(0.9) translateY(-1px); }
-            50% { opacity: 1; transform: scaleY(1.5) translateY(-5px); }
-            65% { opacity: 0.6; transform: scaleY(1.0) translateY(-2px); }
-            80% { opacity: 0.95; transform: scaleY(1.4) translateY(-4px); }
+        @keyframes swayUp3 {
+            0%   { transform: scaleY(0.95) scaleX(1)    translateY(0)    rotate(-0.5deg); opacity: 0.7; }
+            20%  { transform: scaleY(1.1)  scaleX(0.93) translateY(-2px) rotate(1deg); opacity: 0.85; }
+            45%  { transform: scaleY(1.25) scaleX(0.88) translateY(-4px) rotate(-0.5deg); opacity: 0.92; }
+            70%  { transform: scaleY(0.9)  scaleX(1.02) translateY(1px)  rotate(0.5deg); opacity: 0.68; }
+            100% { transform: scaleY(0.95) scaleX(1)    translateY(0)    rotate(-0.5deg); opacity: 0.7; }
         }
-        @keyframes flicker2 {
-            0%, 100% { opacity: 0.4; transform: scaleY(0.9) translateY(0); }
-            20% { opacity: 1; transform: scaleY(1.4) translateY(-4px); }
-            40% { opacity: 0.5; transform: scaleY(0.85) translateY(-1px); }
-            55% { opacity: 0.85; transform: scaleY(1.2) translateY(-3px); }
-            75% { opacity: 0.95; transform: scaleY(1.5) translateY(-5px); }
-            90% { opacity: 0.4; transform: scaleY(0.95) translateY(-1px); }
+        @keyframes swaySide1 {
+            0%   { transform: scaleX(1)   scaleY(1)   translateX(0)   rotate(0deg); opacity: 0.75; }
+            25%  { transform: scaleX(1.15) scaleY(0.92) translateX(-2px) rotate(1deg); opacity: 0.85; }
+            50%  { transform: scaleX(0.9)  scaleY(1.05) translateX(1px)  rotate(-0.5deg); opacity: 0.7; }
+            75%  { transform: scaleX(1.2)  scaleY(0.95) translateX(-3px) rotate(1.5deg); opacity: 0.9; }
+            100% { transform: scaleX(1)    scaleY(1)    translateX(0)    rotate(0deg); opacity: 0.75; }
         }
-        @keyframes flicker3 {
-            0%, 100% { opacity: 0.35; transform: scaleY(0.85) translateY(0); }
-            10% { opacity: 0.7; transform: scaleY(1.1) translateY(-2px); }
-            25% { opacity: 1; transform: scaleY(1.5) translateY(-5px); }
-            45% { opacity: 0.55; transform: scaleY(0.9) translateY(-1px); }
-            60% { opacity: 0.9; transform: scaleY(1.3) translateY(-4px); }
-            85% { opacity: 0.45; transform: scaleY(1.0) translateY(-2px); }
-        }
-        @keyframes flickerSide1 {
-            0%, 100% { opacity: 0.3; transform: scaleX(0.8) translateX(0); }
-            15% { opacity: 0.9; transform: scaleX(1.3) translateX(-3px); }
-            30% { opacity: 0.5; transform: scaleX(0.9) translateX(-1px); }
-            50% { opacity: 1; transform: scaleX(1.5) translateX(-5px); }
-            65% { opacity: 0.6; transform: scaleX(1.0) translateX(-2px); }
-            80% { opacity: 0.95; transform: scaleX(1.4) translateX(-4px); }
-        }
-        @keyframes flickerSide2 {
-            0%, 100% { opacity: 0.4; transform: scaleX(0.9) translateX(0); }
-            20% { opacity: 1; transform: scaleX(1.4) translateX(-4px); }
-            40% { opacity: 0.5; transform: scaleX(0.85) translateX(-1px); }
-            55% { opacity: 0.85; transform: scaleX(1.2) translateX(-3px); }
-            75% { opacity: 0.95; transform: scaleX(1.5) translateX(-5px); }
-        }
-        @keyframes flickerRight1 {
-            0%, 100% { opacity: 0.3; transform: scaleX(0.8) translateX(0); }
-            15% { opacity: 0.9; transform: scaleX(1.3) translateX(3px); }
-            50% { opacity: 1; transform: scaleX(1.5) translateX(5px); }
-            80% { opacity: 0.95; transform: scaleX(1.4) translateX(4px); }
-        }
-        @keyframes flickerRight2 {
-            0%, 100% { opacity: 0.4; transform: scaleX(0.9) translateX(0); }
-            20% { opacity: 1; transform: scaleX(1.4) translateX(4px); }
-            55% { opacity: 0.85; transform: scaleX(1.2) translateX(3px); }
-            75% { opacity: 0.95; transform: scaleX(1.5) translateX(5px); }
-        }
-        @keyframes emberRise {
-            0% { opacity: 0; transform: translateY(0) scale(1); }
-            20% { opacity: 1; }
-            100% { opacity: 0; transform: translateY(-40px) scale(0.3); }
+        @keyframes swaySide2 {
+            0%   { transform: scaleX(1.05) scaleY(0.95) translateX(0)    rotate(0.5deg); opacity: 0.8; }
+            35%  { transform: scaleX(0.88) scaleY(1.04) translateX(2px)  rotate(-1deg); opacity: 0.65; }
+            65%  { transform: scaleX(1.2)  scaleY(0.9)  translateX(-2px) rotate(0.5deg); opacity: 0.88; }
+            100% { transform: scaleX(1.05) scaleY(0.95) translateX(0)    rotate(0.5deg); opacity: 0.8; }
         }
 
-        .ember {
+        @keyframes emberFloat {
+            0%   { opacity: 0; transform: translateY(0) scale(1); }
+            15%  { opacity: 0.9; }
+            100% { opacity: 0; transform: translateY(-50px) translateX(var(--ember-drift, 5px)) scale(0.2); }
+        }
+
+        .ember-particle {
             position: absolute;
-            width: 3px;
-            height: 3px;
+            width: 2.5px;
+            height: 2.5px;
             border-radius: 50%;
-            background: #ffcc33;
+            background: #ffcc44;
             filter: blur(0.5px);
             mix-blend-mode: screen;
-            animation: emberRise linear infinite;
+            animation: emberFloat linear infinite;
         }
 
         /* Glow pulse behind the panel */
         .flame-glow {
             position: absolute;
-            inset: -8px;
+            inset: -6px;
             border-radius: 20px;
-            z-index: -1;
-            animation: glowPulse 2s ease-in-out infinite alternate;
+            z-index: 0;
+            animation: glowPulse 3s ease-in-out infinite alternate;
         }
         @keyframes glowPulse {
-            0% { box-shadow: 0 0 20px rgba(255,80,0,0.15), 0 0 40px rgba(255,40,0,0.08); }
-            100% { box-shadow: 0 0 35px rgba(255,80,0,0.25), 0 0 60px rgba(255,40,0,0.12); }
+            0%   { box-shadow: 0 0 15px rgba(255,100,0,0.12), 0 0 35px rgba(255,50,0,0.06); }
+            100% { box-shadow: 0 0 25px rgba(255,100,0,0.2), 0 0 50px rgba(255,50,0,0.1); }
         }
 
         .login-panel .logo-text {
@@ -1762,21 +1736,21 @@
             <img src="https://cards.scryfall.io/art_crop/front/5/c/5cd4154e-7681-444b-a0f2-33e887791ba7.jpg?1612316219" alt="" loading="eager">
             <img src="https://cards.scryfall.io/art_crop/front/e/7/e71c8c39-3fbb-4a42-9cf6-b3224f5a56fc.jpg?1717013745" alt="" loading="eager">
         </div>
-        <div class="login-panel">
-            <!-- Animated flame border -->
+        <div class="login-panel-wrapper">
+            <!-- Flame edges positioned outside the panel -->
             <div class="flame-glow"></div>
-            <div class="login-flames">
-                <div class="flame-edge flame-edge-top" id="flamesTop"></div>
-                <div class="flame-edge flame-edge-bottom" id="flamesBottom"></div>
-                <div class="flame-edge flame-edge-left" id="flamesLeft"></div>
-                <div class="flame-edge flame-edge-right" id="flamesRight"></div>
+            <div class="flame-edge flame-edge-top" id="flamesTop"></div>
+            <div class="flame-edge flame-edge-bottom" id="flamesBottom"></div>
+            <div class="flame-edge flame-edge-left" id="flamesLeft"></div>
+            <div class="flame-edge flame-edge-right" id="flamesRight"></div>
+            <div class="login-panel">
+                <div class="logo-text">BEN'S MAGIC FORGE</div>
+                <div class="logo-subtitle">Enter the Sanctum</div>
+                <input type="text" id="loginUsername" class="login-field" placeholder="Username" autocomplete="username">
+                <input type="password" id="loginPassword" class="login-field" placeholder="Password" autocomplete="current-password">
+                <button class="btn-login" id="btnLogin" onclick="handleLogin()">Enter the Forge</button>
+                <div class="login-error" id="loginError"></div>
             </div>
-            <div class="logo-text">BEN'S MAGIC FORGE</div>
-            <div class="logo-subtitle">Enter the Sanctum</div>
-            <input type="text" id="loginUsername" class="login-field" placeholder="Username" autocomplete="username">
-            <input type="password" id="loginPassword" class="login-field" placeholder="Password" autocomplete="current-password">
-            <button class="btn-login" id="btnLogin" onclick="handleLogin()">Enter the Forge</button>
-            <div class="login-error" id="loginError"></div>
         </div>
     </div>
 
@@ -2244,93 +2218,93 @@
 
         // ── Flame border generator ──
         function initFlames() {
+            // Realistic flame gradient colors — warm core fading to transparent tips
             const colors = [
-                'radial-gradient(ellipse at 50% 90%, #fff7aa 0%, #ffcc33 15%, #ff8800 40%, #ff4400 65%, #cc2200 80%, transparent 100%)',
-                'radial-gradient(ellipse at 50% 90%, #ffffcc 0%, #ffdd44 15%, #ff9922 40%, #ee5500 65%, #aa1100 80%, transparent 100%)',
-                'radial-gradient(ellipse at 50% 90%, #fff5e0 0%, #ffbb33 15%, #ff7700 40%, #dd3300 65%, #991100 80%, transparent 100%)'
+                'radial-gradient(ellipse at 50% 85%, #fffbe6 0%, #ffe066 12%, #ff9900 30%, #e64a00 55%, #8b1a00 75%, transparent 100%)',
+                'radial-gradient(ellipse at 50% 85%, #fff8dc 0%, #ffd43b 12%, #ff8c00 30%, #d63600 55%, #7a1200 75%, transparent 100%)',
+                'radial-gradient(ellipse at 50% 85%, #fffacd 0%, #ffcc33 12%, #ff7700 30%, #cc2800 55%, #6b0f00 75%, transparent 100%)',
+                'radial-gradient(ellipse at 50% 85%, #ffffff 0%, #ffe88a 10%, #ffaa22 28%, #ee5500 52%, #991500 72%, transparent 100%)'
             ];
-            const anims = {
-                top: ['flicker1', 'flicker2', 'flicker3'],
-                bottom: ['flicker1', 'flicker2', 'flicker3'],
-                left: ['flickerSide1', 'flickerSide2', 'flickerSide1'],
-                right: ['flickerRight1', 'flickerRight2', 'flickerRight1']
-            };
+            const vertAnims = ['swayUp1', 'swayUp2', 'swayUp3'];
+            const sideAnims = ['swaySide1', 'swaySide2'];
 
             ['Top', 'Bottom', 'Left', 'Right'].forEach(side => {
                 const el = document.getElementById('flames' + side);
                 if (!el) return;
                 el.innerHTML = '';
                 const isHoriz = side === 'Top' || side === 'Bottom';
-                const count = isHoriz ? 28 : 22;
-                const sideKey = side.toLowerCase();
+                const count = isHoriz ? 32 : 26;
+                const anims = isHoriz ? vertAnims : sideAnims;
 
                 for (let i = 0; i < count; i++) {
                     const flame = document.createElement('div');
-                    flame.className = 'flame-particle';
-                    const size = 10 + Math.random() * 16;
-                    const pos = (i / count) * 100 + (Math.random() * (100 / count));
-                    const dur = 0.3 + Math.random() * 0.5;
-                    const delay = Math.random() * -1.5;
+                    flame.className = 'flame-tongue';
                     const color = colors[Math.floor(Math.random() * colors.length)];
-                    const anim = anims[sideKey][Math.floor(Math.random() * anims[sideKey].length)];
+                    // Longer durations = smoother sway (0.8–2s, not 0.3s)
+                    const dur = 0.8 + Math.random() * 1.2;
+                    const delay = -(Math.random() * 3);
+                    const anim = anims[Math.floor(Math.random() * anims.length)];
+                    const pos = (i / count) * 100 + (Math.random() * (90 / count));
 
                     flame.style.background = color;
-                    flame.style.animationName = anim;
-                    flame.style.animationDuration = dur + 's';
-                    flame.style.animationDelay = delay + 's';
-                    flame.style.animationTimingFunction = 'ease-in-out';
-                    flame.style.animationIterationCount = 'infinite';
+                    flame.style.animation = `${anim} ${dur}s ease-in-out ${delay}s infinite`;
 
                     if (isHoriz) {
-                        flame.style.width = (6 + Math.random() * 10) + 'px';
-                        flame.style.height = size + 'px';
+                        const w = 5 + Math.random() * 8;
+                        const h = 14 + Math.random() * 18;
+                        flame.style.width = w + 'px';
+                        flame.style.height = h + 'px';
                         flame.style.left = pos + '%';
-                        flame.style.borderRadius = '50% 50% 50% 50% / 60% 60% 40% 40%';
+                        flame.style.borderRadius = '50% 50% 20% 20%';
                         if (side === 'Top') {
-                            flame.style.bottom = '0';
+                            flame.style.bottom = '-2px';
                             flame.style.transformOrigin = 'center bottom';
                         } else {
-                            flame.style.top = '0';
+                            flame.style.top = '-2px';
                             flame.style.transformOrigin = 'center top';
                             flame.style.transform = 'rotate(180deg)';
                         }
                     } else {
-                        flame.style.height = (6 + Math.random() * 10) + 'px';
-                        flame.style.width = size + 'px';
+                        const w = 14 + Math.random() * 18;
+                        const h = 5 + Math.random() * 8;
+                        flame.style.width = w + 'px';
+                        flame.style.height = h + 'px';
                         flame.style.top = pos + '%';
-                        flame.style.borderRadius = '40% 60% 60% 40% / 50% 50% 50% 50%';
                         if (side === 'Left') {
-                            flame.style.right = '0';
+                            flame.style.right = '-2px';
                             flame.style.transformOrigin = 'right center';
+                            flame.style.borderRadius = '20% 50% 50% 20%';
                         } else {
-                            flame.style.left = '0';
+                            flame.style.left = '-2px';
                             flame.style.transformOrigin = 'left center';
+                            flame.style.borderRadius = '50% 20% 20% 50%';
                         }
                     }
 
                     el.appendChild(flame);
                 }
 
-                // Add embers (rising sparks)
-                const emberCount = isHoriz ? 8 : 6;
+                // Ember sparks — fewer, subtler
+                const emberCount = isHoriz ? 5 : 4;
                 for (let i = 0; i < emberCount; i++) {
                     const ember = document.createElement('div');
-                    ember.className = 'ember';
+                    ember.className = 'ember-particle';
                     const pos = 10 + Math.random() * 80;
-                    const dur = 1 + Math.random() * 1.5;
-                    const delay = Math.random() * -3;
+                    const dur = 1.5 + Math.random() * 2;
+                    const delay = -(Math.random() * 4);
+                    const drift = -8 + Math.random() * 16;
+                    ember.style.setProperty('--ember-drift', drift + 'px');
+                    ember.style.animation = `emberFloat ${dur}s linear ${delay}s infinite`;
 
                     if (isHoriz) {
                         ember.style.left = pos + '%';
-                        ember.style.bottom = side === 'Top' ? '0' : 'auto';
-                        ember.style.top = side === 'Bottom' ? '0' : 'auto';
+                        if (side === 'Top') ember.style.bottom = '0';
+                        else ember.style.top = '0';
                     } else {
                         ember.style.top = pos + '%';
-                        ember.style.right = side === 'Left' ? '0' : 'auto';
-                        ember.style.left = side === 'Right' ? '0' : 'auto';
+                        if (side === 'Left') ember.style.right = '0';
+                        else ember.style.left = '0';
                     }
-                    ember.style.animationDuration = dur + 's';
-                    ember.style.animationDelay = delay + 's';
                     el.appendChild(ember);
                 }
             });
