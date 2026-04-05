@@ -17,13 +17,14 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const { data: branches } = await github.rest.repos.listBranches({
+            const keep = new Set(['main', 'staging']);
+            let failed = 0;
+
+            const branches = await github.paginate(github.rest.repos.listBranches, {
               owner: context.repo.owner,
               repo: context.repo.repo,
               per_page: 100,
             });
-
-            const keep = new Set(['main', 'staging']);
 
             for (const branch of branches) {
               if (keep.has(branch.name)) {
@@ -31,9 +32,18 @@ jobs:
                 continue;
               }
               console.log(`Deleting branch: ${branch.name}`);
-              await github.rest.git.deleteRef({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                ref: `heads/${branch.name}`,
-              });
+              try {
+                await github.rest.git.deleteRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: `heads/${branch.name}`,
+                });
+              } catch (err) {
+                console.error(`Failed to delete branch ${branch.name}: ${err.message}`);
+                failed++;
+              }
+            }
+
+            if (failed > 0) {
+              core.setFailed(`${failed} branch(es) could not be deleted. Check the workflow logs for details on which branches failed.`);
             }
