@@ -84,7 +84,14 @@ public class DecksController : ControllerBase
             var budgetMax = ClaudeService.GetBudgetMax(request.BudgetRange);
             if (budgetMax.HasValue && deck.EstimatedTotalPrice > budgetMax.Value)
             {
-                const int maxRetries = 2;
+                // Determine per-card price ceiling based on budget tier
+                var perCardMax = budgetMax.Value <= 50m ? 1.00m
+                    : budgetMax.Value <= 150m ? 2.00m
+                    : 5.00m;
+
+                var cheapCardPool = await _pricingService.GetCheapCardsAsync(perCardMax, 300);
+
+                const int maxRetries = 3;
                 for (var attempt = 0; attempt < maxRetries && deck.EstimatedTotalPrice > budgetMax.Value; attempt++)
                 {
                     var overage = deck.EstimatedTotalPrice - budgetMax.Value;
@@ -92,28 +99,19 @@ public class DecksController : ControllerBase
                         "Deck over budget by ${Overage:F2} (${Total:F2} vs ${Max:F2}). Attempt {Attempt} to fix.",
                         overage, deck.EstimatedTotalPrice, budgetMax.Value, attempt + 1);
 
-                    // Find the most expensive non-commander, non-basic-land cards to replace
-                    var candidates = deck.Cards
+                    // Replace ALL cards that exceed the per-card price ceiling
+                    var expensiveCards = deck.Cards
                         .Where(c => !c.Category.Equals("Commander", StringComparison.OrdinalIgnoreCase)
-                                 && !c.CardType.Contains("Basic Land", StringComparison.OrdinalIgnoreCase))
+                                 && !c.CardType.Contains("Basic Land", StringComparison.OrdinalIgnoreCase)
+                                 && c.EstimatedPrice > perCardMax)
                         .OrderByDescending(c => c.EstimatedPrice)
+                        .Take(25)
                         .ToList();
-
-                    // Take enough expensive cards to cover the overage (plus $10 buffer)
-                    var expensiveCards = new List<CardEntry>();
-                    var runningTotal = 0m;
-                    foreach (var card in candidates)
-                    {
-                        if (expensiveCards.Count >= 15) break;
-                        expensiveCards.Add(card);
-                        runningTotal += card.EstimatedPrice;
-                        if (runningTotal >= overage + 10m) break;
-                    }
 
                     if (expensiveCards.Count == 0) break;
 
                     var replacements = await _claudeService.SuggestBudgetReplacementsAsync(
-                        deck, expensiveCards, deck.EstimatedTotalPrice, budgetMax.Value);
+                        deck, expensiveCards, deck.EstimatedTotalPrice, budgetMax.Value, cheapCardPool);
 
                     if (replacements.Count == 0) break;
 

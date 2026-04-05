@@ -410,16 +410,24 @@ Sample Cards:
 
     /// <summary>
     /// Asks Claude to suggest cheaper replacement cards for over-budget cards.
-    /// Returns a list of (removeCardName, replacement CardEntry) pairs.
+    /// Includes a pool of verified-cheap cards from the pricing DB so Claude picks
+    /// from cards with known low real prices.
     /// </summary>
     public async Task<List<CardEntry>> SuggestBudgetReplacementsAsync(
         DeckConfiguration deck,
         List<CardEntry> expensiveCards,
         decimal currentTotal,
-        decimal budgetMax)
+        decimal budgetMax,
+        List<(string CardName, decimal Price)> cheapCardPool)
     {
         var cardListStr = string.Join("\n", expensiveCards
             .Select(c => $"- {c.Name} (${c.EstimatedPrice:F2}, {c.CardType}, {c.Category}, Role: {c.RoleInDeck})"));
+
+        var existingNames = new HashSet<string>(
+            deck.Cards.Select(c => c.Name), StringComparer.OrdinalIgnoreCase);
+        var poolStr = string.Join("\n", cheapCardPool
+            .Where(c => !existingNames.Contains(c.CardName))
+            .Select(c => $"- {c.CardName} (${c.Price:F2})"));
 
         var deckContext = $@"Deck: {deck.DeckName}
 Format: {deck.Format}
@@ -438,16 +446,18 @@ I need you to suggest cheaper replacement cards for the most expensive cards lis
 Expensive cards to replace:
 {cardListStr}
 
-For EACH card above, suggest a cheaper alternative that:
-1. Fills the same role in the deck (same category/function)
+IMPORTANT: You MUST choose replacements from this list of verified budget cards with confirmed real prices:
+{poolStr}
+
+For EACH expensive card above, pick a replacement from the budget pool that:
+1. Fills a similar role in the deck (same category/function when possible)
 2. Is legal in {deck.Format} format
-3. Costs significantly less (ideally under $1-2 each)
-4. Is a real Magic: The Gathering card
+3. Works with the deck's color identity: {string.Join(", ", deck.Colors)}
 
 Respond with ONLY a valid JSON array (no markdown, no explanation) of replacement cards:
 [
   {{
-    ""name"": ""string - exact replacement card name"",
+    ""name"": ""string - exact card name from the budget pool above"",
     ""quantity"": 1,
     ""manaCost"": ""string - mana cost like {{2}}{{B}}{{G}}"",
     ""cmc"": number,
@@ -458,7 +468,8 @@ Respond with ONLY a valid JSON array (no markdown, no explanation) of replacemen
   }}
 ]
 
-Return exactly {expensiveCards.Count} replacement cards, one for each expensive card, in the same order.";
+Return exactly {expensiveCards.Count} replacement cards, one for each expensive card, in the same order.
+You MUST only use card names from the budget pool list above — do not suggest cards outside that list.";
 
         var apiRequest = new
         {

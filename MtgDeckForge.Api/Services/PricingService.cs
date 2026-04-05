@@ -39,4 +39,17 @@ public class PricingService
             }
         }
     }
+
+    /// <summary>
+    /// Returns a random sample of card names with verified prices at or below the given max price.
+    /// </summary>
+    public async Task<List<(string CardName, decimal Price)>> GetCheapCardsAsync(decimal maxPrice, int count = 200)
+    {
+        return await _db.CardPrices.AsNoTracking()
+            .Where(x => x.PriceUsd > 0 && x.PriceUsd <= maxPrice)
+            .OrderBy(x => Guid.NewGuid()) // random sample
+            .Take(count)
+            .Select(x => new ValueTuple<string, decimal>(x.CardName, x.PriceUsd))
+            .ToListAsync();
+    }
 }
