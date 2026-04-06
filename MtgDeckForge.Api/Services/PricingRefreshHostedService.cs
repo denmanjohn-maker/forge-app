@@ -1,5 +1,9 @@
 namespace MtgDeckForge.Api.Services;
 
+/// <summary>
+/// Daily pricing refresh service using IHostedLifecycleService for proper startup lifecycle.
+/// StartedAsync fires after the app is fully ready, replacing the old BackgroundService + Task.Delay hack.
+/// </summary>
 public class PricingRefreshHostedService : IHostedLifecycleService
 {
     private readonly IServiceProvider _serviceProvider;
@@ -11,8 +15,11 @@ public class PricingRefreshHostedService : IHostedLifecycleService
         _logger = logger;
     }
 
+    // Required by IHostedService — no setup/teardown needed beyond StartedAsync
     public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    // Required by IHostedLifecycleService — only StartedAsync is used
     public Task StartingAsync(CancellationToken cancellationToken) => Task.CompletedTask;
     public Task StoppingAsync(CancellationToken cancellationToken) => Task.CompletedTask;
     public Task StoppedAsync(CancellationToken cancellationToken) => Task.CompletedTask;

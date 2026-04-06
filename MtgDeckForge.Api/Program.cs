@@ -128,6 +128,7 @@ builder.Services.AddHttpClient<MtgJsonPricingImportService>(client =>
 {
     client.Timeout = TimeSpan.FromMinutes(10);
 });
+// Register as singleton + hosted service so IHostedLifecycleService hooks fire at startup
 builder.Services.AddSingleton<PricingRefreshHostedService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<PricingRefreshHostedService>());
 
