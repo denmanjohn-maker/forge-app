@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
+using MtgDeckForge.Api.Json;
 using MtgDeckForge.Api.Models;
 
 namespace MtgDeckForge.Api.Services;
@@ -64,7 +65,7 @@ public class ClaudeService
             throw new Exception($"Claude API returned {response.StatusCode}: {responseBody}");
         }
 
-        var claudeResponse = JsonSerializer.Deserialize<ClaudeResponse>(responseBody);
+        var claudeResponse = JsonSerializer.Deserialize(responseBody, AppJsonContext.Default.ClaudeResponse);
         var textContent = claudeResponse?.Content?.FirstOrDefault(c => c.Type == "text")?.Text;
 
         if (string.IsNullOrEmpty(textContent))
@@ -75,23 +76,17 @@ public class ClaudeService
 
         // Extract JSON from the response (Claude may wrap it in markdown code blocks)
         var jsonContent = ExtractJson(textContent);
-        
-        var options = new JsonSerializerOptions 
-        { 
-            PropertyNameCaseInsensitive = true,
-            NumberHandling = JsonNumberHandling.AllowReadingFromString
-        };
 
         DeckConfiguration? deck;
         try
         {
-            deck = JsonSerializer.Deserialize<DeckConfiguration>(jsonContent, options);
+            deck = JsonSerializer.Deserialize(jsonContent, AppJsonContext.Default.DeckConfiguration);
         }
         catch (JsonException ex) when (claudeResponse?.StopReason == "max_tokens")
         {
             _logger.LogWarning(ex, "Truncated JSON detected, attempting repair");
             jsonContent = RepairTruncatedDeckJson(jsonContent);
-            deck = JsonSerializer.Deserialize<DeckConfiguration>(jsonContent, options);
+            deck = JsonSerializer.Deserialize(jsonContent, AppJsonContext.Default.DeckConfiguration);
         }
         
         if (deck == null)
@@ -227,15 +222,14 @@ Provide 3-5 weaknesses, 3-5 improvement suggestions, and 3-5 card upgrade recomm
             throw new Exception($"Claude API returned {response.StatusCode}: {responseBody}");
         }
 
-        var claudeResponse = JsonSerializer.Deserialize<ClaudeResponse>(responseBody);
+        var claudeResponse = JsonSerializer.Deserialize(responseBody, AppJsonContext.Default.ClaudeResponse);
         var textContent = claudeResponse?.Content?.FirstOrDefault(c => c.Type == "text")?.Text;
 
         if (string.IsNullOrEmpty(textContent))
             throw new Exception("No text content in Claude response");
 
         var jsonContent = ExtractJson(textContent);
-        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        var analysis = JsonSerializer.Deserialize<DeckAnalysis>(jsonContent, options);
+        var analysis = JsonSerializer.Deserialize(jsonContent, AppJsonContext.Default.DeckAnalysis);
 
         if (analysis == null)
             throw new Exception("Failed to deserialize deck analysis from Claude response");
@@ -272,7 +266,7 @@ Sample Cards:
             var responseBody = await response.Content.ReadAsStringAsync();
             if (!response.IsSuccessStatusCode) return $"Imported deck: {deckName}";
 
-            var claudeResponse = JsonSerializer.Deserialize<ClaudeResponse>(responseBody);
+            var claudeResponse = JsonSerializer.Deserialize(responseBody, AppJsonContext.Default.ClaudeResponse);
             return claudeResponse?.Content?.FirstOrDefault(c => c.Type == "text")?.Text?.Trim()
                 ?? $"Imported deck: {deckName}";
         }

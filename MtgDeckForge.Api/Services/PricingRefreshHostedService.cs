@@ -1,6 +1,10 @@
 namespace MtgDeckForge.Api.Services;
 
-public class PricingRefreshHostedService : BackgroundService
+/// <summary>
+/// Daily pricing refresh service using IHostedLifecycleService for proper startup lifecycle.
+/// StartedAsync fires after the app is fully ready, replacing the old BackgroundService + Task.Delay hack.
+/// </summary>
+public class PricingRefreshHostedService : IHostedLifecycleService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<PricingRefreshHostedService> _logger;
@@ -11,9 +15,25 @@ public class PricingRefreshHostedService : BackgroundService
         _logger = logger;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    // Required by IHostedService — no setup/teardown needed beyond StartedAsync
+    public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    // Required by IHostedLifecycleService — only StartedAsync is used
+    public Task StartingAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task StoppingAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task StoppedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    public async Task StartedAsync(CancellationToken cancellationToken)
     {
-        await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+        // Run initial import shortly after application has fully started
+        await RunImportLoopAsync(cancellationToken);
+    }
+
+    private async Task RunImportLoopAsync(CancellationToken stoppingToken)
+    {
+        // Brief delay to let the app finish startup
+        await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
 
         while (!stoppingToken.IsCancellationRequested)
         {
