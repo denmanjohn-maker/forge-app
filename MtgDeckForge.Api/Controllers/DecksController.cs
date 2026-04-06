@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.Timeouts;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using MtgDeckForge.Api.Models;
@@ -68,6 +69,7 @@ public class DecksController : ControllerBase
 
     [HttpPost("generate")]
     [EnableRateLimiting("deck-generation")]
+    [RequestTimeout("ai-request")]
     public async Task<ActionResult<DeckConfiguration>> Generate([FromBody] DeckGenerationRequest request)
     {
         try
@@ -147,6 +149,7 @@ public class DecksController : ControllerBase
     }
 
     [HttpPost("{id}/analyze")]
+    [RequestTimeout("ai-request")]
     public async Task<ActionResult<DeckAnalysis>> Analyze(string id)
     {
         try
@@ -232,6 +235,7 @@ public class DecksController : ControllerBase
     // === CSV Import (auto-detects format, enriches via Scryfall, generates description) ===
 
     [HttpPost("import/csv")]
+    [RequestTimeout("ai-request")]
     public async Task<ActionResult<DeckConfiguration>> ImportCsv(IFormFile file, [FromForm] string? deckName)
     {
         if (file is null || file.Length == 0)

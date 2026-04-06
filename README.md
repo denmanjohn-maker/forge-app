@@ -1,8 +1,8 @@
 # ⚔️ MTG Deck Forge
 
-A Magic: The Gathering deck configuration generator powered by Claude AI, built with .NET 8, MongoDB, PostgreSQL, and Docker.
+A Magic: The Gathering deck configuration generator powered by Claude AI, built with .NET 10, MongoDB, PostgreSQL, and Docker.
 
-![.NET 8](https://img.shields.io/badge/.NET-8.0-purple)
+![.NET 10](https://img.shields.io/badge/.NET-10.0-purple)
 ![MongoDB](https://img.shields.io/badge/MongoDB-7-green)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue)
 ![Docker](https://img.shields.io/badge/Docker-Compose-blue)
@@ -17,8 +17,8 @@ A Magic: The Gathering deck configuration generator powered by Claude AI, built 
 - **JWT + Cookie Auth** — All deck and pricing APIs require authentication. Login via the SPA (JWT) or the Razor Pages flow (cookie)
 - **User & Group Management** — Admin users can create/delete accounts, reset passwords, and manage groups
 - **Rate Limiting** — Deck generation is capped at 20 requests per user per 24 hours
-- **Observability** — Serilog structured logging, Prometheus metrics via OpenTelemetry, and Grafana dashboards included out of the box
-- **Swagger API Docs** — Available at `/swagger` for testing endpoints directly
+- **Observability** — Serilog structured logging, Prometheus metrics via OpenTelemetry, Grafana Loki log push, and Grafana dashboards included out of the box
+- **Scalar API Docs** — Interactive API reference at `/scalar/v1`; OpenAPI spec at `/openapi/v1.json`
 
 ## Architecture
 
@@ -28,7 +28,7 @@ A Magic: The Gathering deck configuration generator powered by Claude AI, built 
 │                                                              │
 │  ┌──────────────────┐  ┌─────────────┐  ┌───────────────┐  │
 │  │  mtg-api          │  │  mongodb    │  │  postgres     │  │
-│  │  .NET 8 Web API   │──│  Mongo 7    │  │  PG 16        │  │
+│  │  .NET 10 Web API  │──│  Mongo 7    │  │  PG 16        │  │
 │  │  + Static SPA     │  │  Port 27017 │  │  Port 5432    │  │
 │  │  + Razor Pages    │  └─────────────┘  └───────────────┘  │
 │  │  Port 5000        │                                       │
@@ -81,11 +81,11 @@ Navigate to **http://localhost:5000** in your browser and log in with your admin
 - **Forge tab** — Configure and generate new decks
 - **Library tab** — Browse, view, and manage saved decks
 - **Price Lookup** — Search cards and view live pricing from multiple sources
-- **Swagger** — http://localhost:5000/swagger for API exploration
+- **Scalar API docs** — http://localhost:5000/scalar/v1 for API exploration
 
 ## Authentication
 
-All API endpoints (except `/healthz`, `/api/version`, and Swagger) require authentication.
+All API endpoints (except `/healthz`, `/api/version`, and the OpenAPI/Scalar docs) require authentication.
 
 **Login** via `POST /api/auth/login` to receive a JWT token, then pass it as `Authorization: Bearer <token>` on subsequent requests. The Razor Pages UI (`/Account/Login`) uses cookie auth instead.
 
@@ -144,12 +144,14 @@ curl -X POST http://localhost:5000/api/auth/login \
 
 ### System
 
-| Method | Endpoint          | Description                       |
-|--------|-------------------|-----------------------------------|
-| `GET`  | `/healthz`        | Health check (returns `healthy`)  |
-| `GET`  | `/api/version`    | Current build version             |
-| `GET`  | `/metrics`        | Prometheus scrape endpoint (internal only) |
-| `GET`  | `/logging`        | Recent structured log entries (internal only) |
+| Method | Endpoint                | Description                                                |
+|--------|-------------------------|------------------------------------------------------------|
+| `GET`  | `/healthz`              | Health check (returns `healthy`)                           |
+| `GET`  | `/api/version`          | Current build version                                      |
+| `GET`  | `/openapi/v1.json`      | OpenAPI specification                                      |
+| `GET`  | `/scalar/v1`            | Scalar interactive API reference                           |
+| `GET`  | `/metrics`              | Prometheus scrape endpoint (internal only)                 |
+| `GET`  | `/logging`              | Recent structured log entries (internal only)              |
 
 ### Example: Generate a Deck
 
@@ -181,6 +183,7 @@ curl -X POST http://localhost:5000/api/decks/generate \
 | `MongoDb__DatabaseName`       | MongoDB database name                            | `mtgdeckforge`                         |
 | `ClaudeApi__Model`            | Claude model to use                              | `claude-sonnet-4-20250514`             |
 | `ClaudeApi__MaxTokens`        | Max tokens per generation request                | `16384`                                |
+| `LOKI_URL`                    | Grafana Loki endpoint for log push               | *(optional)*                           |
 | `CORS_ALLOWED_ORIGINS`        | Comma-separated allowed origins (production)     | Wide-open in development               |
 | `GRAFANA_ADMIN_PASSWORD`      | Grafana admin password                           | `admin` (change in production)         |
 | `PORT`                        | Port the API listens on                          | `5000`                                 |
@@ -205,6 +208,7 @@ The application includes a full observability stack:
 
 - **Health Check**: `GET /healthz` — returns `{ status: "healthy" }`
 - **Prometheus Metrics**: Scraped from `/metrics` (ASP.NET Core + HTTP client + runtime instrumentation via OpenTelemetry)
+- **Grafana Loki**: Set `LOKI_URL` to push structured logs directly to a Loki instance; labels are set to `app=MtgDeckForge`
 - **Grafana**: Pre-configured dashboards at `http://localhost:3000` (admin/admin locally)
 - **Structured Logging**: Serilog with console output; recent logs available via `GET /logging`
 - **Application Logs**: `docker compose logs -f mtg-api`
@@ -227,7 +231,7 @@ curl -X POST http://localhost:5000/api/pricing/refresh \
 MtgDeckForge/
 ├── docker-compose.yml              # Production: API + MongoDB + Prometheus + Grafana
 ├── docker-compose-local.yml        # Local dev: MongoDB + PostgreSQL + Prometheus + Grafana
-├── Dockerfile                      # Multi-stage .NET 8 build
+├── Dockerfile                      # Multi-stage .NET 10 build (sdk:10.0 → aspnet:10.0)
 ├── .env.example                    # Environment variable template
 ├── MtgDeckForge.sln                # Solution file
 ├── monitoring/                     # Prometheus & Grafana config
@@ -238,7 +242,7 @@ MtgDeckForge/
 │   ├── ScryfallServiceTests.cs
 │   └── DecksControllerCsvHelpersTests.cs
 └── MtgDeckForge.Api/
-    ├── MtgDeckForge.Api.csproj     # Project file
+    ├── MtgDeckForge.Api.csproj     # Project file (net10.0; Scalar, OpenAPI, MongoDB.Driver 3.x)
     ├── Program.cs                  # Service registration & middleware pipeline
     ├── appsettings.json            # Default configuration
     ├── Controllers/
@@ -248,6 +252,8 @@ MtgDeckForge/
     │   └── GroupsController.cs     # Group management (Admin)
     ├── Data/
     │   └── AppDbContext.cs         # EF Core DbContext (Identity + pricing tables)
+    ├── Json/
+    │   └── AppJsonContext.cs       # Source-generated JSON serialization context (AOT-ready)
     ├── Migrations/                 # EF Core PostgreSQL migrations
     ├── Models/
     │   ├── DeckModels.cs           # Deck, Card, Request/Response models
@@ -257,8 +263,9 @@ MtgDeckForge/
     │   ├── JwtSettings.cs          # JWT config POCO
     │   └── CardPrice.cs            # EF Core pricing entity
     ├── Observability/              # InMemoryLogStore, InMemoryLogSink, middleware
-    ├── Pages/                      # Razor Pages (login, deck views)
+    ├── Pages/                      # Razor Pages (login, logout, deck views)
     │   ├── Account/Login.cshtml
+    │   ├── Account/Logout.cshtml
     │   └── Decks/
     ├── Services/
     │   ├── DeckService.cs                  # MongoDB deck CRUD
@@ -266,7 +273,7 @@ MtgDeckForge/
     │   ├── ScryfallService.cs              # Scryfall card enrichment & color derivation
     │   ├── PricingService.cs               # Apply local prices to card lists
     │   ├── MtgJsonPricingImportService.cs  # MTGJSON bulk price import
-    │   ├── PricingRefreshHostedService.cs  # Daily background price refresh
+    │   ├── PricingRefreshHostedService.cs  # Daily background price refresh (IHostedLifecycleService)
     │   ├── AuthService.cs                  # JWT generation, password hashing
     │   └── UserService.cs                  # MongoDB user/group CRUD + seeding
     └── wwwroot/

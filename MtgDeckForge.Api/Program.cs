@@ -2,24 +2,27 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http.Timeouts;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
 using MtgDeckForge.Api.Data;
 using MtgDeckForge.Api.Models;
 using MtgDeckForge.Api.Observability;
 using MtgDeckForge.Api.Services;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
+using Scalar.AspNetCore;
 using Serilog;
 using Serilog.Events;
+using Serilog.Sinks.Grafana.Loki;
 
 // ── Serilog bootstrap (captures startup errors) ──
+var lokiUrl = Environment.GetEnvironmentVariable("LOKI_URL");
 var logStore = new InMemoryLogStore(1000);
 
-Log.Logger = new LoggerConfiguration()
+var loggerConfig = new LoggerConfiguration()
     .MinimumLevel.Information()
     .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
     .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
@@ -35,8 +38,17 @@ Log.Logger = new LoggerConfiguration()
         {
             ["service.name"] = "MtgDeckForge"
         };
-    })
-    .CreateLogger();
+    });
+
+if (!string.IsNullOrEmpty(lokiUrl))
+{
+    loggerConfig = loggerConfig.WriteTo.GrafanaLoki(
+        lokiUrl,
+        labels: new[] { new LokiLabel { Key = "app", Value = "MtgDeckForge" } }
+    );
+}
+
+Log.Logger = loggerConfig.CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseSerilog();
@@ -45,11 +57,11 @@ builder.Host.UseSerilog();
 var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
 builder.WebHost.UseUrls($"http://+:{port}");
 
-// Kestrel keep-alive for long AI requests (prevents iOS Safari "Load Failed")
-builder.WebHost.ConfigureKestrel(options =>
+// Request timeouts — long timeout for AI endpoints, standard for everything else
+builder.Services.AddRequestTimeouts(options =>
 {
-    options.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(5);
-    options.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(2);
+    options.DefaultPolicy = new RequestTimeoutPolicy { Timeout = TimeSpan.FromSeconds(30) };
+    options.AddPolicy("ai-request", new RequestTimeoutPolicy { Timeout = TimeSpan.FromMinutes(5) });
 });
 
 // MongoDB
@@ -116,7 +128,9 @@ builder.Services.AddHttpClient<MtgJsonPricingImportService>(client =>
 {
     client.Timeout = TimeSpan.FromMinutes(10);
 });
-builder.Services.AddHostedService<PricingRefreshHostedService>();
+// Register as singleton + hosted service so IHostedLifecycleService hooks fire at startup
+builder.Services.AddSingleton<PricingRefreshHostedService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<PricingRefreshHostedService>());
 
 // ── Observability ──
 builder.Services.AddSingleton(logStore);
@@ -200,33 +214,18 @@ builder.Services.AddRateLimiter(options =>
     };
 });
 
-// Controllers + Swagger
+// Controllers + OpenAPI
 builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
+builder.Services.AddOpenApi("v1", options =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "MtgDeckForge API", Version = "v1" });
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    options.AddDocumentTransformer((document, context, cancellationToken) =>
     {
-        Description = "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and then your token.",
-        Name = "Authorization",
-        In = ParameterLocation.Header,
-        Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
-    });
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
+        document.Info = new()
         {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
-        }
+            Title = "MtgDeckForge API",
+            Version = "v1"
+        };
+        return Task.CompletedTask;
     });
 });
 
@@ -319,8 +318,8 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-app.UseSwagger();
-app.UseSwaggerUI();
+app.MapOpenApi();
+app.MapScalarApiReference();
 
 // Forward headers from Railway reverse proxy (required for iOS Safari compatibility)
 app.UseForwardedHeaders(new ForwardedHeadersOptions
@@ -336,6 +335,7 @@ app.UseSerilogRequestLogging();
 
 app.UseCors();
 app.UseRateLimiter();
+app.UseRequestTimeouts();
 
 app.UseAuthentication();
 app.UseAuthorization();
