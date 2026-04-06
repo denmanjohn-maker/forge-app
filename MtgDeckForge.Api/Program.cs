@@ -21,7 +21,7 @@ using Serilog.Sinks.Grafana.Loki;
 var lokiUrl = Environment.GetEnvironmentVariable("LOKI_URL");
 var logStore = new InMemoryLogStore(1000);
 
-Log.Logger = new LoggerConfiguration()
+var loggerConfig = new LoggerConfiguration()
     .MinimumLevel.Information()
     .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
     .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
@@ -37,15 +37,17 @@ Log.Logger = new LoggerConfiguration()
         {
             ["service.name"] = "MtgDeckForge"
         };
-    })
-    .WriteTo.Conditional(
-        _ => !string.IsNullOrEmpty(lokiUrl),
-        wt => wt.GrafanaLoki(
-            lokiUrl!,
-            labels: new[] { new LokiLabel { Key = "app", Value = "MtgDeckForge" } }
-        )
-    )
-    .CreateLogger();
+    });
+
+if (!string.IsNullOrEmpty(lokiUrl))
+{
+    loggerConfig = loggerConfig.WriteTo.GrafanaLoki(
+        lokiUrl,
+        labels: new[] { new LokiLabel { Key = "app", Value = "MtgDeckForge" } }
+    );
+}
+
+Log.Logger = loggerConfig.CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseSerilog();
