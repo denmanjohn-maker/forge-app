@@ -15,8 +15,10 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using Serilog;
 using Serilog.Events;
+using Serilog.Sinks.Grafana.Loki;
 
 // ── Serilog bootstrap (captures startup errors) ──
+var lokiUrl = Environment.GetEnvironmentVariable("LOKI_URL");
 var logStore = new InMemoryLogStore(1000);
 
 Log.Logger = new LoggerConfiguration()
@@ -36,6 +38,13 @@ Log.Logger = new LoggerConfiguration()
             ["service.name"] = "MtgDeckForge"
         };
     })
+    .WriteTo.Conditional(
+        _ => !string.IsNullOrEmpty(lokiUrl),
+        wt => wt.GrafanaLoki(
+            lokiUrl!,
+            labels: new[] { new LokiLabel { Key = "app", Value = "MtgDeckForge" } }
+        )
+    )
     .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);

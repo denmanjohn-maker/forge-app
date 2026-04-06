@@ -105,6 +105,7 @@ curl -X POST http://localhost:5000/api/decks/generate \
 | `MongoDb__DatabaseName`     | Database name                      | `mtgdeckforge`               |
 | `ClaudeApi__Model`          | Claude model to use                | `claude-sonnet-4-20250514`     |
 | `ClaudeApi__MaxTokens`      | Max tokens for generation          | `8192`                       |
+| `LOKI_URL`                  | Grafana Loki endpoint for log push | *(optional)*                 |
 
 ### Using with Authentication (Production)
 
