@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using MtgDeckForge.Api.Json;
 using MtgDeckForge.Api.Models;
 
 namespace MtgDeckForge.Api.Services;
@@ -10,7 +11,7 @@ public class ScryfallService
     private readonly HttpClient _httpClient;
     private readonly ILogger<ScryfallService> _logger;
 
-    private static readonly JsonSerializerOptions _jsonOpts = new() { PropertyNameCaseInsensitive = true };
+    private static readonly JsonSerializerOptions _jsonOpts = AppJsonContext.Default.Options;
 
     public ScryfallService(HttpClient httpClient, ILogger<ScryfallService> logger)
     {
