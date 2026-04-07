@@ -14,15 +14,15 @@ namespace MtgDeckForge.Api.Controllers;
 public class DecksController : ControllerBase
 {
     private readonly DeckService _deckService;
-    private readonly ClaudeService _claudeService;
+    private readonly IDeckGenerationService _llmService;
     private readonly ScryfallService _scryfallService;
     private readonly PricingService _pricingService;
     private readonly ILogger<DecksController> _logger;
 
-    public DecksController(DeckService deckService, ClaudeService claudeService, ScryfallService scryfallService, PricingService pricingService, ILogger<DecksController> logger)
+    public DecksController(DeckService deckService, IDeckGenerationService llmService, ScryfallService scryfallService, PricingService pricingService, ILogger<DecksController> logger)
     {
         _deckService = deckService;
-        _claudeService = claudeService;
+        _llmService = llmService;
         _scryfallService = scryfallService;
         _pricingService = pricingService;
         _logger = logger;
@@ -75,7 +75,7 @@ public class DecksController : ControllerBase
             _logger.LogInformation("Generating deck with colors: {Colors}, format: {Format}",
                 string.Join(",", request.Colors), request.Format);
 
-            var deck = await _claudeService.GenerateDeckAsync(request);
+            var deck = await _llmService.GenerateDeckAsync(request);
             await _pricingService.ApplyPricesAsync(deck.Cards);
             deck.TotalCards = deck.Cards.Sum(c => c.Quantity);
             deck.EstimatedTotalPrice = deck.Cards.Sum(c => c.EstimatedPrice * c.Quantity);
@@ -110,7 +110,7 @@ public class DecksController : ControllerBase
 
                     if (expensiveCards.Count == 0) break;
 
-                    var replacements = await _claudeService.SuggestBudgetReplacementsAsync(
+                    var replacements = await _llmService.SuggestBudgetReplacementsAsync(
                         deck, expensiveCards, deck.EstimatedTotalPrice, budgetMax.Value, cheapCardPool);
 
                     if (replacements.Count == 0) break;
@@ -225,7 +225,7 @@ public class DecksController : ControllerBase
                 return Forbid();
 
             _logger.LogInformation("Analyzing deck {Id}: {Name}", id, deck.DeckName);
-            var analysis = await _claudeService.AnalyzeDeckAsync(deck);
+            var analysis = await _llmService.AnalyzeDeckAsync(deck);
 
             // Persist the analysis so it can be recalled without re-querying Claude
             await _deckService.UpdateAnalysisAsync(id, analysis);
@@ -350,7 +350,7 @@ public class DecksController : ControllerBase
             var commander = cards.FirstOrDefault(c => c.Category.Equals("Commander", StringComparison.OrdinalIgnoreCase))?.Name ?? "";
 
             // Generate a flavorful description via Claude
-            var description = await _claudeService.GenerateImportDescriptionAsync(resolvedDeckName, cards);
+            var description = await _llmService.GenerateImportDescriptionAsync(resolvedDeckName, cards);
 
             var totalPrice = cards.Sum(c => c.EstimatedPrice * c.Quantity);
 
