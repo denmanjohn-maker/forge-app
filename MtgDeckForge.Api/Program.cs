@@ -115,6 +115,9 @@ builder.Services.AddScoped<PricingService>();
 builder.Services.AddHttpClient<MtgJsonPricingImportService>(client =>
 {
     client.Timeout = TimeSpan.FromMinutes(10);
+    // MTGJSON streams are very large; HTTP/2 (the .NET 10 default) can cause
+    // mid-stream resets on CDNs that don't fully support it.
+    client.DefaultRequestVersion = System.Net.HttpVersion.Version11;
 });
 builder.Services.AddHostedService<PricingRefreshHostedService>();
 
