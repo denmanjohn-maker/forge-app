@@ -145,6 +145,6 @@ mtg-forge-local :5000
 
 | Issue | Severity | Notes |
 |---|---|---|
-| Qdrant color identity filter uses `Must` instead of `MustNot` | **High** | Must match: selects cards with ALL listed colors (e.g., BGW for a BG commander). MustNot fix: exclude colors outside identity (W, U, R for BG). Excludes legal mono-color and colorless cards. Fix in mtg-forge-local. |
+| Qdrant color identity filter uses `Must` instead of `MustNot` | **High** | Current bug: selects cards with ALL listed colors (e.g., includes BGW for a BG commander) and excludes legal mono-color and colorless cards. Fix: use `must_not` to exclude colors outside identity (W, U, R for BG). Requires change in mtg-forge-local repo. |
 | Embedding dimension mismatch if collection was created with wrong model | Medium | Qdrant collections are immutable in vector dimension. Delete collection and re-ingest if switching embedding models. |
 | `SuggestBudgetReplacementsAsync` returns `[]` in Rag mode | By design | Budget enforcement loop in `DecksController` handles this gracefully; Qdrant pre-filtering makes it unnecessary |

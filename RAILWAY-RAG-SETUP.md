@@ -129,7 +129,7 @@ On your **mtg-api** service in Railway, set:
 
 | Variable | Example |
 |---|---|
-| `MONGODB_CONNECTION_STRING` | `mongodb://...` |
+| `MongoDb__ConnectionString` | `mongodb://...` |
 | `DATABASE_URL` | `postgresql://...` (Railway auto-injects) |
 | `JWT_SECRET` | Your JWT signing key |
 | `ADMIN_PASSWORD` | Admin account password |
