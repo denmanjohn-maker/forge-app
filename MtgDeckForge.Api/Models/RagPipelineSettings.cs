@@ -1,6 +1,12 @@
 namespace MtgDeckForge.Api.Models;
 
-public class LocalLlmSettings
+/// <summary>
+/// Configuration for the RAG pipeline provider (mtg-forge-local + Ollama).
+/// mtg-forge-local uses Qdrant vector search to pre-filter cards by price and
+/// color identity before passing them to the LLM, solving budget compliance
+/// and card legality problems upstream.
+/// </summary>
+public class RagPipelineSettings
 {
     /// <summary>Base URL of the mtg-forge-local API (deck generation + card search).</summary>
     public string BaseUrl { get; set; } = "http://localhost:5000";
