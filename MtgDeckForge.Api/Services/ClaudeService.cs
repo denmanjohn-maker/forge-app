@@ -7,7 +7,7 @@ using MtgDeckForge.Api.Models;
 
 namespace MtgDeckForge.Api.Services;
 
-public class ClaudeService
+public class ClaudeService : IDeckGenerationService
 {
     private readonly HttpClient _httpClient;
     private readonly ClaudeApiSettings _settings;

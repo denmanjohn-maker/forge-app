@@ -60,7 +60,35 @@ builder.Services.AddSingleton<DeckService>();
 // Claude API
 builder.Services.Configure<ClaudeApiSettings>(
     builder.Configuration.GetSection("ClaudeApi"));
-builder.Services.AddHttpClient<ClaudeService>();
+
+// Local LLM (Ollama + mtg-forge-local)
+builder.Services.Configure<LocalLlmSettings>(
+    builder.Configuration.GetSection("LocalLlm"));
+
+// Ollama direct (hosted Ollama without mtg-forge-local)
+builder.Services.Configure<OllamaSettings>(
+    builder.Configuration.GetSection("Ollama"));
+
+// Register the active LLM provider as IDeckGenerationService
+var llmProvider = builder.Configuration["LlmProvider"] ?? "Claude";
+if (llmProvider.Equals("Ollama", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddHttpClient<OllamaService>();
+    builder.Services.AddTransient<IDeckGenerationService, OllamaService>();
+    Log.Information("LLM provider: Ollama (direct)");
+}
+else if (llmProvider.Equals("Local", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddHttpClient<LocalLlmService>();
+    builder.Services.AddTransient<IDeckGenerationService, LocalLlmService>();
+    Log.Information("LLM provider: Local (mtg-forge-local + Ollama)");
+}
+else
+{
+    builder.Services.AddHttpClient<ClaudeService>();
+    builder.Services.AddTransient<IDeckGenerationService, ClaudeService>();
+    Log.Information("LLM provider: Claude (Anthropic API)");
+}
 
 // Scryfall
 builder.Services.AddHttpClient<ScryfallService>();
