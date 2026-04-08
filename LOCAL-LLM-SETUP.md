@@ -14,8 +14,8 @@ Two repos have been updated:
 ### What was already done by Copilot
 
 - **`mtg-forge-local`** extended to support all major formats: `commander`, `standard`, `modern`, `legacy`, `pioneer`, `pauper`, `vintage` — format-aware prompts, Qdrant filters, and deck size rules
-- **`MtgDeckForge`** given a `IDeckGenerationService` abstraction with two implementations: `ClaudeService` (existing) and `LocalLlmService` (new)
-- Provider toggled by `"LlmProvider"` in `appsettings.json` — no code changes required to switch
+- **`MtgDeckForge`** given a `IDeckGenerationService` abstraction with two implementations: `ClaudeService` (existing) and `RagPipelineService` (new)
+- Provider toggled by `"LlmProvider"` in `appsettings.json` (`"Claude"` or `"Rag"`) — no code changes required to switch
 - Both repos build cleanly (0 errors)
 
 ---
@@ -86,7 +86,7 @@ curl http://localhost:5000/health
 
 ---
 
-### 5. Switch MtgDeckForge to Local Mode
+### 5. Switch MtgDeckForge to RAG Mode
 
 **File:** `~/Desktop/Repos/MtgDeckForge/MtgDeckForge.Api/appsettings.json`
 
@@ -96,12 +96,12 @@ Change:
 ```
 To:
 ```json
-"LlmProvider": "Local"
+"LlmProvider": "Rag"
 ```
 
-The `LocalLlm` section should already be present with default values:
+The `RagPipeline` section should already be present with default values:
 ```json
-"LocalLlm": {
+"RagPipeline": {
   "BaseUrl": "http://localhost:5000",
   "OllamaUrl": "http://localhost:11434",
   "Model": "mistral"
@@ -128,23 +128,23 @@ To switch back to Claude at any time, set `"LlmProvider": "Claude"` and restart.
 MtgDeckForge.Api
   └─ DecksController
        └─ IDeckGenerationService
-            ├─ ClaudeService        (LlmProvider = "Claude")
-            └─ LocalLlmService      (LlmProvider = "Local")
-                  ├─ GenerateDeckAsync  → mtg-forge-local :5000/api/deck/generate
+            ├─ ClaudeService          (LlmProvider = "Claude")
+            └─ RagPipelineService     (LlmProvider = "Rag")
+                  ├─ GenerateDeckAsync  → mtg-forge-local :5000/api/decks/generate
                   ├─ AnalyzeDeckAsync   → Ollama :11434 directly
                   └─ SuggestBudgetReplacementsAsync → returns [] (Qdrant pre-filters by price)
 
 mtg-forge-local :5000
-  └─ /api/deck/generate
+  └─ /api/decks/generate
        ├─ CardSearchService  → Qdrant (semantic search + price filter + legality filter)
        ├─ DeckGenerationService → Ollama (format-aware prompt)
        └─ MongoDB (saved decks)
 ```
 
-## Known Issues / Optional Follow-Up
+## Known Issues / Follow-Up (in mtg-forge-local repo)
 
 | Issue | Severity | Notes |
 |---|---|---|
-| Qdrant color identity filter uses `Must` (requires ALL listed colors) instead of `MustNot` (exclude colors outside identity) | Low | Only affects multi-color Commander decks; cards returned may include colors outside the identity |
-| `mtg-forge-local` runs in Docker but Ollama runs natively on macOS | Info | Docker containers reach Ollama via `host.docker.internal:11434` — already configured |
-| `SuggestBudgetReplacementsAsync` returns `[]` in Local mode | By design | Budget enforcement loop in `DecksController` handles this gracefully; Qdrant pre-filtering makes it unnecessary |
+| Qdrant color identity filter uses `Must` instead of `MustNot` | **High** | Must match: selects cards with ALL listed colors (e.g., BGW for a BG commander). MustNot fix: exclude colors outside identity (W, U, R for BG). Excludes legal mono-color and colorless cards. Fix in mtg-forge-local. |
+| Embedding dimension mismatch if collection was created with wrong model | Medium | Qdrant collections are immutable in vector dimension. Delete collection and re-ingest if switching embedding models. |
+| `SuggestBudgetReplacementsAsync` returns `[]` in Rag mode | By design | Budget enforcement loop in `DecksController` handles this gracefully; Qdrant pre-filtering makes it unnecessary |

@@ -61,27 +61,17 @@ builder.Services.AddSingleton<DeckService>();
 builder.Services.Configure<ClaudeApiSettings>(
     builder.Configuration.GetSection("ClaudeApi"));
 
-// Local LLM (Ollama + mtg-forge-local)
-builder.Services.Configure<LocalLlmSettings>(
-    builder.Configuration.GetSection("LocalLlm"));
-
-// Ollama direct (hosted Ollama without mtg-forge-local)
-builder.Services.Configure<OllamaSettings>(
-    builder.Configuration.GetSection("Ollama"));
+// RAG pipeline (mtg-forge-local + Qdrant + Ollama)
+builder.Services.Configure<RagPipelineSettings>(
+    builder.Configuration.GetSection("RagPipeline"));
 
 // Register the active LLM provider as IDeckGenerationService
 var llmProvider = builder.Configuration["LlmProvider"] ?? "Claude";
-if (llmProvider.Equals("Ollama", StringComparison.OrdinalIgnoreCase))
+if (llmProvider.Equals("Rag", StringComparison.OrdinalIgnoreCase))
 {
-    builder.Services.AddHttpClient<OllamaService>();
-    builder.Services.AddTransient<IDeckGenerationService, OllamaService>();
-    Log.Information("LLM provider: Ollama (direct)");
-}
-else if (llmProvider.Equals("Local", StringComparison.OrdinalIgnoreCase))
-{
-    builder.Services.AddHttpClient<LocalLlmService>();
-    builder.Services.AddTransient<IDeckGenerationService, LocalLlmService>();
-    Log.Information("LLM provider: Local (mtg-forge-local + Ollama)");
+    builder.Services.AddHttpClient<RagPipelineService>();
+    builder.Services.AddTransient<IDeckGenerationService, RagPipelineService>();
+    Log.Information("LLM provider: Rag (mtg-forge-local + Qdrant + Ollama)");
 }
 else
 {

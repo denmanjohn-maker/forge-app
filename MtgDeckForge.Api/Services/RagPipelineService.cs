@@ -7,19 +7,22 @@ using MtgDeckForge.Api.Models;
 namespace MtgDeckForge.Api.Services;
 
 /// <summary>
-/// Implements IDeckGenerationService using the local mtg-forge-local API + Ollama.
+/// Implements IDeckGenerationService using the RAG pipeline: mtg-forge-local + Ollama.
 ///
-/// Deck generation calls mtg-forge-local (localhost:5000), which uses Qdrant vector search
-/// to pre-filter cards by price and color before passing them to the local LLM — solving
-/// the budget compliance problem without relying on the LLM to estimate prices.
+/// Deck generation calls mtg-forge-local, which uses Qdrant vector search to pre-filter
+/// cards by price and color identity before passing them to the local LLM — solving
+/// the budget compliance and card legality problems without relying on the LLM to
+/// estimate prices or enforce color restrictions.
 ///
-/// Deck analysis calls Ollama directly (localhost:11434) using the same prompt as ClaudeService.
+/// Deck analysis calls Ollama directly using the same prompt as ClaudeService.
+///
+/// Works both locally (localhost endpoints) and on Railway (internal DNS endpoints).
 /// </summary>
-public class LocalLlmService : IDeckGenerationService
+public class RagPipelineService : IDeckGenerationService
 {
     private readonly IHttpClientFactory _factory;
-    private readonly LocalLlmSettings _settings;
-    private readonly ILogger<LocalLlmService> _logger;
+    private readonly RagPipelineSettings _settings;
+    private readonly ILogger<RagPipelineService> _logger;
 
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
@@ -27,10 +30,10 @@ public class LocalLlmService : IDeckGenerationService
         NumberHandling = JsonNumberHandling.AllowReadingFromString
     };
 
-    public LocalLlmService(
+    public RagPipelineService(
         IHttpClientFactory factory,
-        IOptions<LocalLlmSettings> settings,
-        ILogger<LocalLlmService> logger)
+        IOptions<RagPipelineSettings> settings,
+        ILogger<RagPipelineService> logger)
     {
         _factory = factory;
         _settings = settings.Value;
@@ -42,7 +45,7 @@ public class LocalLlmService : IDeckGenerationService
     public async Task<DeckConfiguration> GenerateDeckAsync(DeckGenerationRequest request)
     {
         _logger.LogInformation(
-            "LocalLlmService: generating {Format} deck via mtg-forge-local at {Url}",
+            "RagPipelineService: generating {Format} deck via mtg-forge-local at {Url}",
             request.Format, _settings.BaseUrl);
 
         var client = CreateMtgForgeClient();
@@ -83,7 +86,7 @@ public class LocalLlmService : IDeckGenerationService
 
     public async Task<DeckAnalysis> AnalyzeDeckAsync(DeckConfiguration deck)
     {
-        _logger.LogInformation("LocalLlmService: analyzing deck '{Name}' via Ollama", deck.DeckName);
+        _logger.LogInformation("RagPipelineService: analyzing deck '{Name}' via Ollama", deck.DeckName);
 
         var cardList = string.Join("\n", deck.Cards.Select(c =>
             $"- {c.Quantity}x {c.Name} ({c.CardType}, CMC {c.Cmc}): {c.RoleInDeck}"));
@@ -146,7 +149,7 @@ public class LocalLlmService : IDeckGenerationService
         List<(string CardName, decimal Price)> cheapCardPool)
     {
         _logger.LogInformation(
-            "LocalLlmService: budget enforcement skipped (cards are pre-filtered by Qdrant price)");
+            "RagPipelineService: budget enforcement skipped (cards are pre-filtered by Qdrant price)");
         return Task.FromResult<List<CardEntry>>([]);
     }
 
