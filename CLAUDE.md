@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MTG Deck Forge is a Magic: The Gathering deck generator powered by Claude AI. It uses ASP.NET 8 with MongoDB for persistence and a vanilla JavaScript SPA frontend served from `wwwroot/index.html`.
+MTG Deck Forge is a Magic: The Gathering deck generator powered by AI. It uses .NET 8 ASP.NET Core with MongoDB for deck storage, PostgreSQL for Identity + pricing data, and a vanilla JavaScript SPA frontend served from `wwwroot/index.html`.
 
 ## Build & Run Commands
 
@@ -12,53 +12,91 @@ MTG Deck Forge is a Magic: The Gathering deck generator powered by Claude AI. It
 # Build
 dotnet build MtgDeckForge.sln
 
-# Run locally (requires MongoDB and ANTHROPIC_API_KEY env var)
+# Run locally (requires MongoDB + PostgreSQL — use docker-compose-local.yml)
 cd MtgDeckForge.Api && dotnet run
 
-# Local dev with Docker (includes MongoDB)
-docker compose -f docker-compose-local.yml up -d --build
+# Local dev infrastructure (MongoDB :27018, PostgreSQL :5433, Prometheus :9090, Grafana :3000)
+docker compose -f docker-compose-local.yml up -d
 
-# Deploy to AWS ECS
-export AWS_REGION=us-east-1 AWS_ACCOUNT_ID=<account-id>
-./deploy/push-to-ecr.sh
+# Tests
+dotnet test MtgDeckForge.sln
+
+# Single test
+dotnet test MtgDeckForge.Tests --filter "FullyQualifiedName~ClaudeServiceTests"
 ```
 
-Local dev: API on `http://localhost:5001`, MongoDB on port 27018. Swagger at `/swagger`.
+Local dev: API on `http://localhost:5001`, Swagger at `/swagger`.
 
 ## Architecture
 
 ```
-Frontend (wwwroot/index.html) → DecksController → ClaudeService → Anthropic Messages API
-                                       ↓
-                                  DeckService → MongoDB
+Browser (wwwroot/index.html — vanilla JS SPA, ~2000 lines)
+    │
+    ▼
+.NET 8 ASP.NET Core API  (Razor Pages + REST Controllers)
+    ├──► IDeckGenerationService  ──► ClaudeService        (LlmProvider=Claude — Anthropic API)
+    │                             └► RagPipelineService   (LlmProvider=Rag — mtg-forge-local + Qdrant + Ollama)
+    ├──► DeckService      → MongoDB (decks collection)
+    ├──► PricingService   → PostgreSQL (MTGJSON/TCGPlayer price cache)
+    ├──► ScryfallService  → Scryfall API (card enrichment, image lookup)
+    └──► AuthService      → PostgreSQL (ASP.NET Identity)
 ```
 
+**LLM Provider toggle** — set `"LlmProvider"` in `appsettings.json` (or env var):
+- `"Rag"` (default) → calls `mtg-forge-local` at `RagPipeline__BaseUrl` via `RagPipelineService`
+- `"Claude"` → calls Anthropic API via `ClaudeService`
+
 - **Single-page frontend** (`wwwroot/index.html`): ~2000-line vanilla JS/HTML/CSS file with MTG-themed UI. Uses Scryfall API for card images. No build tooling or framework.
-- **DecksController**: REST API for deck CRUD, AI generation, AI analysis, CSV import/export (supports moxfield, archidekt, deckbox, deckstats formats).
-- **ClaudeService**: Calls Anthropic Messages API directly via HttpClient (not the SDK). Uses `claude-sonnet-4-20250514` with 8192 max tokens. Generates 100-card Commander decks as JSON.
-- **DeckService**: MongoDB CRUD with `MongoDB.Driver`. Collection: `decks` in `mtgdeckforge` database.
-- **Models** (`Models/`): `DeckConfiguration` (main document), `CardEntry`, `DeckGenerationRequest`, `DeckAnalysis`, settings POCOs.
+- **DecksController**: REST API for deck CRUD, AI generation, AI analysis, CSV import/export (supports moxfield, archidekt, deckbox, deckstats formats). Rate-limited to 20 generations per user per 24 hours.
+- **ClaudeService**: Calls Anthropic Messages API directly via HttpClient (not the SDK). Uses `claude-sonnet-4-20250514` with 16384 max tokens.
+- **RagPipelineService**: Calls `mtg-forge-local` for deck generation (Qdrant pre-filters cards by price + legality) and Ollama directly for analysis.
+- **DeckService**: MongoDB CRUD with `MongoDB.Driver`. Collection: `decks` in `mtgdeckforge` database. Singleton.
+- **PricingService**: Looks up card prices from PostgreSQL MTGJSON cache. Scoped.
+- **MtgJsonPricingImportService**: Bulk-imports MTGJSON pricing daily into PostgreSQL.
+- **AuthService**: JWT generation + password hashing (BCrypt).
+- **UserService**: MongoDB user and group CRUD.
 
 ## Configuration
 
 Environment variables (via `.env` or system env):
-- `ANTHROPIC_API_KEY` — required for AI features
+- `LlmProvider` — `Rag` (default) or `Claude`
+- `ANTHROPIC_API_KEY` — required when `LlmProvider=Claude`
+- `DATABASE_URL` — PostgreSQL URI (Railway format; auto-converted to Npgsql in `Program.cs`)
+- `JWT_SECRET` — JWT signing key (min 32 chars)
+- `ADMIN_PASSWORD` — seeded admin account password
 - `MongoDb__ConnectionString`, `MongoDb__DatabaseName`, `MongoDb__DecksCollectionName`
+- `RagPipeline__BaseUrl`, `RagPipeline__OllamaUrl`, `RagPipeline__Model`
 - `ClaudeApi__Model`, `ClaudeApi__MaxTokens`
+- `CORS_ALLOWED_ORIGINS` — comma-separated allowed origins (wide-open in development)
 
-Production uses AWS Secrets Manager for `ClaudeApi__ApiKey` and `MongoDb__ConnectionString`.
+Production uses Railway environment variable injection.
 
 ## Key Endpoints
 
-- `POST /api/decks/generate` — AI deck generation
+- `POST /api/auth/login` — login, returns JWT
+- `POST /api/auth/register` — register user (Admin only)
+- `GET  /api/auth/me` — current user profile
+- `GET  /api/decks` — paginated deck list (`?name=&color=&format=&powerLevel=&skip=&limit=`)
+- `POST /api/decks/generate` — AI deck generation (rate-limited: 20/24h)
+- `PATCH /api/decks/{id}` — update deck
+- `POST /api/decks/{id}/copy` — duplicate deck
 - `POST /api/decks/{id}/analyze` — AI deck analysis
-- `GET /api/decks/{id}/export/csv?format=moxfield` — export (moxfield/archidekt/deckbox/deckstats)
+- `DELETE /api/decks/{id}` — delete deck
+- `GET  /api/decks/{id}/export/csv?format=moxfield` — export (moxfield/archidekt/deckbox/deckstats)
 - `POST /api/decks/import/csv` — import with auto-format detection
-- `GET /healthz` — health check
+- `GET  /api/pricing/search?q=` — card search via Scryfall
+- `GET  /api/pricing/lookup?cardName=` — full price detail (local DB + Scryfall)
+- `POST /api/pricing/refresh` — trigger MTGJSON import (Admin)
+- `GET  /api/groups` — group management (Admin only)
+- `GET  /healthz` — health check
+- `GET  /api/version` — build version
+- `GET  /metrics` — Prometheus scrape (internal only)
+- `GET  /logging` — recent structured logs (internal only)
 
 ## Notes
 
-- No test project exists yet.
-- CORS is wide open (AllowAny) — development configuration.
+- Tests are in `MtgDeckForge.Tests`: `ClaudeServiceTests`, `DecksControllerCsvHelpersTests`, `ScryfallServiceTests`.
+- CORS is wide open in development; set `CORS_ALLOWED_ORIGINS` env var for production.
 - The frontend uses three Google Fonts: Cinzel, Crimson Text, MedievalSharp.
 - Docker multi-stage build: `sdk:8.0` → build, `aspnet:8.0` → runtime, exposed on port 5000.
+- Deployed to Railway (staging: `staging.bensmagicforge.app`). Push to `staging` branch; merge to `main` for production.
