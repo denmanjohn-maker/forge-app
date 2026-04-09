@@ -1,8 +1,8 @@
 # ⚔️ MTG Deck Forge
 
-A Magic: The Gathering deck configuration generator powered by AI, built with .NET 8, MongoDB, PostgreSQL, and Docker.
+A Magic: The Gathering deck configuration generator powered by AI, built with .NET 10, MongoDB, PostgreSQL, and Docker.
 
-![.NET 8](https://img.shields.io/badge/.NET-8.0-purple)
+![.NET 10](https://img.shields.io/badge/.NET-10.0-purple)
 ![MongoDB](https://img.shields.io/badge/MongoDB-7-green)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue)
 ![Docker](https://img.shields.io/badge/Docker-Compose-blue)
@@ -22,7 +22,7 @@ A Magic: The Gathering deck configuration generator powered by AI, built with .N
 - **Price Lookup** — Card price search via Scryfall + local MTGJSON/TCGPlayer cache
 - **Observability** — Prometheus metrics, Grafana dashboards, OpenTelemetry traces, Serilog structured logging
 - **Rate Limiting** — 20 deck generations per user per 24 hours
-- **Swagger API Docs** — Available at `/swagger` for testing endpoints directly
+- **Swagger API Docs** — Available at `/scalar/v1` for API exploration
 
 ## Architecture
 
@@ -30,7 +30,7 @@ A Magic: The Gathering deck configuration generator powered by AI, built with .N
 Browser (wwwroot/index.html — vanilla JS SPA)
     │
     ▼
-.NET 8 ASP.NET Core API  (Razor Pages + REST Controllers)
+.NET 10 ASP.NET Core API  (Razor Pages + REST Controllers)
     ├──► IDeckGenerationService  ──► ClaudeService        (LlmProvider=Claude — Anthropic API)
     │                             └► RagPipelineService   (LlmProvider=Rag — mtg-forge-local + Qdrant + Ollama)
     ├──► DeckService      → MongoDB (decks collection)
@@ -81,7 +81,7 @@ Navigate to **http://localhost:5000** in your browser.
 
 - **Forge tab** — Configure and generate new decks
 - **Library tab** — Browse, view, and manage saved decks
-- **Swagger** — http://localhost:5000/swagger for API exploration
+- **Swagger** — http://localhost:5000/scalar/v1 for API exploration
 
 ## API Endpoints
 
@@ -195,7 +195,7 @@ export ANTHROPIC_API_KEY=sk-ant-xxxxx
 dotnet run
 ```
 
-Default login page is at `/Account/Login`. API at `http://localhost:5001`, Swagger at `http://localhost:5001/swagger`.
+Default login page is at `/Account/Login`. API at `http://localhost:5001`, Scalar API docs at `http://localhost:5001/scalar/v1`.
 
 ### Pricing refresh
 
@@ -213,7 +213,7 @@ curl -X POST http://localhost:5001/api/pricing/refresh \
 MtgDeckForge/
 ├── docker-compose.yml           # Production stack: API + MongoDB + Prometheus + Grafana
 ├── docker-compose-local.yml     # Local dev dependencies: MongoDB + PostgreSQL + monitoring
-├── Dockerfile                   # Multi-stage .NET 8 build
+├── Dockerfile                   # Multi-stage .NET 10 build
 ├── MtgDeckForge.sln             # Solution file
 ├── LOCAL-LLM-SETUP.md           # Local Rag pipeline setup guide
 ├── RAILWAY-RAG-SETUP.md         # Railway deployment guide (Rag provider)

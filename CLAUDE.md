@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MTG Deck Forge is a Magic: The Gathering deck generator powered by AI. It uses .NET 8 ASP.NET Core with MongoDB for deck storage, PostgreSQL for Identity + pricing data, and a vanilla JavaScript SPA frontend served from `wwwroot/index.html`.
+MTG Deck Forge is a Magic: The Gathering deck generator powered by AI. It uses .NET 10 ASP.NET Core with MongoDB for deck storage, PostgreSQL for Identity + pricing data, and a vanilla JavaScript SPA frontend served from `wwwroot/index.html`.
 
 ## Build & Run Commands
 
@@ -25,7 +25,7 @@ dotnet test MtgDeckForge.sln
 dotnet test MtgDeckForge.Tests --filter "FullyQualifiedName~ClaudeServiceTests"
 ```
 
-Local dev: API on `http://localhost:5001`, Swagger at `/swagger`.
+Local dev: API on `http://localhost:5001`, Scalar API docs at `/scalar/v1`.
 
 ## Architecture
 
@@ -33,7 +33,7 @@ Local dev: API on `http://localhost:5001`, Swagger at `/swagger`.
 Browser (wwwroot/index.html — vanilla JS SPA, ~2000 lines)
     │
     ▼
-.NET 8 ASP.NET Core API  (Razor Pages + REST Controllers)
+.NET 10 ASP.NET Core API  (Razor Pages + REST Controllers)
     ├──► IDeckGenerationService  ──► ClaudeService        (LlmProvider=Claude — Anthropic API)
     │                             └► RagPipelineService   (LlmProvider=Rag — mtg-forge-local + Qdrant + Ollama)
     ├──► DeckService      → MongoDB (decks collection)
@@ -98,5 +98,5 @@ Production uses Railway environment variable injection.
 - Tests are in `MtgDeckForge.Tests`: `ClaudeServiceTests`, `DecksControllerCsvHelpersTests`, `ScryfallServiceTests`.
 - CORS is wide open in development; set `CORS_ALLOWED_ORIGINS` env var for production.
 - The frontend uses three Google Fonts: Cinzel, Crimson Text, MedievalSharp.
-- Docker multi-stage build: `sdk:8.0` → build, `aspnet:8.0` → runtime, exposed on port 5000.
+- Docker multi-stage build: `sdk:10.0` → build, `aspnet:10.0` → runtime, exposed on port 5000.
 - Deployed to Railway (staging: `staging.bensmagicforge.app`). Push to `staging` branch; merge to `main` for production.
