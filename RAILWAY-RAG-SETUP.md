@@ -74,32 +74,104 @@ ollama list
 
 ## 3. Deploy mtg-forge-local on Railway
 
-1. Add a new service from the **mtg-forge-local** repository
+The `mtg-forge-local` service lives in its own repo: **[mtg-forge-card-ai](https://github.com/denmanjohn-maker/mtg-forge-card-ai)**.
+
+1. In your Railway project, add a new service → **GitHub repo** → select `mtg-forge-card-ai`
+   - Railway will auto-detect the Dockerfile at `MtgForgeLocal/Dockerfile`
 2. Under the service settings:
    - Set **Internal Networking** hostname to `mtg-forge-local`
    - **No public ingress** — only the main API should reach it
+   - The container listens on **port 8080** (set by the Dockerfile)
 3. Set environment variables:
 
 | Variable | Value |
 |---|---|
-| `Qdrant__Url` | `http://qdrant.railway.internal:6333` |
-| `Ollama__Url` | `http://ollama.railway.internal:11434` |
+| `Qdrant__Host` | `qdrant.railway.internal` |
+| `Qdrant__Port` | `6334` |
+| `Ollama__BaseUrl` | `http://ollama.railway.internal:11434` |
+| `Ollama__Model` | `mistral` |
 | `Ollama__EmbedModel` | `all-minilm` |
-| `Ollama__LlmModel` | `mistral` |
+| `MongoDB__ConnectionString` | `<your Railway MongoDB internal URL>` |
+| `MongoDB__DatabaseName` | `mtgforge` |
 
 4. Deploy the service
 
 ### Run card ingestion (one-time)
 
-After mtg-forge-local is running, trigger card ingestion. The recommended approach is an admin endpoint in mtg-forge-local (e.g., `POST /api/admin/ingest`) that:
-- Downloads bulk card data from the Scryfall API
-- Generates embeddings via Ollama's `all-minilm` model
-- Stores cards + vectors in Qdrant with price, color identity, and format legality metadata
-- Checks whether the collection already exists and is non-empty (safe to re-run)
+Card ingestion populates the Qdrant vector index with MTG card data (prices, color identity, format legality). It must be run once before the RAG pipeline can generate decks.
 
-Alternatively, run the existing Python ingestion script as a one-shot Railway job.
+#### Where to run these commands
 
-> **Qdrant dimension check:** If a collection was previously created with a different embedding model (e.g., `nomic-embed-text` at 768 dims), you must delete it first: `curl -X DELETE http://qdrant.railway.internal:6333/collections/cards`. The collection schema is immutable — a dimension mismatch will cause silent failures.
+`mtg-forge-local` has **no public ingress** — it is only reachable on Railway's internal network. All `curl` commands below must be run from **Railway's built-in shell**, not your local terminal.
+
+To open a Railway shell:
+1. Go to your Railway project dashboard
+2. Click the **mtg-forge-local** service
+3. Click the **Deploy** tab → **Shell** (or press the terminal icon in the top-right)
+
+This drops you into a shell inside the running container, where you can reach both `localhost:5000` (mtg-forge-local itself) and the internal hostnames like `qdrant.railway.internal`.
+
+#### Step 1 — (Optional) Clear a stale Qdrant collection
+
+Skip this step on a fresh setup. Only run it if you previously ingested with a different embedding model (e.g., switching from `nomic-embed-text` at 768 dims to `all-minilm` at 384 dims). The collection schema is immutable — a dimension mismatch will cause silent failures.
+
+```bash
+# Run from the Railway shell of any service (mtg-forge-local, mtg-api, etc.)
+curl -X DELETE http://qdrant.railway.internal:6333/collections/cards
+# Expected response: {"result":true,"status":"ok","time":...}
+```
+
+#### Step 2 — Trigger ingestion
+
+Open the Railway shell inside the **mtg-forge-local** service (Dashboard → mtg-forge-local → Deploy tab → Shell).
+
+Full ingest (all cards from Scryfall — takes 20-60+ minutes):
+
+```bash
+curl -X POST http://localhost:8080/api/admin/ingest \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+For a quick smoke test with a limited card count (~2-3 minutes):
+
+```bash
+curl -X POST http://localhost:8080/api/admin/ingest \
+  -H "Content-Type: application/json" \
+  -d '{"limit": 1000}'
+```
+
+Optional body fields:
+
+| Field | Type | Description |
+|---|---|---|
+| `limit` | int? | Cap the number of cards ingested (omit for all ~30k cards) |
+| `mongoOnly` | bool | Only write to MongoDB, skip Qdrant embedding |
+| `qdrantOnly` | bool | Only (re-)embed into Qdrant from existing MongoDB data |
+
+> **This will take a while.** Scryfall bulk data is ~250MB and embedding each card via Ollama is slow. Watch the mtg-forge-local service logs in Railway for progress.
+
+#### Step 3 — Verify the collection was populated
+
+Still in the Railway shell, check that Qdrant has cards:
+
+```bash
+curl http://qdrant.railway.internal:6333/collections/cards
+```
+
+Look for `"vectors_count"` in the response — a successful ingest will show tens of thousands of vectors:
+
+```json
+{
+  "result": {
+    "status": "green",
+    "vectors_count": 28000,
+    ...
+  }
+}
+```
+
+If `vectors_count` is `0` or the collection doesn't exist, check the mtg-forge-local logs for errors (Qdrant unreachable, Ollama model not found, etc.).
 
 ---
 
@@ -112,7 +184,7 @@ On your **mtg-api** service in Railway, set:
 | Variable | Value | Notes |
 |---|---|---|
 | `LlmProvider` | `Rag` | Routes to mtg-forge-local RAG pipeline |
-| `RagPipeline__BaseUrl` | `http://mtg-forge-local.railway.internal:5000` | mtg-forge-local internal DNS |
+| `RagPipeline__BaseUrl` | `http://mtg-forge-local.railway.internal:8080` | mtg-forge-local internal DNS |
 | `RagPipeline__OllamaUrl` | `http://ollama.railway.internal:11434` | For deck analysis (direct Ollama calls) |
 | `RagPipeline__Model` | `mistral` | Must match the model pulled in Ollama |
 

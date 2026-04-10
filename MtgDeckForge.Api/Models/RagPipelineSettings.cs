@@ -9,7 +9,7 @@ namespace MtgDeckForge.Api.Models;
 public class RagPipelineSettings
 {
     /// <summary>Base URL of the mtg-forge-local API (deck generation + card search).</summary>
-    public string BaseUrl { get; set; } = "http://localhost:5000";
+    public string BaseUrl { get; set; } = "http://localhost:5001";
 
     /// <summary>Base URL of the Ollama instance (used directly for analysis).</summary>
     public string OllamaUrl { get; set; } = "http://localhost:11434";
