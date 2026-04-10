@@ -2,18 +2,18 @@
 
 ## Summary
 
-Your production app (`bensmagicforge.app`) uses Claude Sonnet to generate MTG decks, but Claude ignores price constraints because it estimates card prices from training memory. The fix is structural: route generation through a local RAG pipeline (`mtg-forge-local`) that pre-filters cards in Qdrant by price **before** the LLM ever sees them.
+Your production app (`bensmagicforge.app`) uses Claude Sonnet to generate MTG decks, but Claude ignores price constraints because it estimates card prices from training memory. The fix is structural: route generation through a local RAG pipeline (`mtg-forge-ai`) that pre-filters cards in Qdrant by price **before** the LLM ever sees them.
 
 Two repos have been updated:
 
 | Repo | Location |
 |---|---|
-| `mtg-forge-local` | `~/Desktop/Local LLM Magic/mtg-forge-local/` |
+| `mtg-forge-ai` | `~/Desktop/Local LLM Magic/mtg-forge-ai/` |
 | `MtgDeckForge` | `~/Desktop/Repos/MtgDeckForge/` |
 
 ### What was already done by Copilot
 
-- **`mtg-forge-local`** extended to support all major formats: `commander`, `standard`, `modern`, `legacy`, `pioneer`, `pauper`, `vintage` — format-aware prompts, Qdrant filters, and deck size rules
+- **`mtg-forge-ai`** extended to support all major formats: `commander`, `standard`, `modern`, `legacy`, `pioneer`, `pauper`, `vintage` — format-aware prompts, Qdrant filters, and deck size rules
 - **`MtgDeckForge`** given a `IDeckGenerationService` abstraction with two implementations: `ClaudeService` (existing) and `RagPipelineService` (new)
 - Provider toggled by `"LlmProvider"` in `appsettings.json` (`"Claude"` or `"Rag"`) — no code changes required to switch
 - Both repos build cleanly (0 errors)
@@ -24,9 +24,9 @@ Two repos have been updated:
 
 ### 1. Fix the Embedding Model Config
 
-The `mtg-forge-local` config has a mismatch that will silently break semantic search. The ingestion script uses a **384-dimension** model but the config points to a **768-dimension** model.
+The `mtg-forge-ai` config has a mismatch that will silently break semantic search. The ingestion script uses a **384-dimension** model but the config points to a **768-dimension** model.
 
-**File:** `~/Desktop/Local LLM Magic/mtg-forge-local/MtgForgeLocal/appsettings.json`
+**File:** `~/Desktop/Local LLM Magic/mtg-forge-ai/MtgForgeLocal/appsettings.json`
 
 Change:
 ```json
@@ -51,7 +51,7 @@ Make sure the generation model is downloaded (default is `mistral`):
 ollama pull mistral
 ```
 
-You can change the model in `mtg-forge-local/MtgForgeLocal/appsettings.json` under `"LlmModel"` if you prefer a different one (e.g. `llama3`, `phi3`).
+You can change the model in `mtg-forge-ai/MtgForgeLocal/appsettings.json` under `"LlmModel"` if you prefer a different one (e.g. `llama3`, `phi3`).
 
 ---
 
@@ -62,20 +62,20 @@ The existing Qdrant collection only has `legality_commander`. Re-ingestion adds 
 This will take ~15 minutes (downloads ~80MB from Scryfall, embeds ~26k cards).
 
 ```bash
-cd ~/Desktop/Local\ LLM\ Magic/mtg-forge-local/scripts
+cd ~/Desktop/Local\ LLM\ Magic/mtg-forge-ai/scripts
 pip install -r requirements.txt   # first time only
 python ingest_cards.py
 ```
 
 > **Prerequisites:** Docker must be running with Qdrant and MongoDB containers up.
-> Start them with: `cd ~/Desktop/Local\ LLM\ Magic/mtg-forge-local && docker compose up -d qdrant mongo`
+> Start them with: `cd ~/Desktop/Local\ LLM\ Magic/mtg-forge-ai && docker compose up -d qdrant mongo`
 
 ---
 
-### 4. Start the `mtg-forge-local` Services
+### 4. Start the `mtg-forge-ai` Services
 
 ```bash
-cd ~/Desktop/Local\ LLM\ Magic/mtg-forge-local
+cd ~/Desktop/Local\ LLM\ Magic/mtg-forge-ai
 docker compose up -d
 ```
 
@@ -130,21 +130,21 @@ MtgDeckForge.Api
        └─ IDeckGenerationService
             ├─ ClaudeService          (LlmProvider = "Claude")
             └─ RagPipelineService     (LlmProvider = "Rag")
-                  ├─ GenerateDeckAsync  → mtg-forge-local :5000/api/decks/generate
+                  ├─ GenerateDeckAsync  → mtg-forge-ai :5000/api/decks/generate
                   ├─ AnalyzeDeckAsync   → Ollama :11434 directly
                   └─ SuggestBudgetReplacementsAsync → returns [] (Qdrant pre-filters by price)
 
-mtg-forge-local :5000
+mtg-forge-ai :5000
   └─ /api/decks/generate
        ├─ CardSearchService  → Qdrant (semantic search + price filter + legality filter)
        ├─ DeckGenerationService → Ollama (format-aware prompt)
        └─ MongoDB (saved decks)
 ```
 
-## Known Issues / Follow-Up (in mtg-forge-local repo)
+## Known Issues / Follow-Up (in mtg-forge-ai repo)
 
 | Issue | Severity | Notes |
 |---|---|---|
-| Qdrant color identity filter uses `Must` instead of `MustNot` | **High** | Current bug: selects cards with ALL listed colors (e.g., includes BGW for a BG commander) and excludes legal mono-color and colorless cards. Fix: use `must_not` to exclude colors outside identity (W, U, R for BG). Requires change in mtg-forge-local repo. |
+| Qdrant color identity filter uses `Must` instead of `MustNot` | **High** | Current bug: selects cards with ALL listed colors (e.g., includes BGW for a BG commander) and excludes legal mono-color and colorless cards. Fix: use `must_not` to exclude colors outside identity (W, U, R for BG). Requires change in mtg-forge-ai repo. |
 | Embedding dimension mismatch if collection was created with wrong model | Medium | Qdrant collections are immutable in vector dimension. Delete collection and re-ingest if switching embedding models. |
 | `SuggestBudgetReplacementsAsync` returns `[]` in Rag mode | By design | Budget enforcement loop in `DecksController` handles this gracefully; Qdrant pre-filtering makes it unnecessary |

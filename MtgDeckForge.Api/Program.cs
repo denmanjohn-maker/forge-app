@@ -61,7 +61,7 @@ builder.Services.AddSingleton<DeckService>();
 builder.Services.Configure<ClaudeApiSettings>(
     builder.Configuration.GetSection("ClaudeApi"));
 
-// RAG pipeline (mtg-forge-local + Qdrant + Ollama)
+// RAG pipeline (mtg-forge-ai + Qdrant + Ollama)
 builder.Services.Configure<RagPipelineSettings>(
     builder.Configuration.GetSection("RagPipeline"));
 
@@ -71,7 +71,7 @@ if (llmProvider.Equals("Rag", StringComparison.OrdinalIgnoreCase))
 {
     builder.Services.AddHttpClient<RagPipelineService>();
     builder.Services.AddTransient<IDeckGenerationService, RagPipelineService>();
-    Log.Information("LLM provider: Rag (mtg-forge-local + Qdrant + Ollama)");
+    Log.Information("LLM provider: Rag (mtg-forge-ai + Qdrant + Ollama)");
 }
 else
 {

@@ -1,14 +1,14 @@
 namespace MtgDeckForge.Api.Models;
 
 /// <summary>
-/// Configuration for the RAG pipeline provider (mtg-forge-local + Ollama).
-/// mtg-forge-local uses Qdrant vector search to pre-filter cards by price and
+/// Configuration for the RAG pipeline provider (mtg-forge-ai + Ollama).
+/// mtg-forge-ai uses Qdrant vector search to pre-filter cards by price and
 /// color identity before passing them to the LLM, solving budget compliance
 /// and card legality problems upstream.
 /// </summary>
 public class RagPipelineSettings
 {
-    /// <summary>Base URL of the mtg-forge-local API (deck generation + card search).</summary>
+    /// <summary>Base URL of the mtg-forge-ai API (deck generation + card search).</summary>
     public string BaseUrl { get; set; } = "http://localhost:5001";
 
     /// <summary>Base URL of the Ollama instance (used directly for analysis).</summary>

@@ -9,7 +9,7 @@ Browser (wwwroot/index.html — vanilla JS SPA, ~2000 lines)
 .NET 8 ASP.NET Core API  (Razor Pages + REST Controllers)
     ├──► IDeckGenerationService  ──► ClaudeService     (Anthropic API)
     │                             ├──► OllamaService   (hosted Ollama, default in appsettings)
-    │                             └──► LocalLlmService (mtg-forge-local + Ollama, local dev)
+    │                             └──► LocalLlmService (mtg-forge-ai + Ollama, local dev)
     ├──► DeckService         → MongoDB (decks collection)
     ├──► PricingService      → PostgreSQL (MTGJSON price data)
     ├──► ScryfallService     → Scryfall API (card enrichment, image lookup)
@@ -22,7 +22,7 @@ Browser (wwwroot/index.html — vanilla JS SPA, ~2000 lines)
 |-------|---------|-------|
 | `"Ollama"` | `OllamaService` | Default in appsettings.json; targets `ollama.railway.internal:11434` |
 | `"Claude"` | `ClaudeService` | Anthropic API; requires `ANTHROPIC_API_KEY` |
-| `"Local"` | `LocalLlmService` | `mtg-forge-local` sidecar at `localhost:5001` + Qdrant price pre-filter |
+| `"Local"` | `LocalLlmService` | `mtg-forge-ai` sidecar at `localhost:5001` + Qdrant price pre-filter |
 
 ## Build & Run
 

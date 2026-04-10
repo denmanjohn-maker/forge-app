@@ -7,9 +7,9 @@ using MtgDeckForge.Api.Models;
 namespace MtgDeckForge.Api.Services;
 
 /// <summary>
-/// Implements IDeckGenerationService using the RAG pipeline: mtg-forge-local + Ollama.
+/// Implements IDeckGenerationService using the RAG pipeline: mtg-forge-ai + Ollama.
 ///
-/// Deck generation calls mtg-forge-local, which uses Qdrant vector search to pre-filter
+/// Deck generation calls mtg-forge-ai, which uses Qdrant vector search to pre-filter
 /// cards by price and color identity before passing them to the local LLM — solving
 /// the budget compliance and card legality problems without relying on the LLM to
 /// estimate prices or enforce color restrictions.
@@ -45,7 +45,7 @@ public class RagPipelineService : IDeckGenerationService
     public async Task<DeckConfiguration> GenerateDeckAsync(DeckGenerationRequest request)
     {
         _logger.LogInformation(
-            "RagPipelineService: generating {Format} deck via mtg-forge-local at {Url}",
+            "RagPipelineService: generating {Format} deck via mtg-forge-ai at {Url}",
             request.Format, _settings.BaseUrl);
 
         var client = CreateMtgForgeClient();
@@ -71,13 +71,13 @@ public class RagPipelineService : IDeckGenerationService
         if (!response.IsSuccessStatusCode)
         {
             var err = await response.Content.ReadAsStringAsync();
-            _logger.LogError("mtg-forge-local error {Status}: {Body}", response.StatusCode, err);
-            throw new InvalidOperationException($"mtg-forge-local returned {response.StatusCode}: {err}");
+            _logger.LogError("mtg-forge-ai error {Status}: {Body}", response.StatusCode, err);
+            throw new InvalidOperationException($"mtg-forge-ai returned {response.StatusCode}: {err}");
         }
 
         var body = await response.Content.ReadAsStringAsync();
         var localDeck = JsonSerializer.Deserialize<LocalDeckResponse>(body, JsonOpts)
-            ?? throw new InvalidOperationException("Null response from mtg-forge-local");
+            ?? throw new InvalidOperationException("Null response from mtg-forge-ai");
 
         return MapToDeckConfiguration(localDeck, request);
     }
@@ -138,7 +138,7 @@ public class RagPipelineService : IDeckGenerationService
     // ─── Budget Replacements ──────────────────────────────────────────────────
 
     /// <summary>
-    /// Budget is enforced upstream by Qdrant price filtering in mtg-forge-local,
+    /// Budget is enforced upstream by Qdrant price filtering in mtg-forge-ai,
     /// so replacements are rarely needed. Returns empty to skip the retry loop.
     /// </summary>
     public Task<List<CardEntry>> SuggestBudgetReplacementsAsync(
@@ -285,7 +285,7 @@ public class RagPipelineService : IDeckGenerationService
         return start >= 0 && end > start ? text[start..(end + 1)] : text.Trim();
     }
 
-    // ─── mtg-forge-local Response DTOs ───────────────────────────────────────
+    // ─── mtg-forge-ai Response DTOs ───────────────────────────────────────
 
     private class LocalDeckResponse
     {
