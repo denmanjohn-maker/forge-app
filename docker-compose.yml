@@ -3,6 +3,7 @@ version: '3.8'
 # Production Docker Compose — full stack with monitoring
 # Usage: docker compose up -d --build
 # Requires .env with: ANTHROPIC_API_KEY, ADMIN_PASSWORD, JWT_SECRET, DATABASE_URL (optional)
+# Optional .env keys: LLM_PROVIDER (Rag|Claude, default: Rag)
 
 services:
   # ─── MongoDB ───────────────────────────────────────────────
@@ -37,6 +38,7 @@ services:
       - "5000:5000"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      LlmProvider: "${LLM_PROVIDER:-Rag}"
       MongoDb__ConnectionString: "${MONGODB_CONNECTION_STRING:-mongodb://mongodb:27017}"
       MongoDb__DatabaseName: "mtgdeckforge"
       MongoDb__DecksCollectionName: "decks"
