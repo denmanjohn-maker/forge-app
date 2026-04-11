@@ -1,4 +1,4 @@
-# ⚔️ MTG Deck Forge
+# ⚔️ mtg-forge
 
 A Magic: The Gathering deck configuration generator powered by Claude AI, built with .NET 8, MongoDB, SQL LocalDB pricing cache, and Docker.
 
@@ -46,7 +46,7 @@ A Magic: The Gathering deck configuration generator powered by Claude AI, built 
 
 ```bash
 git clone <your-repo-url>
-cd MtgDeckForge
+cd mtg-forge
 
 # Create your environment file
 cp .env.example .env
@@ -142,7 +142,7 @@ For integration with your existing observability stack, you can add Prometheus m
 mongod --dbpath ./data
 
 # Run the API (Razor Pages + API)
-cd MtgDeckForge.Api
+cd mtg-forge.Api
 export ANTHROPIC_API_KEY=sk-ant-xxxxx
 dotnet run
 ```
@@ -161,13 +161,13 @@ curl -X POST http://localhost:5000/api/pricing/refresh --cookie "<auth-cookie>"
 ## Project Structure
 
 ```
-MtgDeckForge/
+mtg-forge/
 ├── docker-compose.yml          # Orchestration: API + MongoDB
 ├── Dockerfile                  # Multi-stage .NET 8 build
 ├── .env.example                # Environment template
-├── MtgDeckForge.sln            # Solution file
-└── MtgDeckForge.Api/
-    ├── MtgDeckForge.Api.csproj # Project with MongoDB.Driver
+├── mtg-forge.sln            # Solution file
+└── mtg-forge.Api/
+    ├── mtg-forge.Api.csproj # Project with MongoDB.Driver
     ├── Program.cs              # Service registration & middleware
     ├── appsettings.json        # Default configuration
     ├── Controllers/

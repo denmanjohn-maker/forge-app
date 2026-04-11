@@ -3,12 +3,12 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 # Copy csproj and restore
-COPY MtgDeckForge.Api/MtgDeckForge.Api.csproj MtgDeckForge.Api/
-RUN dotnet restore MtgDeckForge.Api/MtgDeckForge.Api.csproj
+COPY mtg-forge.Api/mtg-forge.Api.csproj mtg-forge.Api/
+RUN dotnet restore mtg-forge.Api/mtg-forge.Api.csproj
 
 # Copy everything and build
 COPY . .
-WORKDIR /src/MtgDeckForge.Api
+WORKDIR /src/mtg-forge.Api
 RUN dotnet publish -c Release -o /app/publish --no-restore
 
 # Runtime stage
@@ -26,4 +26,4 @@ EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
     CMD curl -f http://localhost:${PORT:-5000}/healthz || exit 1
 
-ENTRYPOINT ["dotnet", "MtgDeckForge.Api.dll"]
+ENTRYPOINT ["dotnet", "mtg-forge.Api.dll"]

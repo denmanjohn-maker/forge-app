@@ -24,7 +24,7 @@ services:
       retries: 5
       start_period: 30s
 
-  # ─── MTG Deck Forge API ────────────────────────────────────
+  # ─── mtg-forge API ────────────────────────────────────────
   mtg-api:
     build:
       context: .

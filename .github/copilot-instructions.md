@@ -1,128 +1,57 @@
-# MtgDeckForge — Copilot Instructions
+# Copilot Instructions for mtg-forge
 
-## Architecture
-
-```
-Browser (wwwroot/index.html — vanilla JS SPA, ~2000 lines)
-    │
-    ▼
-.NET 8 ASP.NET Core API  (Razor Pages + REST Controllers)
-    ├──► IDeckGenerationService  ──► ClaudeService     (Anthropic API)
-    │                             ├──► OllamaService   (hosted Ollama, default in appsettings)
-    │                             └──► LocalLlmService (mtg-forge-ai + Ollama, local dev)
-    ├──► DeckService         → MongoDB (decks collection)
-    ├──► PricingService      → PostgreSQL (MTGJSON price data)
-    ├──► ScryfallService     → Scryfall API (card enrichment, image lookup)
-    ├──► UserService/AuthService → MongoDB + PostgreSQL (ASP.NET Identity)
-    └──► PricingRefreshHostedService (background MTGJSON sync, IHostedService)
-```
-
-**LLM Provider toggle** — set `"LlmProvider"` in `appsettings.json` (or env var):
-| Value | Service | Notes |
-|-------|---------|-------|
-| `"Ollama"` | `OllamaService` | Default in appsettings.json; targets `ollama.railway.internal:11434` |
-| `"Claude"` | `ClaudeService` | Anthropic API; requires `ANTHROPIC_API_KEY` |
-| `"Local"` | `LocalLlmService` | `mtg-forge-ai` sidecar at `localhost:5001` + Qdrant price pre-filter |
-
-## Build & Run
+## Build and test commands
 
 ```bash
-# Build
-dotnet build MtgDeckForge.sln
+# Restore
+dotnet restore mtg-forge.sln
 
-# Run (requires MongoDB + PostgreSQL)
-cd MtgDeckForge.Api && dotnet run
+# Build the whole solution
+dotnet build mtg-forge.sln
 
-# Local dev with Docker (MongoDB + PostgreSQL + Ollama included)
-docker compose -f docker-compose-local.yml up -d --build
+# Run the full test suite
+dotnet test mtg-forge.sln
 
-# Tests
-dotnet test MtgDeckForge.sln
+# Run a single test class
+dotnet test mtg-forge.Tests --filter "FullyQualifiedName~ClaudeServiceTests"
 
-# Single test class
-dotnet test MtgDeckForge.Tests --filter "FullyQualifiedName~ClaudeServiceTests"
+# Run a single test method
+dotnet test mtg-forge.Tests --filter "FullyQualifiedName~ClaudeServiceTests.GenerateDeckAsync_ParsesJsonFromMarkdownCodeBlock"
 
-# Single test method
-dotnet test MtgDeckForge.Tests --filter "FullyQualifiedName~ClaudeServiceTests.GenerateDeckAsync_ParsesJsonFromMarkdownCodeBlock"
+# Run the API locally from the project directory
+cd mtg-forge.Api && dotnet run
+
+# Start local dependencies for host-based development
+docker compose -f docker-compose-local.yml up -d
+
+# Apply PostgreSQL migrations when schema changes
+cd mtg-forge.Api && dotnet ef database update
 ```
 
-Local dev: API on `http://localhost:5000`, Swagger at `/swagger`. The listen port defaults to `5000` but honours the `PORT` env var (injected by Railway at runtime).
+There is no dedicated lint command or lint configuration checked into this repository.
 
-EF Core migrations (PostgreSQL schema):
-```bash
-cd MtgDeckForge.Api
-dotnet ef migrations add <MigrationName>
-dotnet ef database update
-```
+## High-level architecture
 
-## Key Conventions
+- `mtg-forge.Api` is a single ASP.NET Core web app that serves three surfaces from one process: REST controllers, Razor Pages under `Pages/`, and the static SPA in `wwwroot/index.html`.
+- The app uses **two databases**. MongoDB stores deck documents plus the app's own `User` and `Group` records. PostgreSQL stores ASP.NET Identity tables and the MTGJSON pricing cache in `AppDbContext`.
+- Deck generation is controller-driven rather than abstracted behind an interface. `DecksController.Generate` calls `ClaudeService`, then `PricingService.ApplyPricesAsync`, then persists the finished `DeckConfiguration` through `DeckService`.
+- CSV import is a multi-step pipeline in `DecksController.ImportCsv`: parse CSV with private static helpers, enrich cards through `ScryfallService`, overlay local prices from `PricingService`, derive deck colors, generate an import description with `ClaudeService`, then save to MongoDB.
+- Pricing data is refreshed in the background. `PricingRefreshHostedService` runs daily and calls `MtgJsonPricingImportService`, which streams large MTGJSON payloads into PostgreSQL instead of loading them fully into memory.
+- Authentication is split by client type. `Program.cs` configures a `"smart"` auth policy that uses JWT bearer tokens for API clients with an `Authorization: Bearer ...` header and falls back to the ASP.NET Identity cookie flow for Razor Pages.
+- Observability is built in. Serilog writes to console and an in-memory log store, OpenTelemetry exposes Prometheus metrics, and `/metrics` plus `/logging` are protected by `InternalOnlyMiddleware`.
 
-### LLM Abstraction
-`IDeckGenerationService` (`Services/IDeckGenerationService.cs`) is the single seam for swapping LLM providers:
-- `GenerateDeckAsync(DeckGenerationRequest)` → `DeckConfiguration`
-- `AnalyzeDeckAsync(DeckConfiguration)` → `DeckAnalysis`
-- `SuggestBudgetReplacementsAsync(...)` → `List<CardEntry>` (returns `[]` in `LocalLlmService` — budget is pre-filtered upstream)
-- `GenerateImportDescriptionAsync(...)` → `string`
+## Key conventions
 
-`ClaudeService`, `OllamaService`, and `LocalLlmService` all implement this interface. Registration is in `Program.cs` based on `"LlmProvider"` config.
+- Most API controllers are `[Authorize]` by default. `GroupsController` and several auth-management endpoints are admin-only, and deck ownership checks are enforced in controllers by comparing `DeckConfiguration.UserId` to the current claim unless the caller is in the `Admin` role.
+- `DeckService` and `UserService` are Mongo-backed singleton services that create indexes themselves. `PricingService` is scoped because it depends on `AppDbContext`.
+- Price lookups depend on normalized card names. Reuse `PricingService.NormalizeCardName` instead of introducing alternate normalization logic.
+- `ScryfallService.EnrichCardsAsync` is intentionally non-destructive: it fills missing mana cost, CMC, type, and price fields, but does not overwrite populated values. It batches requests in groups of 75 to match Scryfall's collection API limits.
+- The SPA is a single large `wwwroot/index.html` file with no frontend build step. If you touch the CSS or layout, preserve the existing iOS/Safari compatibility details such as `min-height: 100dvh` and `-webkit-backdrop-filter`.
+- Tests are xUnit-only and avoid mocking libraries. HTTP-dependent services are tested with hand-rolled `HttpMessageHandler` stubs, and private static CSV helper methods in `DecksController` are tested via reflection rather than being made public just for tests.
+- The repository's main automated verification lives in `.github/workflows/post-merge-review.yml`, which restores, builds in Release, runs `dotnet test`, and checks vulnerable NuGet packages with `dotnet list ... --vulnerable`.
 
-### Budget Enforcement
-`ClaudeService.GetBudgetMax(string budgetRange)` is a static helper. Budget tier strings: `"Budget"` ($50), `"$50-$150"`, `"$150-$500"`, anything else = no limit.
+## Local environment details
 
-The enforcement loop in `DecksController.Generate`:
-1. Generate deck via `IDeckGenerationService.GenerateDeckAsync`
-2. Apply real prices via `PricingService.ApplyPricesAsync` (from MTGJSON PostgreSQL data)
-3. If over budget: call `SuggestBudgetReplacementsAsync` (Claude/Ollama retry, Local skips gracefully)
-
-### Data Storage — Two Databases
-- **MongoDB** (`DeckService`): deck documents (`DeckConfiguration` with embedded `List<CardEntry>`); also users/groups collections
-- **PostgreSQL** (`AppDbContext`): ASP.NET Identity users + MTGJSON pricing data (`CardPrices`, `PricingImportRuns`)
-
-`DeckService` is Singleton (MongoDB driver is thread-safe). `PricingService` is Scoped. `AuthService`/`UserService` are Singleton.
-
-### Models
-- `DeckConfiguration` — MongoDB document; persisted deck including cards, analysis, metadata
-- `CardEntry` — embedded sub-document inside `DeckConfiguration.Cards`
-- `DeckGenerationRequest` — API input; `Format` is a string (`"Commander"`, `"Standard"`, etc.), `PowerLevel` is a string (`"Casual"`, `"Focused"`, `"Optimized"`, `"Competitive"`)
-- `DeckAnalysis` — persisted as `DeckConfiguration.LastAnalysis` after `/analyze`
-
-### CSV Export/Import
-`DecksController` supports 4 formats: `moxfield`, `archidekt`, `deckbox`, `deckstats`. Auto-detected on import from header fields. After import, Scryfall enriches `ManaCost`/`Cmc`/`CardType`, and `PricingService` applies real prices.
-
-### Auth
-Dual-auth: JWT Bearer for API clients, ASP.NET Identity cookie for Razor Pages (`/Account/Login`). The `"smart"` policy scheme in `Program.cs` routes between them based on the `Authorization` header prefix. `GroupsController` is admin-only (`[Authorize(Roles = "Admin")]`).
-
-### Rate Limiting
-`"deck-generation"` rate limiter: 20 requests per user per 24 hours (keyed by `ClaimTypes.NameIdentifier`, anonymous bucketed together). Applied on `POST /api/decks/generate` via `[EnableRateLimiting("deck-generation")]`.
-
-### Configuration
-All secrets via environment variables — `appsettings.json` has safe defaults for local dev only:
-- `ANTHROPIC_API_KEY` — Claude API key (only needed when `LlmProvider=Claude`)
-- `DATABASE_URL` — PostgreSQL URI (Railway format; converted to Npgsql key-value in `Program.cs`)
-- `JWT_SECRET`, `ADMIN_PASSWORD`
-
-Production uses Railway env injection.
-
-### Observability
-- **Serilog**: structured console logging + in-memory log store (last 1000 entries); accessible at `GET /logging` (internal only)
-- **OpenTelemetry**: metrics exported via Prometheus scrape endpoint at `GET /metrics` (internal only)
-- `/metrics` and `/logging` are blocked by `InternalOnlyMiddleware` — only reachable from Docker-internal IPs
-- Monitoring stack in `monitoring/` (Prometheus + Grafana)
-
-### Frontend
-Single file `wwwroot/index.html` — vanilla JS/HTML/CSS, no build step. Uses Scryfall image API for card art. Three Google Fonts: Cinzel, Crimson Text, MedievalSharp. Requires `-webkit-backdrop-filter` prefix and `dvh` fallback for iOS Safari compatibility.
-
-### Razor Pages
-Under `Pages/Account` (login/register) and `Pages/Decks`. These use Identity cookie auth, not JWT. `UseForwardedHeaders` is configured for Railway reverse-proxy compatibility (required for iOS Safari).
-
-### Tests
-- Framework: xUnit. No mocking library — tests use a hand-rolled `StubHttpMessageHandler` to fake `HttpClient` responses.
-- Private/internal controller helpers (e.g., CSV parsing) are tested via reflection (`MethodInfo` + `Invoke`).
-- Known pre-existing failure: `ClaudeServiceTests.GenerateDeckAsync_ParsesJsonFromMarkdownCodeBlock` — `Assert.Single` fails because Commander deck generation pads the card list with basic lands.
-
-### Deployment
-Staging-first workflow: develop on `staging` branch, promote to production with:
-```bash
-git push origin staging:main --force
-```
-Hosted on Railway. Staging URL: `staging.bensmagicforge.app`.
+- Host-based local development uses `docker-compose-local.yml` for dependencies only: MongoDB on `localhost:27018`, PostgreSQL on `localhost:5433`, Prometheus on `localhost:9090`, and Grafana on `localhost:3000`.
+- The app honors the `PORT` environment variable and otherwise listens on `5000`.
+- Key runtime configuration comes from environment variables or `appsettings.json`, especially `ANTHROPIC_API_KEY`, `DATABASE_URL` or `SqlStorage:ConnectionString`, `JWT_SECRET`, and `ADMIN_PASSWORD`.

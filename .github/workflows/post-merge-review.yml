@@ -32,10 +32,10 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Restore dependencies
-        run: dotnet restore MtgDeckForge.sln
+        run: dotnet restore mtg-forge.sln
 
       - name: Build solution (Release)
-        run: dotnet build MtgDeckForge.sln --configuration Release --no-restore
+        run: dotnet build mtg-forge.sln --configuration Release --no-restore
 
       - name: Detect test projects
         id: test_projects
@@ -49,7 +49,7 @@ jobs:
 
       - name: Run tests
         if: steps.test_projects.outputs.has_tests == 'true'
-        run: dotnet test MtgDeckForge.sln --configuration Release --no-build --verbosity normal
+        run: dotnet test mtg-forge.sln --configuration Release --no-build --verbosity normal
 
       - name: No tests found
         if: steps.test_projects.outputs.has_tests != 'true'
@@ -58,7 +58,7 @@ jobs:
       - name: Dependency vulnerability review
         shell: bash
         run: |
-          output="$(dotnet list MtgDeckForge.sln package --vulnerable --include-transitive --format json)"
+          output="$(dotnet list mtg-forge.sln package --vulnerable --include-transitive --format json)"
           echo "$output"
           python - <<'PY' <<<"$output"
           import json

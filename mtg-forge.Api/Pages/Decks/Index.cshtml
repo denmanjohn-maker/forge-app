@@ -1,0 +1,22 @@
+@page
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@model MtgForge.Api.Pages.Decks.IndexModel
+@{
+    ViewData["Title"] = "Decks";
+}
+<h2>Deck Library</h2>
+<table>
+    <thead><tr><th>Name</th><th>Format</th><th>Colors</th><th>Price</th><th></th></tr></thead>
+    <tbody>
+    @foreach (var d in Model.Decks)
+    {
+        <tr>
+            <td>@d.DeckName</td>
+            <td>@d.Format</td>
+            <td>@string.Join(",", d.Colors)</td>
+            <td>@d.EstimatedTotalPrice.ToString("C")</td>
+            <td><a asp-page="/Decks/Details" asp-route-id="@d.Id">View</a></td>
+        </tr>
+    }
+    </tbody>
+</table>

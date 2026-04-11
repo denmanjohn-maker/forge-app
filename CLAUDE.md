@@ -4,16 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MTG Deck Forge is a Magic: The Gathering deck generator powered by Claude AI. It uses ASP.NET 8 with MongoDB for persistence and a vanilla JavaScript SPA frontend served from `wwwroot/index.html`.
+mtg-forge is a Magic: The Gathering deck generator powered by Claude AI. It uses ASP.NET 8 with MongoDB for persistence and a vanilla JavaScript SPA frontend served from `wwwroot/index.html`.
 
 ## Build & Run Commands
 
 ```bash
 # Build
-dotnet build MtgDeckForge.sln
+dotnet build mtg-forge.sln
 
 # Run locally (requires MongoDB and ANTHROPIC_API_KEY env var)
-cd MtgDeckForge.Api && dotnet run
+cd mtg-forge.Api && dotnet run
 
 # Local dev with Docker (includes MongoDB)
 docker compose -f docker-compose-local.yml up -d --build
