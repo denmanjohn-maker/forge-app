@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-mtg-forge is a Magic: The Gathering deck generator powered by Claude AI. It uses ASP.NET 8 with MongoDB for persistence and a vanilla JavaScript SPA frontend served from `wwwroot/index.html`.
+mtg-forge is a Magic: The Gathering deck generator powered by Claude AI. It uses ASP.NET 10 with MongoDB for persistence and a vanilla JavaScript SPA frontend served from `wwwroot/index.html`.
 
 ## Build & Run Commands
 
@@ -61,4 +61,4 @@ Production uses AWS Secrets Manager for `ClaudeApi__ApiKey` and `MongoDb__Connec
 - No test project exists yet.
 - CORS is wide open (AllowAny) — development configuration.
 - The frontend uses three Google Fonts: Cinzel, Crimson Text, MedievalSharp.
-- Docker multi-stage build: `sdk:8.0` → build, `aspnet:8.0` → runtime, exposed on port 5000.
+- Docker multi-stage build: `sdk:10.0` → build, `aspnet:10.0` → runtime, exposed on port 5000.

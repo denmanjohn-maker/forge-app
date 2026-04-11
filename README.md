@@ -1,8 +1,8 @@
 # ⚔️ mtg-forge
 
-A Magic: The Gathering deck configuration generator powered by Claude AI, built with .NET 8, MongoDB, SQL LocalDB pricing cache, and Docker.
+A Magic: The Gathering deck configuration generator powered by Claude AI, built with .NET 10, MongoDB, PostgreSQL pricing cache, and Docker.
 
-![.NET 8](https://img.shields.io/badge/.NET-8.0-purple)
+![.NET 10](https://img.shields.io/badge/.NET-10.0-purple)
 ![MongoDB](https://img.shields.io/badge/MongoDB-7-green)
 ![Docker](https://img.shields.io/badge/Docker-Compose-blue)
 
@@ -24,7 +24,7 @@ A Magic: The Gathering deck configuration generator powered by Claude AI, built 
 │                                              │
 │  ┌──────────────────┐  ┌─────────────────┐  │
 │  │  mtg-api          │  │  mongodb        │  │
-│  │  .NET 8 Web API   │──│  Mongo 7        │  │
+│  │  .NET 10 Web API  │──│  Mongo 7        │  │
 │  │  + Static SPA     │  │  Port 27017     │  │
 │  │  Port 5000        │  │                 │  │
 │  └────────┬─────────┘  └─────────────────┘  │
@@ -163,7 +163,7 @@ curl -X POST http://localhost:5000/api/pricing/refresh --cookie "<auth-cookie>"
 ```
 mtg-forge/
 ├── docker-compose.yml          # Orchestration: API + MongoDB
-├── Dockerfile                  # Multi-stage .NET 8 build
+├── Dockerfile                  # Multi-stage .NET 10 build
 ├── .env.example                # Environment template
 ├── mtg-forge.sln            # Solution file
 └── mtg-forge.Api/
