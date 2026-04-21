@@ -8,13 +8,13 @@ namespace MtgForge.Api.Pages.Decks;
 
 public class GenerateModel : PageModel
 {
-    private readonly ClaudeService _claudeService;
+    private readonly IDeckGenerationService _llmService;
     private readonly DeckService _deckService;
     private readonly PricingService _pricingService;
 
-    public GenerateModel(ClaudeService claudeService, DeckService deckService, PricingService pricingService)
+    public GenerateModel(IDeckGenerationService llmService, DeckService deckService, PricingService pricingService)
     {
-        _claudeService = claudeService;
+        _llmService = llmService;
         _deckService = deckService;
         _pricingService = pricingService;
     }
@@ -46,7 +46,7 @@ public class GenerateModel : PageModel
                 AdditionalNotes = Input.AdditionalNotes
             };
 
-            var deck = await _claudeService.GenerateDeckAsync(request);
+            var deck = await _llmService.GenerateDeckAsync(request);
             await _pricingService.ApplyPricesAsync(deck.Cards);
             deck.TotalCards = deck.Cards.Sum(c => c.Quantity);
             deck.EstimatedTotalPrice = deck.Cards.Sum(c => c.EstimatedPrice * c.Quantity);
