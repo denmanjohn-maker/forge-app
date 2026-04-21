@@ -45,7 +45,8 @@ public class ClaudeServiceTests
         Assert.Equal("Commander", result.Format);
         Assert.Equal("High", result.PowerLevel);
         Assert.Equal("Mid", result.BudgetRange);
-        Assert.Single(result.Cards);
+        // Commander decks are padded to exactly 100 cards by the service
+        Assert.Equal(100, result.Cards.Count);
     }
 
     [Fact]

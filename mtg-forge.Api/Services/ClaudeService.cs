@@ -397,13 +397,13 @@ Sample Cards:
             || budgetRange.Equals("Budget", StringComparison.OrdinalIgnoreCase))
             return 50m;
 
-        if (budgetRange.Contains("$50", StringComparison.OrdinalIgnoreCase)
-            && budgetRange.Contains("$150", StringComparison.OrdinalIgnoreCase))
-            return 150m;
-
         if (budgetRange.Contains("$150", StringComparison.OrdinalIgnoreCase)
             && budgetRange.Contains("$500", StringComparison.OrdinalIgnoreCase))
             return 500m;
+
+        if (budgetRange.Contains("$50", StringComparison.OrdinalIgnoreCase)
+            && budgetRange.Contains("$150", StringComparison.OrdinalIgnoreCase))
+            return 150m;
 
         return null; // no limit
     }
