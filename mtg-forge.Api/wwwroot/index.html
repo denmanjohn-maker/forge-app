@@ -1626,6 +1626,31 @@
         }
         .card-img-tooltip.visible { opacity: 1; }
         .card-img-tooltip img { display: block; width: 476px; height: auto; }
+
+        /* Card image lightbox (touch/mobile fullscreen) */
+        .card-lightbox {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.88);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            -webkit-backdrop-filter: blur(6px);
+            backdrop-filter: blur(6px);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        .card-lightbox.visible { opacity: 1; }
+        .card-lightbox.hidden { display: none; }
+        .card-lightbox img {
+            max-width: 90vw;
+            max-height: 90dvh;
+            border-radius: 12px;
+            box-shadow: 0 12px 48px rgba(0,0,0,0.9);
+            border: 1px solid var(--border-gold);
+            display: block;
+        }
         .card-name-text {
             cursor: pointer;
             text-decoration: underline dotted;
@@ -2202,6 +2227,11 @@
         <img id="cardImgEl" src="" alt="Card image">
     </div>
 
+    <!-- Card Image Lightbox (touch/mobile fullscreen) -->
+    <div class="card-lightbox hidden" id="cardLightbox" role="dialog" aria-modal="true" aria-label="Card image" onclick="hideCardLightbox()">
+        <img id="cardLightboxImg" src="" alt="Card image">
+    </div>
+
     <!-- Delete Modal -->
     <div class="modal-overlay hidden" id="deleteModal">
         <div class="modal">
@@ -2411,6 +2441,12 @@
         });
         document.getElementById('loginUsername').addEventListener('keydown', e => {
             if (e.key === 'Enter') document.getElementById('loginPassword').focus();
+        });
+
+        // Allow Escape key to dismiss card lightbox
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && !document.getElementById('cardLightbox').classList.contains('hidden'))
+                hideCardLightbox();
         });
 
         function logout() {
@@ -3011,6 +3047,23 @@
                     if (document.getElementById('cardImgTooltip').classList.contains('visible'))
                         positionTooltip(e);
                 });
+                if (_isTouchDevice) {
+                    let _touchStartY = 0;
+                    let _touchMoved = false;
+                    el.addEventListener('touchstart', e => {
+                        _touchStartY = e.touches[0].clientY;
+                        _touchMoved = false;
+                    }, { passive: true });
+                    el.addEventListener('touchmove', e => {
+                        if (Math.abs(e.touches[0].clientY - _touchStartY) > 8) _touchMoved = true;
+                    }, { passive: true });
+                    el.addEventListener('touchend', e => {
+                        if (!_touchMoved) {
+                            e.preventDefault();
+                            showCardLightbox(el.dataset.cn);
+                        }
+                    });
+                }
             });
         }
 
@@ -3124,6 +3177,7 @@
         const _cardImageCache = new Map();
         let _imgTooltipTimer = null;
         let _activeHoverCard = null;
+        let _lightboxHideHandler = null;
 
         const _isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
@@ -3190,6 +3244,60 @@
             clearTimeout(_imgTooltipTimer);
             _activeHoverCard = null;
             document.getElementById('cardImgTooltip').classList.remove('visible');
+        }
+
+        async function showCardLightbox(cardName) {
+            const lightbox = document.getElementById('cardLightbox');
+            const imgEl = document.getElementById('cardLightboxImg');
+
+            // Cancel any in-progress hide transition to avoid race condition
+            if (_lightboxHideHandler) {
+                lightbox.removeEventListener('transitionend', _lightboxHideHandler);
+                _lightboxHideHandler = null;
+            }
+
+            // Ensure lightbox is visible regardless of prior transition state
+            lightbox.classList.remove('hidden');
+
+            lightbox.setAttribute('aria-label', `Card image: ${cardName}`);
+            imgEl.alt = cardName;
+
+            let url;
+            if (_cardImageCache.has(cardName)) {
+                url = _cardImageCache.get(cardName);
+            } else {
+                try {
+                    const resp = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(cardName)}`);
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        url = data.image_uris?.normal ?? data.card_faces?.[0]?.image_uris?.normal ?? null;
+                    } else {
+                        url = null;
+                    }
+                } catch {
+                    url = null;
+                }
+                _cardImageCache.set(cardName, url);
+            }
+
+            if (!url) {
+                lightbox.classList.add('hidden');
+                return;
+            }
+
+            imgEl.src = url;
+            // Trigger transition on next frame
+            requestAnimationFrame(() => lightbox.classList.add('visible'));
+        }
+
+        function hideCardLightbox() {
+            const lightbox = document.getElementById('cardLightbox');
+            lightbox.classList.remove('visible');
+            _lightboxHideHandler = () => {
+                lightbox.classList.add('hidden');
+                _lightboxHideHandler = null;
+            };
+            lightbox.addEventListener('transitionend', _lightboxHideHandler, { once: true });
         }
 
         // === Deck Export ===
