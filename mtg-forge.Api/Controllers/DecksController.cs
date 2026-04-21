@@ -239,6 +239,50 @@ public class DecksController : ControllerBase
         }
     }
 
+    [HttpPost("{id}/apply-upgrade")]
+    public async Task<ActionResult<DeckConfiguration>> ApplyUpgrade(string id, [FromBody] CardUpgrade upgrade)
+    {
+        if (string.IsNullOrWhiteSpace(upgrade.RemoveCard) || string.IsNullOrWhiteSpace(upgrade.AddCard))
+            return BadRequest(new { error = "RemoveCard and AddCard must be specified." });
+
+        var deck = await _deckService.GetByIdAsync(id);
+        if (deck is null)
+            return NotFound();
+        if (!IsAdmin() && deck.UserId != GetUserId())
+            return Forbid();
+
+        var cardToRemove = deck.Cards.FirstOrDefault(c =>
+            string.Equals(c.Name, upgrade.RemoveCard, StringComparison.OrdinalIgnoreCase));
+        if (cardToRemove is null)
+            return BadRequest(new { error = $"Card '{upgrade.RemoveCard}' not found in deck." });
+
+        var newCard = new CardEntry
+        {
+            Name = upgrade.AddCard,
+            Quantity = cardToRemove.Quantity,
+            Category = cardToRemove.Category,
+            RoleInDeck = cardToRemove.RoleInDeck
+        };
+
+        var enriched = await _scryfallService.EnrichCardsAsync(new List<CardEntry> { newCard });
+        if (enriched.Count > 0)
+            newCard = enriched[0];
+        await _pricingService.ApplyPricesAsync(new List<CardEntry> { newCard });
+
+        deck.Cards.Remove(cardToRemove);
+        deck.Cards.Add(newCard);
+        deck.TotalCards = deck.Cards.Sum(c => c.Quantity);
+        deck.EstimatedTotalPrice = deck.Cards.Sum(c => c.EstimatedPrice * c.Quantity);
+        deck.UpdatedAt = DateTime.UtcNow;
+
+        var updateRequest = new DeckUpdateRequest { Cards = deck.Cards };
+        await _deckService.UpdateAsync(id, updateRequest);
+
+        _logger.LogInformation("Applied upgrade on deck {Id}", id.Replace(Environment.NewLine, ""));
+
+        return Ok(deck);
+    }
+
     // === CSV Export (multiple formats) ===
 
     [HttpGet("{id}/export/csv")]

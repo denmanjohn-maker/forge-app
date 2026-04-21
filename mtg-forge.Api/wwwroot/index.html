@@ -1725,6 +1725,20 @@
         .upgrade-arrow { color: var(--text-muted); }
         .upgrade-add { color: #27ae60; font-weight: 600; }
         .upgrade-reason { color: var(--text-muted); font-size: 0.95rem; font-style: italic; }
+        .upgrade-apply-btn {
+            margin-top: 0.4rem;
+            padding: 0.2rem 0.65rem;
+            font-size: 0.8rem;
+            background: var(--gold-dark);
+            color: #1a1209;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: opacity 0.15s;
+        }
+        .upgrade-apply-btn:hover { opacity: 0.85; }
+        .upgrade-apply-btn:disabled { opacity: 0.5; cursor: default; }
         .analysis-loading {
             display: flex;
             align-items: center;
@@ -3410,14 +3424,19 @@
         function buildAnalysisHtml(a, analyzedAt, deckId) {
             const weaknesses = (a.weaknesses || []).map(w => `<li>${w}</li>`).join('');
             const suggestions = (a.improvementSuggestions || []).map(s => `<li>${s}</li>`).join('');
-            const upgrades = (a.cardUpgrades || []).map(u => `
-                <div class="upgrade-row">
+            const upgrades = (a.cardUpgrades || []).map((u, i) => `
+                <div class="upgrade-row" id="upgrade-row-${deckId}-${i}">
                     <div class="upgrade-swap">
                         <span class="upgrade-remove">&#x2715; ${u.removeCard}</span>
                         <span class="upgrade-arrow">&#8594;</span>
                         <span class="upgrade-add">&#x2713; ${u.addCard}</span>
                     </div>
                     <div class="upgrade-reason">${u.reason}</div>
+                    <button class="upgrade-apply-btn"
+                        data-deck-id="${deckId}"
+                        data-remove="${u.removeCard.replace(/"/g,'&quot;')}"
+                        data-add="${u.addCard.replace(/"/g,'&quot;')}"
+                        onclick="applyUpgrade(this)">&#10003; Apply</button>
                 </div>`).join('');
             const dateStr = analyzedAt ? `<span style="color:var(--text-muted);font-size:0.75rem;margin-left:0.75rem;">Analyzed ${new Date(analyzedAt).toLocaleDateString()}</span>` : '';
             return `
@@ -3434,6 +3453,33 @@
                         ${upgrades ? `<div class="analysis-section-title">Recommended Upgrades</div>${upgrades}` : ''}
                     </div>
                 </div>`;
+        }
+
+        async function applyUpgrade(btn) {
+            const deckId = btn.dataset.deckId;
+            const removeCard = btn.dataset.remove;
+            const addCard = btn.dataset.add;
+            btn.disabled = true;
+            btn.innerHTML = 'Applying&hellip;';
+            try {
+                const res = await authFetch(`${API_BASE}/${deckId}/apply-upgrade`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ removeCard, addCard, reason: '' })
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.error || 'Failed to apply upgrade');
+                }
+                const updatedDeck = await res.json();
+                currentDetailDeck = updatedDeck;
+                showToast(`Swapped \u201c${removeCard}\u201d for \u201c${addCard}\u201d`);
+                renderDetail(updatedDeck);
+            } catch (err) {
+                showToast(err.message, true);
+                btn.disabled = false;
+                btn.innerHTML = '&#10003; Apply';
+            }
         }
 
         function showToast(msg, isError = false) {
