@@ -7,14 +7,15 @@ using MtgForge.Api.Models;
 namespace MtgForge.Api.Services;
 
 /// <summary>
-/// Implements IDeckGenerationService using the RAG pipeline: mtg-forge-ai + Ollama.
+/// Implements IDeckGenerationService using the RAG pipeline: mtg-forge-ai + Together.ai.
 ///
 /// Deck generation calls mtg-forge-ai, which uses Qdrant vector search to pre-filter
-/// cards by price and color identity before passing them to the local LLM — solving
+/// cards by price and color identity before passing them to the hosted LLM — solving
 /// the budget compliance and card legality problems without relying on the LLM to
 /// estimate prices or enforce color restrictions.
 ///
-/// Deck analysis calls Ollama directly using the same prompt as ClaudeService.
+/// Deck analysis and import descriptions call Together.ai directly using the
+/// OpenAI-compatible /v1/chat/completions endpoint.
 ///
 /// Works both locally (localhost endpoints) and on Railway (internal DNS endpoints).
 /// </summary>
@@ -86,7 +87,7 @@ public class RagPipelineService : IDeckGenerationService
 
     public async Task<DeckAnalysis> AnalyzeDeckAsync(DeckConfiguration deck)
     {
-        _logger.LogInformation("RagPipelineService: analyzing deck '{Name}' via Ollama", deck.DeckName);
+        _logger.LogInformation("RagPipelineService: analyzing deck '{Name}' via Together.ai", deck.DeckName);
 
         var cardList = string.Join("\n", deck.Cards.Select(c =>
             $"- {c.Quantity}x {c.Name} ({c.CardType}, CMC {c.Cmc}): {c.RoleInDeck}"));
@@ -126,11 +127,11 @@ public class RagPipelineService : IDeckGenerationService
             Provide 3-5 weaknesses, 3-5 improvement suggestions, and 3-5 card upgrade recommendations.
             """;
 
-        var rawResponse = await CallOllamaAsync(prompt);
+        var rawResponse = await CallLlmAsync(prompt);
 
         var jsonContent = ExtractJson(rawResponse);
         var analysis = JsonSerializer.Deserialize<DeckAnalysis>(jsonContent, JsonOpts)
-            ?? throw new InvalidOperationException("Failed to deserialize analysis from Ollama");
+            ?? throw new InvalidOperationException("Failed to deserialize analysis from Together.ai");
 
         return analysis;
     }
@@ -173,11 +174,11 @@ public class RagPipelineService : IDeckGenerationService
 
         try
         {
-            return (await CallOllamaAsync(prompt)).Trim();
+            return (await CallLlmAsync(prompt)).Trim();
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to generate import description via Ollama");
+            _logger.LogWarning(ex, "Failed to generate import description via Together.ai");
             return $"Imported deck: {deckName}";
         }
     }
@@ -192,40 +193,49 @@ public class RagPipelineService : IDeckGenerationService
         return client;
     }
 
-    private async Task<string> CallOllamaAsync(string prompt)
+    private async Task<string> CallLlmAsync(string prompt)
     {
+        if (string.IsNullOrWhiteSpace(_settings.LlmApiKey))
+            throw new InvalidOperationException(
+                "RagPipeline:LlmApiKey is required. Set it via environment variable RAGPIPELINE__LLMAPIKEY.");
+
         var client = _factory.CreateClient();
-        client.BaseAddress = new Uri(_settings.OllamaUrl);
+        client.BaseAddress = new Uri(_settings.LlmBaseUrl);
         client.Timeout = TimeSpan.FromMinutes(5);
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _settings.LlmApiKey);
 
         var payload = new
         {
             model = _settings.Model,
             stream = false,
+            max_tokens = 4096,
+            temperature = 0.7,
             messages = new[] { new { role = "user", content = prompt } }
         };
 
         var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions
         {
-            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
         });
         using var content = new StringContent(json, Encoding.UTF8, "application/json");
-        using var response = await client.PostAsync("/api/chat", content);
+        using var response = await client.PostAsync("/v1/chat/completions", content);
 
         if (!response.IsSuccessStatusCode)
         {
             var err = await response.Content.ReadAsStringAsync();
-            throw new InvalidOperationException($"Ollama error {response.StatusCode}: {err}");
+            throw new InvalidOperationException($"Together.ai error {response.StatusCode}: {err}");
         }
 
         var body = await response.Content.ReadAsStringAsync();
-        var ollamaResponse = JsonSerializer.Deserialize<OllamaResponse>(body, new JsonSerializerOptions
+        var chatResponse = JsonSerializer.Deserialize<ChatCompletionResponse>(body, new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true
         });
 
-        return ollamaResponse?.Message?.Content
-            ?? throw new InvalidOperationException("Empty Ollama response");
+        return chatResponse?.Choices?.FirstOrDefault()?.Message?.Content
+            ?? throw new InvalidOperationException("Empty response from Together.ai");
     }
 
     private static DeckConfiguration MapToDeckConfiguration(
@@ -314,14 +324,19 @@ public class RagPipelineService : IDeckGenerationService
         public string? TypeLine { get; set; }
     }
 
-    // ─── Ollama Response DTOs ─────────────────────────────────────────────────
+    // ─── Together.ai / OpenAI-compatible Response DTOs ───────────────────────
 
-    private class OllamaResponse
+    private class ChatCompletionResponse
     {
-        public OllamaMessage? Message { get; set; }
+        public List<ChatChoice>? Choices { get; set; }
     }
 
-    private class OllamaMessage
+    private class ChatChoice
+    {
+        public ChatMessage? Message { get; set; }
+    }
+
+    private class ChatMessage
     {
         public string Content { get; set; } = "";
     }

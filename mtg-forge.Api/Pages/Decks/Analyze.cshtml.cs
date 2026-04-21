@@ -8,12 +8,12 @@ namespace MtgForge.Api.Pages.Decks;
 public class AnalyzeModel : PageModel
 {
     private readonly DeckService _deckService;
-    private readonly ClaudeService _claudeService;
+    private readonly IDeckGenerationService _llmService;
 
-    public AnalyzeModel(DeckService deckService, ClaudeService claudeService)
+    public AnalyzeModel(DeckService deckService, IDeckGenerationService llmService)
     {
         _deckService = deckService;
-        _claudeService = claudeService;
+        _llmService = llmService;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -35,7 +35,7 @@ public class AnalyzeModel : PageModel
         var deck = await _deckService.GetByIdAsync(Id);
         if (deck is null) return NotFound();
 
-        var analysis = await _claudeService.AnalyzeDeckAsync(deck);
+        var analysis = await _llmService.AnalyzeDeckAsync(deck);
         await _deckService.UpdateAnalysisAsync(Id, analysis);
         AnalysisJson = JsonSerializer.Serialize(analysis, new JsonSerializerOptions { WriteIndented = true });
         return Page();
