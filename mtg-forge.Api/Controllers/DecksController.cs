@@ -271,14 +271,16 @@ public class DecksController : ControllerBase
 
         deck.Cards.Remove(cardToRemove);
         deck.Cards.Add(newCard);
+        deck.TotalCards = deck.Cards.Sum(c => c.Quantity);
+        deck.EstimatedTotalPrice = deck.Cards.Sum(c => c.EstimatedPrice * c.Quantity);
+        deck.UpdatedAt = DateTime.UtcNow;
 
         var updateRequest = new DeckUpdateRequest { Cards = deck.Cards };
         await _deckService.UpdateAsync(id, updateRequest);
 
-        _logger.LogInformation("Applied upgrade on deck {Id}", id);
+        _logger.LogInformation("Applied upgrade on deck {Id}", id.Replace(Environment.NewLine, ""));
 
-        var updated = await _deckService.GetByIdAsync(id);
-        return Ok(updated);
+        return Ok(deck);
     }
 
     // === CSV Export (multiple formats) ===

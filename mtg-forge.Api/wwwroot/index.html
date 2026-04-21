@@ -3460,7 +3460,7 @@
             const removeCard = btn.dataset.remove;
             const addCard = btn.dataset.add;
             btn.disabled = true;
-            btn.textContent = 'Applying\u2026';
+            btn.innerHTML = 'Applying&hellip;';
             try {
                 const res = await authFetch(`${API_BASE}/${deckId}/apply-upgrade`, {
                     method: 'POST',
