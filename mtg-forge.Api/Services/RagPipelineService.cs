@@ -80,7 +80,9 @@ public class RagPipelineService : IDeckGenerationService
         var localDeck = JsonSerializer.Deserialize<LocalDeckResponse>(body, JsonOpts)
             ?? throw new InvalidOperationException("Null response from mtg-forge-ai");
 
-        return MapToDeckConfiguration(localDeck, request);
+        var deck = MapToDeckConfiguration(localDeck, request);
+        EnforceCardCount(deck, request, _logger);
+        return deck;
     }
 
     // ─── Deck Analysis ────────────────────────────────────────────────────────
@@ -138,20 +140,79 @@ public class RagPipelineService : IDeckGenerationService
 
     // ─── Budget Replacements ──────────────────────────────────────────────────
 
-    /// <summary>
-    /// Budget is enforced upstream by Qdrant price filtering in mtg-forge-ai,
-    /// so replacements are rarely needed. Returns empty to skip the retry loop.
-    /// </summary>
-    public Task<List<CardEntry>> SuggestBudgetReplacementsAsync(
+    public async Task<List<CardEntry>> SuggestBudgetReplacementsAsync(
         DeckConfiguration deck,
         List<CardEntry> expensiveCards,
         decimal currentTotal,
         decimal budgetMax,
         List<(string CardName, decimal Price)> cheapCardPool)
     {
-        _logger.LogInformation(
-            "RagPipelineService: budget enforcement skipped (cards are pre-filtered by Qdrant price)");
-        return Task.FromResult<List<CardEntry>>([]);
+        var cardListStr = string.Join("\n", expensiveCards
+            .Select(c => $"- {c.Name} (${c.EstimatedPrice:F2}, {c.CardType}, {c.Category}, Role: {c.RoleInDeck})"));
+
+        var existingNames = new HashSet<string>(
+            deck.Cards.Select(c => c.Name), StringComparer.OrdinalIgnoreCase);
+        var poolStr = string.Join("\n", cheapCardPool
+            .Where(c => !existingNames.Contains(c.CardName))
+            .Select(c => $"- {c.CardName} (${c.Price:F2})"));
+
+        var deckContext = $$"""
+            Deck: {{deck.DeckName}}
+            Format: {{deck.Format}}
+            Colors: {{string.Join(", ", deck.Colors)}}
+            Commander: {{deck.Commander}}
+            Strategy: {{deck.Strategy}}
+            Current total price: ${{currentTotal:F2}}
+            Budget limit: ${{budgetMax:F2}}
+            Amount over budget: ${{(currentTotal - budgetMax):F2}}
+            """;
+
+        var prompt = $$"""
+            You are a Magic: The Gathering deck building expert. A generated deck is over budget.
+            I need you to suggest cheaper replacement cards for the most expensive cards listed below.
+
+            {{deckContext}}
+
+            Expensive cards to replace:
+            {{cardListStr}}
+
+            IMPORTANT: You MUST choose replacements from this list of verified budget cards with confirmed real prices:
+            {{poolStr}}
+
+            For EACH expensive card above, pick a replacement from the budget pool that:
+            1. Fills a similar role in the deck (same category/function when possible)
+            2. Is legal in {{deck.Format}} format
+            3. Works with the deck's color identity: {{string.Join(", ", deck.Colors)}}
+
+            Respond with ONLY a valid JSON array (no markdown, no explanation) of replacement cards:
+            [
+              {
+                "name": "string - exact card name from the budget pool above",
+                "quantity": 1,
+                "manaCost": "string - mana cost like {2}{B}{G}",
+                "cmc": 0,
+                "cardType": "string - e.g. Creature - Elf Shaman",
+                "category": "string - must match the category of the card it replaces",
+                "roleInDeck": "string - brief explanation",
+                "estimatedPrice": 0.0
+              }
+            ]
+
+            Return exactly {{expensiveCards.Count}} replacement cards, one for each expensive card, in the same order.
+            You MUST only use card names from the budget pool list above — do not suggest cards outside that list.
+            """;
+
+        try
+        {
+            var rawResponse = await CallLlmAsync(prompt);
+            var jsonContent = ExtractJson(rawResponse);
+            return JsonSerializer.Deserialize<List<CardEntry>>(jsonContent, JsonOpts) ?? [];
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "RagPipelineService: failed to parse budget replacement suggestions from Together.ai");
+            return [];
+        }
     }
 
     // ─── Import Description ───────────────────────────────────────────────────
@@ -290,9 +351,133 @@ public class RagPipelineService : IDeckGenerationService
 
     private static string ExtractJson(string text)
     {
-        var start = text.IndexOf('{');
-        var end   = text.LastIndexOf('}');
-        return start >= 0 && end > start ? text[start..(end + 1)] : text.Trim();
+        // Try to find JSON in code blocks first
+        var codeBlockStart = text.IndexOf("```json");
+        if (codeBlockStart >= 0)
+        {
+            var jsonStart = text.IndexOf('\n', codeBlockStart) + 1;
+            var jsonEnd = text.IndexOf("```", jsonStart);
+            if (jsonEnd > jsonStart)
+                return text[jsonStart..jsonEnd].Trim();
+        }
+
+        codeBlockStart = text.IndexOf("```");
+        if (codeBlockStart >= 0)
+        {
+            var jsonStart = text.IndexOf('\n', codeBlockStart) + 1;
+            var jsonEnd = text.IndexOf("```", jsonStart);
+            if (jsonEnd > jsonStart)
+                return text[jsonStart..jsonEnd].Trim();
+        }
+
+        // Try to find raw JSON object or array
+        var braceStart  = text.IndexOf('{');
+        var braceEnd    = text.LastIndexOf('}');
+        var bracketStart = text.IndexOf('[');
+        var bracketEnd  = text.LastIndexOf(']');
+
+        // Pick whichever delimiter comes first (array or object)
+        if (bracketStart >= 0 && bracketEnd > bracketStart
+            && (braceStart < 0 || bracketStart < braceStart))
+            return text[bracketStart..(bracketEnd + 1)];
+
+        if (braceStart >= 0 && braceEnd > braceStart)
+            return text[braceStart..(braceEnd + 1)];
+
+        return text.Trim();
+    }
+
+    private const decimal BasicLandPrice = 0.25m;
+
+    private static void EnforceCardCount(
+        DeckConfiguration deck,
+        DeckGenerationRequest request,
+        ILogger logger)
+    {
+        if (!request.Format.Equals("Commander", StringComparison.OrdinalIgnoreCase))
+        {
+            deck.TotalCards = deck.Cards.Sum(c => c.Quantity);
+            return;
+        }
+
+        var totalCards = deck.Cards.Sum(c => c.Quantity);
+        if (totalCards == 100)
+        {
+            deck.TotalCards = 100;
+            return;
+        }
+
+        logger.LogWarning(
+            "RagPipelineService: Commander deck has {ActualCount} cards instead of 100. Adjusting.",
+            totalCards);
+
+        // Commander is singleton — force all quantities to 1
+        foreach (var card in deck.Cards)
+            card.Quantity = 1;
+
+        totalCards = deck.Cards.Count;
+
+        if (totalCards > 100)
+        {
+            var excessCount = totalCards - 100;
+            var removable = deck.Cards
+                .Where(c => !c.Category.Equals("Commander", StringComparison.OrdinalIgnoreCase)
+                         && !c.Category.Equals("Land", StringComparison.OrdinalIgnoreCase))
+                .TakeLast(excessCount)
+                .ToList();
+            foreach (var card in removable)
+                deck.Cards.Remove(card);
+        }
+        else if (totalCards < 100)
+        {
+            var deficit = 100 - totalCards;
+            var basicLands = GetBasicLandsForColors(request.Colors);
+
+            for (var landIndex = 0; landIndex < deficit; landIndex++)
+            {
+                deck.Cards.Add(new CardEntry
+                {
+                    Name           = basicLands[landIndex % basicLands.Count],
+                    Quantity       = 1,
+                    ManaCost       = "",
+                    Cmc            = 0,
+                    CardType       = "Basic Land",
+                    Category       = "Land",
+                    RoleInDeck     = "Mana base (auto-added to reach 100 cards)",
+                    EstimatedPrice = BasicLandPrice
+                });
+            }
+
+            logger.LogWarning(
+                "RagPipelineService: padded Commander deck with {Deficit} basic lands to reach 100 cards.",
+                deficit);
+        }
+
+        deck.TotalCards = deck.Cards.Sum(c => c.Quantity);
+    }
+
+    private static List<string> GetBasicLandsForColors(List<string> colors)
+    {
+        var lands = new List<string>();
+        foreach (var color in colors)
+        {
+            var land = color.ToUpperInvariant() switch
+            {
+                "W" => "Plains",
+                "U" => "Island",
+                "B" => "Swamp",
+                "R" => "Mountain",
+                "G" => "Forest",
+                _   => null
+            };
+            if (land != null)
+                lands.Add(land);
+        }
+
+        if (lands.Count == 0)
+            lands.Add("Wastes");
+
+        return lands;
     }
 
     // ─── mtg-forge-ai Response DTOs ───────────────────────────────────────
