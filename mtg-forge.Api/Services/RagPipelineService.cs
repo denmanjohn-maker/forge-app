@@ -338,7 +338,7 @@ public class RagPipelineService : IDeckGenerationService
     }
 
     private static double MapBudget(string budgetRange) =>
-        ClaudeService.GetBudgetMax(budgetRange) is { } max ? (double)max : 10_000.0;
+        BudgetHelper.GetBudgetMax(budgetRange) is { } max ? (double)max : 10_000.0;
 
     private static int MapPowerLevel(string powerLevel) => powerLevel.ToLower() switch
     {

@@ -57,28 +57,12 @@ builder.Services.Configure<MongoDbSettings>(
     builder.Configuration.GetSection("MongoDb"));
 builder.Services.AddSingleton<DeckService>();
 
-// Claude API
-builder.Services.Configure<ClaudeApiSettings>(
-    builder.Configuration.GetSection("ClaudeApi"));
-
-// RAG pipeline (mtg-forge-ai + Qdrant + Ollama)
+// RAG pipeline (mtg-forge-ai + Together.ai)
 builder.Services.Configure<RagPipelineSettings>(
     builder.Configuration.GetSection("RagPipeline"));
-
-// Register the active LLM provider as IDeckGenerationService
-var llmProvider = builder.Configuration["LlmProvider"] ?? "Claude";
-if (llmProvider.Equals("Rag", StringComparison.OrdinalIgnoreCase))
-{
-    builder.Services.AddHttpClient<RagPipelineService>();
-    builder.Services.AddTransient<IDeckGenerationService, RagPipelineService>();
-    Log.Information("LLM provider: Rag (mtg-forge-ai + Qdrant + Ollama)");
-}
-else
-{
-    builder.Services.AddHttpClient<ClaudeService>();
-    builder.Services.AddTransient<IDeckGenerationService, ClaudeService>();
-    Log.Information("LLM provider: Claude (Anthropic API)");
-}
+builder.Services.AddHttpClient<RagPipelineService>();
+builder.Services.AddTransient<IDeckGenerationService, RagPipelineService>();
+Log.Information("LLM provider: Rag (mtg-forge-ai + Together.ai)");
 
 // Scryfall
 builder.Services.AddHttpClient<ScryfallService>();

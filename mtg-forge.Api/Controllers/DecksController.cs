@@ -81,7 +81,7 @@ public class DecksController : ControllerBase
             deck.EstimatedTotalPrice = deck.Cards.Sum(c => c.EstimatedPrice * c.Quantity);
 
             // Budget enforcement: swap expensive cards if real prices exceed budget
-            var budgetMax = ClaudeService.GetBudgetMax(request.BudgetRange);
+            var budgetMax = BudgetHelper.GetBudgetMax(request.BudgetRange);
             if (budgetMax.HasValue && deck.EstimatedTotalPrice > budgetMax.Value)
             {
                 // Determine per-card price ceiling based on budget tier
@@ -227,7 +227,7 @@ public class DecksController : ControllerBase
             _logger.LogInformation("Analyzing deck {Id}: {Name}", id, deck.DeckName);
             var analysis = await _llmService.AnalyzeDeckAsync(deck);
 
-            // Persist the analysis so it can be recalled without re-querying Claude
+            // Persist the analysis so it can be recalled without re-querying the LLM
             await _deckService.UpdateAnalysisAsync(id, analysis);
 
             return Ok(analysis);
@@ -349,7 +349,7 @@ public class DecksController : ControllerBase
             var resolvedDeckName = deckName ?? Path.GetFileNameWithoutExtension(file.FileName);
             var commander = cards.FirstOrDefault(c => c.Category.Equals("Commander", StringComparison.OrdinalIgnoreCase))?.Name ?? "";
 
-            // Generate a flavorful description via Claude
+            // Generate a flavorful description via the LLM
             var description = await _llmService.GenerateImportDescriptionAsync(resolvedDeckName, cards);
 
             var totalPrice = cards.Sum(c => c.EstimatedPrice * c.Quantity);

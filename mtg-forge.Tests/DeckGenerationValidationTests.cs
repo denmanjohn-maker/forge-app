@@ -22,7 +22,7 @@ public class DeckGenerationValidationTests
     [Fact]
     public async Task GenerateDeckAsync_CommanderFormat_RetainsExactly100Cards_WhenApiReturnsExact100()
     {
-        var service = CreateServiceWithDeckResponse(MakeCards(100, "Creature"), "Commander");
+        var service = CreateServiceWithDeckResponse(MakeSection("Creature", 100), "Commander");
 
         var result = await service.GenerateDeckAsync(new DeckGenerationRequest
         {
@@ -39,7 +39,7 @@ public class DeckGenerationValidationTests
     public async Task GenerateDeckAsync_CommanderFormat_Pads_To100Cards_WhenApiReturnsTooFew()
     {
         // API returns 97 cards → service must pad to exactly 100 with basic lands
-        var service = CreateServiceWithDeckResponse(MakeCards(97, "Creature"), "Commander");
+        var service = CreateServiceWithDeckResponse(MakeSection("Creature", 97), "Commander");
 
         var result = await service.GenerateDeckAsync(new DeckGenerationRequest
         {
@@ -56,7 +56,7 @@ public class DeckGenerationValidationTests
     public async Task GenerateDeckAsync_CommanderFormat_Trims_To100Cards_WhenApiReturnsTooMany()
     {
         // API returns 105 non-land non-commander cards → service must trim to exactly 100
-        var service = CreateServiceWithDeckResponse(MakeCards(105, "Creature"), "Commander");
+        var service = CreateServiceWithDeckResponse(MakeSection("Creature", 105), "Commander");
 
         var result = await service.GenerateDeckAsync(new DeckGenerationRequest
         {
@@ -78,7 +78,7 @@ public class DeckGenerationValidationTests
     {
         // For non-Commander formats the service does not modify the card list,
         // so TotalCards should match whatever the API returned.
-        var service = CreateServiceWithDeckResponse(MakeCards(60, "Creature"), "Standard");
+        var service = CreateServiceWithDeckResponse(MakeSection("Creature", 60), "Standard");
 
         var result = await service.GenerateDeckAsync(new DeckGenerationRequest
         {
@@ -94,7 +94,7 @@ public class DeckGenerationValidationTests
     [Fact]
     public async Task GenerateDeckAsync_ModernFormat_PreservesApiCardCount()
     {
-        var service = CreateServiceWithDeckResponse(MakeCards(60, "Creature"), "Modern");
+        var service = CreateServiceWithDeckResponse(MakeSection("Creature", 60), "Modern");
 
         var result = await service.GenerateDeckAsync(new DeckGenerationRequest
         {
@@ -108,7 +108,7 @@ public class DeckGenerationValidationTests
     }
 
     // -------------------------------------------------------------------------
-    // Budget / price range — GetBudgetMax
+    // Budget / price range — BudgetHelper.GetBudgetMax
     // -------------------------------------------------------------------------
 
     [Theory]
@@ -118,7 +118,7 @@ public class DeckGenerationValidationTests
     [InlineData("High ($150-$500)", 500)]
     public void GetBudgetMax_ReturnsCorrectLimit_ForNamedBudgetRanges(string budgetRange, decimal expectedMax)
     {
-        var max = ClaudeService.GetBudgetMax(budgetRange);
+        var max = BudgetHelper.GetBudgetMax(budgetRange);
 
         Assert.NotNull(max);
         Assert.Equal(expectedMax, max!.Value);
@@ -129,7 +129,7 @@ public class DeckGenerationValidationTests
     [InlineData("No limit")]
     public void GetBudgetMax_ReturnsNull_ForUnlimitedBudgets(string budgetRange)
     {
-        var max = ClaudeService.GetBudgetMax(budgetRange);
+        var max = BudgetHelper.GetBudgetMax(budgetRange);
 
         Assert.Null(max);
     }
@@ -155,7 +155,7 @@ public class DeckGenerationValidationTests
         }).ToList();
 
         var totalPrice = cards.Sum(c => c.EstimatedPrice * c.Quantity);
-        var max = ClaudeService.GetBudgetMax(budgetRange);
+        var max = BudgetHelper.GetBudgetMax(budgetRange);
 
         Assert.NotNull(max);
         Assert.Equal(expectedMax, max!.Value);
@@ -181,7 +181,7 @@ public class DeckGenerationValidationTests
         }).ToList();
 
         var totalPrice = cards.Sum(c => c.EstimatedPrice * c.Quantity);
-        var max = ClaudeService.GetBudgetMax(budgetRange);
+        var max = BudgetHelper.GetBudgetMax(budgetRange);
 
         Assert.NotNull(max);
         Assert.Equal(expectedMax, max!.Value);
@@ -202,7 +202,7 @@ public class DeckGenerationValidationTests
         }).ToList();
 
         var totalPrice = cards.Sum(c => c.EstimatedPrice * c.Quantity);
-        var max = ClaudeService.GetBudgetMax("Budget");
+        var max = BudgetHelper.GetBudgetMax("Budget");
 
         Assert.NotNull(max);
         Assert.True(
@@ -214,57 +214,63 @@ public class DeckGenerationValidationTests
     // Helpers
     // -------------------------------------------------------------------------
 
-    /// <summary>Builds a list of <paramref name="count"/> CardEntry-compatible anonymous objects.</summary>
-    private static List<object> MakeCards(int count, string category) =>
-        Enumerable.Range(1, count).Select(i => (object)new
+    /// <summary>
+    /// Builds a single-section LocalDeckResponse JSON with <paramref name="count"/> cards
+    /// in the given <paramref name="category"/>.
+    /// </summary>
+    private static object MakeSection(string category, int count) => new
+    {
+        category,
+        cards = Enumerable.Range(1, count).Select(i => new
         {
             name = $"Card {i}",
             quantity = 1,
             manaCost = "{1}",
-            cmc = 1,
-            cardType = category,
-            category,
-            roleInDeck = "Test role",
-            estimatedPrice = 0.25
-        }).ToList();
+            cmc = 1.0,
+            typeLine = category,
+            oracleText = "Test role",
+            priceUsd = 0.25
+        }).ToList<object>()
+    };
 
     /// <summary>
-    /// Creates a <see cref="ClaudeService"/> whose HTTP handler returns a deck JSON
-    /// built from <paramref name="cards"/> in the given <paramref name="format"/>.
+    /// Creates a <see cref="RagPipelineService"/> whose HTTP handler returns a deck JSON
+    /// built from <paramref name="section"/> in the given <paramref name="format"/>.
     /// </summary>
-    private static ClaudeService CreateServiceWithDeckResponse(List<object> cards, string format)
+    private static RagPipelineService CreateServiceWithDeckResponse(object section, string format)
     {
         var deckObj = new
         {
-            deckName = "Validation Test Deck",
-            commander = "Test Commander",
-            strategy = "Test strategy for validation.",
-            estimatedTotalPrice = cards.Count * 0.25,
-            totalCards = cards.Count,
-            deckDescription = "A deck used in automated validation tests.",
-            cards
+            commander = (string?)null,
+            theme = "Validation Test",
+            format = format.ToLowerInvariant(),
+            sections = new[] { section },
+            estimatedCost = 25.0,
+            reasoning = "A deck used in automated validation tests."
         };
 
-        // Serialize deck → embed as JSON string in a Claude API response envelope
         var deckJson = JsonSerializer.Serialize(deckObj);
-        var textFieldJson = JsonSerializer.Serialize(deckJson); // produces a JSON-encoded string literal
-        var claudeApiResponse = $$"""{"content":[{"type":"text","text":{{textFieldJson}}}]}""";
-
         var handler = new StubHttpMessageHandler(_ =>
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent(claudeApiResponse, Encoding.UTF8, "application/json")
+                Content = new StringContent(deckJson, Encoding.UTF8, "application/json")
             }));
 
-        var httpClient = new HttpClient(handler);
-        var settings = Options.Create(new ClaudeApiSettings
+        var factory = new StubHttpClientFactory(handler);
+        var settings = Options.Create(new RagPipelineSettings
         {
-            ApiKey = "test-key",
-            Model = "test-model",
-            MaxTokens = 8192
+            BaseUrl = "http://localhost:8080",
+            LlmBaseUrl = "https://api.together.xyz",
+            LlmApiKey = "test-key",
+            Model = "test-model"
         });
 
-        return new ClaudeService(httpClient, settings, NullLogger<ClaudeService>.Instance);
+        return new RagPipelineService(factory, settings, NullLogger<RagPipelineService>.Instance);
+    }
+
+    private sealed class StubHttpClientFactory(HttpMessageHandler handler) : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => new(handler);
     }
 
     private sealed class StubHttpMessageHandler(Func<HttpRequestMessage, Task<HttpResponseMessage>> handlerFunc)

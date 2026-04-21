@@ -2,7 +2,7 @@ version: '3.8'
 
 # Production Docker Compose — full stack with monitoring
 # Usage: docker compose up -d --build
-# Requires .env with: ANTHROPIC_API_KEY, ADMIN_PASSWORD, JWT_SECRET, DATABASE_URL (optional)
+# Requires .env with: ADMIN_PASSWORD, JWT_SECRET, DATABASE_URL (optional)
 
 services:
   # ─── MongoDB ───────────────────────────────────────────────
@@ -40,9 +40,6 @@ services:
       MongoDb__ConnectionString: "${MONGODB_CONNECTION_STRING:-mongodb://mongodb:27017}"
       MongoDb__DatabaseName: "mtgdeckforge"
       MongoDb__DecksCollectionName: "decks"
-      ClaudeApi__ApiKey: "${ANTHROPIC_API_KEY}"
-      ClaudeApi__Model: "claude-sonnet-4-20250514"
-      ClaudeApi__MaxTokens: "16384"
     depends_on:
       mongodb:
         condition: service_healthy
