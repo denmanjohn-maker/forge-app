@@ -91,12 +91,9 @@ public class RagPipelineService : IDeckGenerationService
     {
         _logger.LogInformation("RagPipelineService: analyzing deck '{Name}' via Together.ai", deck.DeckName);
 
+        var metrics  = DeckMetricsCalculator.Calculate(deck.Cards);
         var cardList = string.Join("\n", deck.Cards.Select(c =>
             $"- {c.Quantity}x {c.Name} ({c.CardType}, CMC {c.Cmc}, ${c.EstimatedPrice:F2}): {c.RoleInDeck}"));
-
-        var totalCost = deck.Cards.Sum(c => c.EstimatedPrice * c.Quantity);
-        var avgCmc = deck.Cards.Where(c => c.Cmc > 0).Select(c => c.Cmc).DefaultIfEmpty(0).Average();
-        var landCount = deck.Cards.Where(c => c.CardType.Contains("Land", StringComparison.OrdinalIgnoreCase)).Sum(c => c.Quantity);
 
         var schema = """
             {
@@ -129,8 +126,21 @@ public class RagPipelineService : IDeckGenerationService
             Commander: {(string.IsNullOrEmpty(deck.Commander) ? "N/A" : deck.Commander)}
             Strategy: {deck.Strategy}
             Power Level: {deck.PowerLevel}
-            Total Cost: ${totalCost:F2} | Budget Range: {deck.BudgetRange}
-            Average CMC: {avgCmc:F1} | Land Count: {landCount}
+            Total Cost: ${metrics.TotalCost:F2} | Budget Range: {deck.BudgetRange}
+
+            ── Mana Curve (non-land spells) ──────────────────────────────────────
+            {DeckMetricsCalculator.FormatManaCurve(metrics.ManaCurve)}
+            Average CMC: {metrics.AverageCmc:F2}
+
+            ── Category Coverage ─────────────────────────────────────────────────
+            Lands: {metrics.LandCount} (recommended 36-38 for Commander)
+            Creatures: {metrics.CreatureCount}
+            Ramp: {metrics.RampCount} (recommended ≥10)
+            Removal: {metrics.RemovalCount} (recommended ≥8)
+            Card Draw: {metrics.CardDrawCount} (recommended ≥10)
+
+            ── Color Pip Distribution ────────────────────────────────────────────
+            {DeckMetricsCalculator.FormatPips(metrics.ColorPipDistribution)}
 
             Card List (Qty x Name, Type, CMC, Price):
             {cardList}
@@ -139,7 +149,7 @@ public class RagPipelineService : IDeckGenerationService
             {schema}
 
             Provide 3-5 weaknesses, 3-5 improvement suggestions, and 3-5 card upgrade recommendations.
-            When suggesting card upgrades, consider the deck's budget — prefer swaps that stay within ${totalCost:F2} total.
+            When suggesting card upgrades, consider the deck's budget — prefer swaps that stay within ${metrics.TotalCost:F2} total.
             """;
 
         var rawResponse = await CallLlmAsync(systemPrompt, userPrompt, jsonMode: true, temperature: 0.3);
