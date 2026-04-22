@@ -1739,6 +1739,7 @@
         }
         .upgrade-apply-btn:hover { opacity: 0.85; }
         .upgrade-apply-btn:disabled { opacity: 0.5; cursor: default; }
+        .upgrade-apply-btn.applied { background: #7a5c1e; color: #f0e6c8; }
         .analysis-loading {
             display: flex;
             align-items: center;
@@ -3457,8 +3458,9 @@
 
         async function applyUpgrade(btn) {
             const deckId = btn.dataset.deckId;
-            const removeCard = btn.dataset.remove;
-            const addCard = btn.dataset.add;
+            const isApplied = btn.dataset.applied === 'true';
+            const removeCard = isApplied ? btn.dataset.add : btn.dataset.remove;
+            const addCard   = isApplied ? btn.dataset.remove : btn.dataset.add;
             btn.disabled = true;
             btn.innerHTML = 'Applying&hellip;';
             try {
@@ -3473,12 +3475,22 @@
                 }
                 const updatedDeck = await res.json();
                 currentDetailDeck = updatedDeck;
-                showToast(`Swapped \u201c${removeCard}\u201d for \u201c${addCard}\u201d`);
-                renderDetail(updatedDeck);
+                if (isApplied) {
+                    btn.dataset.applied = 'false';
+                    btn.classList.remove('applied');
+                    btn.innerHTML = '&#10003; Apply';
+                    showToast(`Reverted \u201c${addCard}\u201d back to \u201c${removeCard}\u201d`);
+                } else {
+                    btn.dataset.applied = 'true';
+                    btn.classList.add('applied');
+                    btn.innerHTML = '&#8617; Undo';
+                    showToast(`Swapped \u201c${removeCard}\u201d for \u201c${addCard}\u201d`);
+                }
+                btn.disabled = false;
             } catch (err) {
                 showToast(err.message, true);
                 btn.disabled = false;
-                btn.innerHTML = '&#10003; Apply';
+                btn.innerHTML = isApplied ? '&#8617; Undo' : '&#10003; Apply';
             }
         }
 
