@@ -92,7 +92,11 @@ public class RagPipelineService : IDeckGenerationService
         _logger.LogInformation("RagPipelineService: analyzing deck '{Name}' via Together.ai", deck.DeckName);
 
         var cardList = string.Join("\n", deck.Cards.Select(c =>
-            $"- {c.Quantity}x {c.Name} ({c.CardType}, CMC {c.Cmc}): {c.RoleInDeck}"));
+            $"- {c.Quantity}x {c.Name} ({c.CardType}, CMC {c.Cmc}, ${c.EstimatedPrice:F2}): {c.RoleInDeck}"));
+
+        var totalCost = deck.Cards.Sum(c => c.EstimatedPrice * c.Quantity);
+        var avgCmc = deck.Cards.Where(c => c.Cmc > 0).Select(c => c.Cmc).DefaultIfEmpty(0).Average();
+        var landCount = deck.Cards.Where(c => c.CardType.Contains("Land", StringComparison.OrdinalIgnoreCase)).Sum(c => c.Quantity);
 
         var schema = """
             {
@@ -110,8 +114,14 @@ public class RagPipelineService : IDeckGenerationService
             }
             """;
 
-        var prompt = $"""
-            You are a Magic: The Gathering deck analysis expert. Analyze the following deck and provide detailed, actionable feedback.
+        var systemPrompt = """
+            You are an expert Magic: The Gathering deck analyst. Evaluate decks on synergy, mana curve,
+            category coverage (ramp, removal, card draw), budget efficiency, and format power level.
+            Always respond with a valid JSON object only — no markdown, no explanation outside JSON.
+            """;
+
+        var userPrompt = $"""
+            Analyze the following deck and provide detailed, actionable feedback.
 
             Deck: {deck.DeckName}
             Format: {deck.Format}
@@ -119,17 +129,20 @@ public class RagPipelineService : IDeckGenerationService
             Commander: {(string.IsNullOrEmpty(deck.Commander) ? "N/A" : deck.Commander)}
             Strategy: {deck.Strategy}
             Power Level: {deck.PowerLevel}
+            Total Cost: ${totalCost:F2} | Budget Range: {deck.BudgetRange}
+            Average CMC: {avgCmc:F1} | Land Count: {landCount}
 
-            Card List:
+            Card List (Qty x Name, Type, CMC, Price):
             {cardList}
 
-            Respond with ONLY a valid JSON object (no markdown, no explanation) matching this exact schema:
+            Respond with ONLY a valid JSON object matching this exact schema:
             {schema}
 
             Provide 3-5 weaknesses, 3-5 improvement suggestions, and 3-5 card upgrade recommendations.
+            When suggesting card upgrades, consider the deck's budget — prefer swaps that stay within ${totalCost:F2} total.
             """;
 
-        var rawResponse = await CallLlmAsync(prompt);
+        var rawResponse = await CallLlmAsync(systemPrompt, userPrompt, jsonMode: true, temperature: 0.3);
 
         var jsonContent = ExtractJson(rawResponse);
         var analysis = JsonSerializer.Deserialize<DeckAnalysis>(jsonContent, JsonOpts)
@@ -202,9 +215,14 @@ public class RagPipelineService : IDeckGenerationService
             You MUST only use card names from the budget pool list above — do not suggest cards outside that list.
             """;
 
+        var systemPrompt = """
+            You are an expert Magic: The Gathering deckbuilder specializing in budget optimization.
+            Always respond with a valid JSON array only — no markdown, no explanation outside JSON.
+            """;
+
         try
         {
-            var rawResponse = await CallLlmAsync(prompt);
+            var rawResponse = await CallLlmAsync(systemPrompt, prompt, jsonMode: true, temperature: 0.3);
             var jsonContent = ExtractJson(rawResponse);
             return JsonSerializer.Deserialize<List<CardEntry>>(jsonContent, JsonOpts) ?? [];
         }
@@ -224,9 +242,11 @@ public class RagPipelineService : IDeckGenerationService
             .Take(20)
             .Select(c => $"- {c.Quantity}x {c.Name} ({c.CardType ?? "Unknown"})");
 
-        var prompt = $"""
-            You are a Magic: The Gathering expert. Based on the following deck card list, write a concise 2-3 sentence
-            flavorful description of the deck's playstyle and theme. Respond with ONLY the description text, no JSON.
+        var systemPrompt = "You are a Magic: The Gathering expert. Write vivid, concise deck descriptions. Respond with plain text only — no JSON, no markdown.";
+
+        var userPrompt = $"""
+            Based on the following card list, write a concise 2-3 sentence flavorful description
+            of the deck's playstyle and theme.
 
             Deck Name: {deckName}
             Sample Cards:
@@ -235,7 +255,7 @@ public class RagPipelineService : IDeckGenerationService
 
         try
         {
-            return (await CallLlmAsync(prompt)).Trim();
+            return (await CallLlmAsync(systemPrompt, userPrompt, jsonMode: false, temperature: 0.7)).Trim();
         }
         catch (Exception ex)
         {
@@ -254,7 +274,11 @@ public class RagPipelineService : IDeckGenerationService
         return client;
     }
 
-    private async Task<string> CallLlmAsync(string prompt)
+    private async Task<string> CallLlmAsync(
+        string systemPrompt,
+        string userPrompt,
+        bool jsonMode = false,
+        double temperature = 0.7)
     {
         if (string.IsNullOrWhiteSpace(_settings.LlmApiKey))
             throw new InvalidOperationException(
@@ -266,13 +290,20 @@ public class RagPipelineService : IDeckGenerationService
         client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _settings.LlmApiKey);
 
+        object? responseFormat = jsonMode ? new { type = "json_object" } : null;
+
         var payload = new
         {
             model = _settings.Model,
             stream = false,
             max_tokens = 4096,
-            temperature = 0.7,
-            messages = new[] { new { role = "user", content = prompt } }
+            temperature,
+            response_format = responseFormat,
+            messages = new[]
+            {
+                new { role = "system", content = systemPrompt },
+                new { role = "user",   content = userPrompt   }
+            }
         };
 
         var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions
