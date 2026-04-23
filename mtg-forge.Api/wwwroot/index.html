@@ -3052,7 +3052,7 @@
 
                 ${Object.entries(categories).map(([cat, cards]) => `
                     <div class="category-section">
-                        <div class="category-header" onclick="toggleCategory(this)" role="button" aria-expanded="false">
+                        <div class="category-header" onclick="toggleCategory(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCategory(this);}" tabindex="0" role="button" aria-expanded="false">
                             <span class="category-name">${cat}</span>
                             <span class="category-count">(${cards.reduce((s,c)=>s+c.quantity,0)})</span>
                             <span class="category-toggle">&#9654;</span>
@@ -3210,9 +3210,10 @@
         // === Helpers ===
         function toggleCategory(headerEl) {
             const body = headerEl.nextElementSibling;
+            if (!body || !body.classList.contains('category-body')) return;
             const toggle = headerEl.querySelector('.category-toggle');
             const expanded = body.classList.toggle('expanded');
-            toggle.classList.toggle('expanded', expanded);
+            if (toggle) toggle.classList.toggle('expanded', expanded);
             headerEl.setAttribute('aria-expanded', expanded);
         }
 
