@@ -31,6 +31,10 @@
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
+        /* overflow-x on html (not body) clips viewport scroll without affecting position:fixed elements,
+           which is required for iOS Safari compatibility. */
+        html { overflow-x: hidden; }
+
         body {
             font-family: 'Crimson Text', Georgia, serif;
             font-size: 12pt;
@@ -38,7 +42,6 @@
             color: var(--text-primary);
             min-height: 100vh;
             min-height: 100dvh;
-            overflow-x: clip;
         }
 
         /* Global card-art background (shown behind both login and main app) */
@@ -545,7 +548,6 @@
             backdrop-filter: blur(14px);
             border: 1px solid var(--border);
             border-radius: 12px;
-            overflow: hidden;
             position: relative;
         }
 
@@ -871,7 +873,6 @@
             backdrop-filter: blur(14px);
             border: 1px solid var(--border);
             border-radius: 12px;
-            overflow: hidden;
             transition: all 0.3s;
             cursor: pointer;
             position: relative;
