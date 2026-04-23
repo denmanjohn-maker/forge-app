@@ -16,15 +16,16 @@ A best-of-breed Magic: The Gathering deck analysis and generation tool powered b
 3. [The Full Chain — How a Deck Gets Built](#the-full-chain--how-a-deck-gets-built)
 4. [Card Ingestion — The Foundation](#card-ingestion--the-foundation)
 5. [Pricing Data Pipeline](#pricing-data-pipeline)
-6. [Scryfall Enrichment](#scryfall-enrichment)
-7. [Budget Enforcement Loop](#budget-enforcement-loop)
-8. [Authentication & Multi-User Support](#authentication--multi-user-support)
-9. [Observability Stack](#observability-stack)
-10. [All API Endpoints](#all-api-endpoints)
-11. [Railway Deployment Guide](#railway-deployment-guide)
-12. [Environment Variables Reference](#environment-variables-reference)
-13. [Local Development](#local-development)
-14. [Project Structure](#project-structure)
+6. [Tournament Meta Signals](#tournament-meta-signals)
+7. [Scryfall Enrichment](#scryfall-enrichment)
+8. [Budget Enforcement Loop](#budget-enforcement-loop)
+9. [Authentication & Multi-User Support](#authentication--multi-user-support)
+10. [Observability Stack](#observability-stack)
+11. [All API Endpoints](#all-api-endpoints)
+12. [Railway Deployment Guide](#railway-deployment-guide)
+13. [Environment Variables Reference](#environment-variables-reference)
+14. [Local Development](#local-development)
+15. [Project Structure](#project-structure)
 
 ---
 
@@ -41,6 +42,7 @@ Most AI deck generators ask a language model to invent a 100-card list from memo
 - When a deck is requested, Qdrant pre-filters the candidate card pool **before** the LLM sees it — the LLM never gets to suggest a card that is illegal or over budget.
 - Prices shown in the app come from the MTGJSON daily pricing feed, not from LLM memory.
 - After generation, a post-generation budget enforcement loop swaps any card that still exceeds the per-card price ceiling using real prices from the local PostgreSQL cache.
+- Tournament meta signals aggregated from MTGTop8 are injected into the LLM prompt, so the model can prefer proven tournament staples while still respecting the user's theme and budget.
 
 ---
 
@@ -103,8 +105,13 @@ DecksController.Generate (mtg-forge.Api)
   │     │     Filter: price ≤ budget ceiling, color identity, format legality
   │     │     Returns: top-N candidate cards that already pass all hard constraints
   │     │
+  │     ├─► Tournament meta signal enrichment
+  │     │     Looks up per-format card-inclusion statistics aggregated from MTGTop8
+  │     │     Annotates each candidate card with its tournament play-rate
+  │     │     High-frequency staples are surfaced to the LLM as preferred picks
+  │     │
   │     ├─► LLM (Together.ai — meta-llama/Llama-3.3-70B-Instruct-Turbo)
-  │     │     Input: candidate cards + format rules + deck request
+  │     │     Input: candidate cards (with tournament signals) + format rules + deck request
   │     │     Output: 100-card deck list as structured JSON
   │     │
   │     └─► Returns LocalDeckResponse to mtg-api
@@ -229,6 +236,33 @@ curl -X POST https://<your-railway-domain>/api/pricing/refresh \
 During ingestion, the price ingested for each card into Qdrant is also a real price pulled from Scryfall bulk data. This price is used by the `CardSearchService` inside `mtg-forge-ai` as a hard filter: cards above the budget ceiling are excluded from the candidate pool before the LLM sees them.
 
 This means budget compliance is enforced **twice**: once in Qdrant (structural pre-filter) and once in `DecksController` (post-generation budget loop using the MTGJSON cache).
+
+---
+
+## Tournament Meta Signals
+
+Card-inclusion statistics are aggregated from [MTGTop8](https://www.mtgtop8.com) tournament data and stored as per-format play-rate scores. This gives the deck generation pipeline a signal for which cards are currently proven in competitive play — without forcing competitive choices on users who want a casual or flavour-driven deck.
+
+### What is collected
+
+For each supported format (Commander, Modern, Legacy, Standard, Pioneer, Pauper, Vintage), the pipeline records how frequently each card appears across recent top-8 tournament finishes. A card that appears in 60 % of Modern top-8 lists receives a higher signal score than one that appears in 5 %.
+
+### How signals reach the LLM
+
+After `CardSearchService` returns the Qdrant candidate pool, each card is annotated with its tournament play-rate for the requested format. The annotated list is included in the LLM prompt, letting the model distinguish between:
+
+- **High-signal cards** — tournament staples proven in the meta. The LLM is instructed to prefer these when they fit the deck's theme and color identity.
+- **Low-signal cards** — less-played options that may still be correct for niche strategies.
+
+The user's theme and budget remain the hard constraints — tournament signals are a soft preference layer, not a filter. A card with zero tournament play-rate is never excluded; it is simply given no priority boost.
+
+### Signal freshness
+
+Tournament data is refreshed on a configurable schedule (default: daily). The most recent import timestamp is visible in the admin panel and via:
+
+```bash
+GET /api/admin/meta-signals/status
+```
 
 ---
 
