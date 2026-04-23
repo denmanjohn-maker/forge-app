@@ -135,9 +135,9 @@ public class RagPipelineService : IDeckGenerationService
             ── Category Coverage ─────────────────────────────────────────────────
             Lands: {metrics.LandCount} (recommended 36-38 for Commander)
             Creatures: {metrics.CreatureCount}
-            Ramp: {metrics.RampCount} (recommended ≥10)
-            Removal: {metrics.RemovalCount} (recommended ≥8)
-            Card Draw: {metrics.CardDrawCount} (recommended ≥10)
+            Ramp: {(metrics.RampCount.HasValue ? metrics.RampCount.ToString() : "N/A — imported deck")} (recommended ≥10)
+            Removal: {(metrics.RemovalCount.HasValue ? metrics.RemovalCount.ToString() : "N/A — imported deck")} (recommended ≥8)
+            Card Draw: {(metrics.CardDrawCount.HasValue ? metrics.CardDrawCount.ToString() : "N/A — imported deck")} (recommended ≥10)
 
             ── Color Pip Distribution ────────────────────────────────────────────
             {DeckMetricsCalculator.FormatPips(metrics.ColorPipDistribution)}
