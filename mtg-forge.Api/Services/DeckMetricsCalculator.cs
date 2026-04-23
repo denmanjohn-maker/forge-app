@@ -20,10 +20,12 @@ public static class DeckMetricsCalculator
     // Matches any {…} mana symbol so we can extract color letters from hybrid/phyrexian too
     private static readonly Regex ManaCostSymbolRegex = new(@"\{([^}]+)\}", RegexOptions.Compiled);
 
-    // Semantic categories produced by the AI deck generator
+    // Functional semantic categories produced by the AI deck generator.
+    // Structural categories ("Commander", "Mainboard", "Sideboard") are intentionally
+    // excluded so that imported CSV decks with only a commander row still return null counts.
     private static readonly HashSet<string> SemanticCategories = new(
         ["Ramp", "Removal", "Board Wipes", "Card Draw", "Draw",
-         "Win Conditions", "Synergy Pieces", "Utility", "Commander"],
+         "Win Conditions", "Synergy Pieces", "Utility"],
         StringComparer.OrdinalIgnoreCase);
 
     public static DeckMetrics Calculate(IEnumerable<CardEntry> cards)

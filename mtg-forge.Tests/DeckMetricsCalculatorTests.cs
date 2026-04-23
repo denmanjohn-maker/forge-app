@@ -84,7 +84,7 @@ public class DeckMetricsCalculatorTests
         };
         var m = DeckMetricsCalculator.Calculate(cards);
 
-        Assert.Equal(2.4, m.AverageCmc);
+        Assert.Equal(2.4, m.AverageCmc, precision: 10);
     }
 
     [Fact]
@@ -109,6 +109,24 @@ public class DeckMetricsCalculatorTests
         {
             Card("Lightning Bolt", category: "Mainboard"),
             Card("Counterspell",   category: "Sideboard"),
+        };
+        var m = DeckMetricsCalculator.Calculate(cards);
+
+        Assert.Null(m.RampCount);
+        Assert.Null(m.RemovalCount);
+        Assert.Null(m.CardDrawCount);
+    }
+
+    [Fact]
+    public void CategoryCounts_AreNull_ForImportedDecks_WithCommanderCategory()
+    {
+        // CSV imports assign "Commander" to the commander row alongside "Mainboard" for the rest.
+        // "Commander" is a structural category, not functional, so counts must still be null.
+        var cards = new[]
+        {
+            Card("Atraxa, Praetors' Voice", category: "Commander"),
+            Card("Lightning Bolt",          category: "Mainboard"),
+            Card("Counterspell",            category: "Sideboard"),
         };
         var m = DeckMetricsCalculator.Calculate(cards);
 
