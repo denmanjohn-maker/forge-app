@@ -1091,6 +1091,27 @@
             color: var(--text-muted);
         }
 
+        .category-toggle {
+            margin-left: auto;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            transition: transform 0.2s;
+            flex-shrink: 0;
+            user-select: none;
+        }
+
+        .category-toggle.expanded {
+            transform: rotate(90deg);
+        }
+
+        .category-body {
+            display: none;
+        }
+
+        .category-body.expanded {
+            display: block;
+        }
+
         .card-row {
             display: grid;
             grid-template-columns: 2.5rem 1fr auto auto;
@@ -1497,6 +1518,17 @@
             .btn-logout { padding: 0.5rem 1rem; font-size: 0.8rem; }
             .btn-delete-card { padding: 0.4rem 0.65rem; min-height: 44px; }
             .filter-pip { width: 36px; height: 36px; }
+
+            /* Category tree — tap-friendly header */
+            .category-header { min-height: 44px; padding: 0.6rem 0; }
+
+            /* Admin — scrollable tables */
+            .admin-section { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .admin-table { min-width: 420px; }
+
+            /* Admin — stack form fields */
+            .admin-form { grid-template-columns: 1fr !important; }
+            .admin-form-full { grid-column: 1 !important; }
         }
 
         /* Loading shimmer for generation */
@@ -3020,21 +3052,24 @@
 
                 ${Object.entries(categories).map(([cat, cards]) => `
                     <div class="category-section">
-                        <div class="category-header">
+                        <div class="category-header" onclick="toggleCategory(this)" role="button" aria-expanded="false">
                             <span class="category-name">${cat}</span>
                             <span class="category-count">(${cards.reduce((s,c)=>s+c.quantity,0)})</span>
+                            <span class="category-toggle">&#9654;</span>
                         </div>
-                        ${cards.map(c => `
-                            <div class="card-row">
-                                <span class="card-qty">${c.quantity}x</span>
-                                <div class="card-name-col">
-                                    <span class="card-name-text" data-cn="${c.name.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}">${c.name}</span>
-                                    <span class="card-role-text">${c.roleInDeck || ''}</span>
+                        <div class="category-body">
+                            ${cards.map(c => `
+                                <div class="card-row">
+                                    <span class="card-qty">${c.quantity}x</span>
+                                    <div class="card-name-col">
+                                        <span class="card-name-text" data-cn="${c.name.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}">${c.name}</span>
+                                        <span class="card-role-text">${c.roleInDeck || ''}</span>
+                                    </div>
+                                    <span class="card-type-text">${c.cardType || ''}</span>
+                                    <span class="card-price">$${(c.estimatedPrice || 0).toFixed(2)}</span>
                                 </div>
-                                <span class="card-type-text">${c.cardType || ''}</span>
-                                <span class="card-price">$${(c.estimatedPrice || 0).toFixed(2)}</span>
-                            </div>
-                        `).join('')}
+                            `).join('')}
+                        </div>
                     </div>
                 `).join('')}
 
@@ -3173,6 +3208,14 @@
         }
 
         // === Helpers ===
+        function toggleCategory(headerEl) {
+            const body = headerEl.nextElementSibling;
+            const toggle = headerEl.querySelector('.category-toggle');
+            const expanded = body.classList.toggle('expanded');
+            toggle.classList.toggle('expanded', expanded);
+            headerEl.setAttribute('aria-expanded', expanded);
+        }
+
         function groupByCategory(cards) {
             const order = ['Commander', 'Creature', 'Instant', 'Sorcery', 'Enchantment', 'Artifact', 'Planeswalker', 'Land'];
             const groups = {};
