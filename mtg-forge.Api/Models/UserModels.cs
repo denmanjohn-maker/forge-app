@@ -16,6 +16,7 @@ public class User
     public List<string> GroupIds { get; set; } = new();
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? LastLogin { get; set; }
 }
 
 public class Group
@@ -61,6 +62,7 @@ public class UserResponse
     public string Role { get; set; } = null!;
     public List<string> GroupIds { get; set; } = new();
     public DateTime CreatedAt { get; set; }
+    public DateTime? LastLogin { get; set; }
 }
 
 public class ResetPasswordRequest

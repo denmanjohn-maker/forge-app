@@ -51,6 +51,14 @@ public class UserService
         return result.DeletedCount > 0;
     }
 
+    public async Task UpdateLastLoginAsync(string id)
+    {
+        var update = Builders<User>.Update
+            .Set(u => u.LastLogin, DateTime.UtcNow)
+            .Set(u => u.UpdatedAt, DateTime.UtcNow);
+        await _usersCollection.UpdateOneAsync(u => u.Id == id, update);
+    }
+
     // === Groups ===
 
     public async Task<List<Group>> GetAllGroupsAsync() =>

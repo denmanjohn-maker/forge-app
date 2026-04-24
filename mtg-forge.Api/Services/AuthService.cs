@@ -53,6 +53,7 @@ public class AuthService
         if (user is null || !VerifyPassword(password, user.PasswordHash))
             return null;
 
+        await _userService.UpdateLastLoginAsync(user.Id!);
         var token = GenerateToken(user);
 
         return new LoginResponse

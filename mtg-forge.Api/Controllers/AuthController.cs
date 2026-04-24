@@ -110,6 +110,7 @@ public class AuthController : ControllerBase
         DisplayName = user.DisplayName,
         Role = user.Role,
         GroupIds = user.GroupIds,
-        CreatedAt = user.CreatedAt
+        CreatedAt = user.CreatedAt,
+        LastLogin = user.LastLogin
     };
 }
