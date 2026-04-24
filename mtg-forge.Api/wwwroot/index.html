@@ -3,9 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="color-scheme" content="dark">
+    <meta name="color-scheme" content="dark light">
     <meta name="theme-color" content="#0A0A0A">
     <title>Ben's Magic Forge</title>
+    <script>
+        // Apply persisted/system theme before first paint to avoid flash.
+        (function() {
+            try {
+                var stored = localStorage.getItem('theme');
+                var system = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+                var theme = stored === 'light' || stored === 'dark' ? stored : system;
+                if (theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
+                var meta = document.querySelector('meta[name="theme-color"]');
+                if (meta) meta.setAttribute('content', theme === 'light' ? '#F4EBD9' : '#0A0A0A');
+            } catch (e) { /* localStorage unavailable — keep default dark */ }
+        })();
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&family=MedievalSharp&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -30,6 +43,51 @@
             --danger: #8B2020;
             --danger-hover: #A52A2A;
             --success: #2D6B3F;
+
+            /* Semantic surfaces — swapped by [data-theme="light"] below */
+            --glass-bg: rgba(22, 22, 28, 0.82);
+            --glass-bg-soft: rgba(22, 22, 28, 0.80);
+            --glass-bg-strong: rgba(22, 22, 28, 0.88);
+            --glass-bg-xstrong: rgba(22, 22, 28, 0.92);
+            --header-bg: linear-gradient(180deg, rgba(10,10,15,0.92) 0%, rgba(10,10,15,0.88) 100%);
+            --body-veil:
+                radial-gradient(ellipse at 20% 0%, rgba(201, 168, 76, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 100%, rgba(201, 168, 76, 0.04) 0%, transparent 50%),
+                rgba(10, 10, 15, 0.72);
+            --overlay-bg: rgba(0, 0, 0, 0.7);
+            --lightbox-bg: rgba(0, 0, 0, 0.88);
+            --bg-grid-opacity: 0.45;
+            --bg-grid-filter: saturate(0.8) brightness(0.8);
+        }
+
+        html[data-theme="light"] {
+            color-scheme: light;
+            --gold: #A37F1F;
+            --gold-light: #C9A84C;
+            --gold-dark: #6B4D0E;
+            --bg-deep: #F4EBD9;
+            --bg-card: #FAF3E0;
+            --bg-panel: #F1E4C6;
+            --bg-hover: #E9DAB8;
+            --text-primary: #2A241A;
+            --text-secondary: #5C5238;
+            --text-muted: #8A7F62;
+            --border: #D4C29A;
+            --border-gold: rgba(139, 105, 20, 0.35);
+
+            --glass-bg: rgba(250, 243, 224, 0.82);
+            --glass-bg-soft: rgba(250, 243, 224, 0.78);
+            --glass-bg-strong: rgba(250, 243, 224, 0.90);
+            --glass-bg-xstrong: rgba(250, 243, 224, 0.94);
+            --header-bg: linear-gradient(180deg, rgba(244, 235, 217, 0.94) 0%, rgba(244, 235, 217, 0.86) 100%);
+            --body-veil:
+                radial-gradient(ellipse at 20% 0%, rgba(201, 168, 76, 0.12) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 100%, rgba(139, 105, 20, 0.08) 0%, transparent 50%),
+                rgba(244, 235, 217, 0.60);
+            --overlay-bg: rgba(60, 45, 20, 0.55);
+            --lightbox-bg: rgba(40, 30, 15, 0.85);
+            --bg-grid-opacity: 0.35;
+            --bg-grid-filter: saturate(1.0) brightness(1.05);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -56,8 +114,8 @@
             grid-template-rows: repeat(3, 1fr);
             gap: 6px;
             transform: rotate(-4deg) scale(1.15);
-            opacity: 0.45;
-            filter: saturate(0.8) brightness(0.8);
+            opacity: var(--bg-grid-opacity);
+            filter: var(--bg-grid-filter);
             z-index: -1;
             animation: bgPulse 8s ease-in-out infinite alternate;
             pointer-events: none;
@@ -70,15 +128,12 @@
             border-radius: 6px;
         }
 
-        /* Dark veil + subtle gold atmosphere overlay over card background */
+        /* Theme-aware veil + subtle gold atmosphere overlay over card background */
         body::before {
             content: '';
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: 
-                radial-gradient(ellipse at 20% 0%, rgba(201, 168, 76, 0.06) 0%, transparent 50%),
-                radial-gradient(ellipse at 80% 100%, rgba(201, 168, 76, 0.04) 0%, transparent 50%),
-                rgba(10, 10, 15, 0.72);
+            background: var(--body-veil);
             pointer-events: none;
             z-index: 0;
         }
@@ -88,7 +143,7 @@
             position: sticky;
             top: 0;
             z-index: 100;
-            background: linear-gradient(180deg, rgba(10,10,15,0.92) 0%, rgba(10,10,15,0.88) 100%);
+            background: var(--header-bg);
             -webkit-backdrop-filter: blur(20px);
             backdrop-filter: blur(20px);
             border-bottom: 1px solid var(--border-gold);
@@ -208,6 +263,40 @@
             display: flex;
             align-items: center;
             gap: 1rem;
+        }
+
+        /* Theme toggle — fixed top-left so it rides above login + main views */
+        .theme-toggle {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            z-index: 1001;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1px solid var(--border-gold);
+            background: var(--glass-bg-strong);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            color: var(--gold);
+            font-size: 1.1rem;
+            line-height: 1;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+            padding: 0;
+        }
+        .theme-toggle:hover {
+            transform: scale(1.08);
+            border-color: var(--gold);
+            color: var(--gold-light);
+        }
+        .theme-toggle:focus-visible {
+            outline: 2px solid var(--gold);
+            outline-offset: 2px;
         }
 
         .user-info {
@@ -546,7 +635,7 @@
         }
 
         .panel {
-            background: rgba(22, 22, 28, 0.82);
+            background: var(--glass-bg);
             -webkit-backdrop-filter: blur(14px);
             backdrop-filter: blur(14px);
             border: 1px solid var(--border);
@@ -885,7 +974,7 @@
         }
 
         .deck-card {
-            background: rgba(22, 22, 28, 0.82);
+            background: var(--glass-bg);
             -webkit-backdrop-filter: blur(14px);
             backdrop-filter: blur(14px);
             border: 1px solid var(--border);
@@ -1251,7 +1340,7 @@
         }
 
         .toast {
-            background: rgba(22, 22, 28, 0.88);
+            background: var(--glass-bg-strong);
             -webkit-backdrop-filter: blur(14px);
             backdrop-filter: blur(14px);
             border: 1px solid var(--border-gold);
@@ -1277,7 +1366,7 @@
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.7);
+            background: var(--overlay-bg);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1289,7 +1378,7 @@
         .modal-overlay.hidden { display: none; }
 
         .modal {
-            background: rgba(22, 22, 28, 0.92);
+            background: var(--glass-bg-xstrong);
             -webkit-backdrop-filter: blur(20px);
             backdrop-filter: blur(20px);
             border: 1px solid var(--border-gold);
@@ -1327,7 +1416,7 @@
             align-items: center;
             margin-bottom: 1.5rem;
             padding: 1rem 1.25rem;
-            background: rgba(22, 22, 28, 0.80);
+            background: var(--glass-bg-soft);
             -webkit-backdrop-filter: blur(14px);
             backdrop-filter: blur(14px);
             border: 1px solid var(--border);
@@ -1440,6 +1529,11 @@
             border-color: var(--gold-dark);
         }
         .edit-textarea { resize: vertical; min-height: 80px; }
+
+        /* Desktop: leave room on the left of the header for the fixed theme toggle */
+        @media (min-width: 901px) {
+            .app-header { padding-left: 4.5rem; }
+        }
 
         /* Responsive — tablet */
         @media (max-width: 900px) {
@@ -1710,7 +1804,7 @@
         .card-lightbox {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.88);
+            background: var(--lightbox-bg);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1831,6 +1925,11 @@
     </style>
 </head>
 <body>
+
+    <!-- Theme toggle (top-left, above everything) -->
+    <button type="button" id="themeToggle" class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark mode" title="Toggle light/dark mode">
+        <span id="themeToggleIcon" aria-hidden="true">&#9790;</span>
+    </button>
 
     <!-- Global MTG card-art background — visible behind all views -->
     <div id="app-bg-cards" aria-hidden="true">
@@ -2448,6 +2547,36 @@
         let _searchTimer = null;
         let authToken = localStorage.getItem('authToken');
         let currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+
+        // === Theme (dark/light) ===
+        // The inline <head> script already applied the persisted/system theme before paint.
+        // These handlers keep the toggle icon + <meta theme-color> in sync and handle clicks.
+        const THEME_COLORS = { dark: '#0A0A0A', light: '#F4EBD9' };
+
+        function currentTheme() {
+            return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+        }
+
+        function applyTheme(theme) {
+            const root = document.documentElement;
+            if (theme === 'light') root.setAttribute('data-theme', 'light');
+            else root.removeAttribute('data-theme');
+            const meta = document.querySelector('meta[name="theme-color"]');
+            if (meta) meta.setAttribute('content', THEME_COLORS[theme]);
+            const icon = document.getElementById('themeToggleIcon');
+            if (icon) icon.innerHTML = theme === 'light' ? '&#9728;' : '&#9790;';
+            const btn = document.getElementById('themeToggle');
+            if (btn) btn.setAttribute('aria-label', theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode');
+        }
+
+        function toggleTheme() {
+            const next = currentTheme() === 'light' ? 'dark' : 'light';
+            try { localStorage.setItem('theme', next); } catch (e) { /* ignore */ }
+            applyTheme(next);
+        }
+
+        // Sync the button icon/label on first load (head script has already set the attribute).
+        document.addEventListener('DOMContentLoaded', () => applyTheme(currentTheme()));
 
         // === Auth-aware fetch ===
         async function authFetch(url, options = {}) {
