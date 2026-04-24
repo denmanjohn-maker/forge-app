@@ -265,38 +265,71 @@
             gap: 1rem;
         }
 
-        /* Theme toggle — fixed top-left so it rides above login + main views */
-        .theme-toggle {
-            position: fixed;
-            top: 14px;
-            left: 14px;
-            z-index: 1001;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            border: 1px solid var(--border-gold);
-            background: var(--glass-bg-strong);
-            -webkit-backdrop-filter: blur(10px);
-            backdrop-filter: blur(10px);
-            color: var(--gold);
-            font-size: 1.1rem;
-            line-height: 1;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: transform 0.2s ease, border-color 0.2s ease, color 0.2s ease;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.25);
-            padding: 0;
-        }
-        .theme-toggle:hover {
-            transform: scale(1.08);
-            border-color: var(--gold);
-            color: var(--gold-light);
-        }
-        .theme-toggle:focus-visible {
+        /* User preferences dropdown */
+        .user-info:focus-visible {
             outline: 2px solid var(--gold);
             outline-offset: 2px;
+            border-radius: 8px;
+        }
+        .user-dropdown-chevron {
+            font-size: 0.55rem;
+            color: var(--text-muted);
+            transition: transform 0.2s ease;
+            margin-left: 0.4rem;
+            flex-shrink: 0;
+        }
+        .user-info.open .user-dropdown-chevron {
+            transform: rotate(180deg);
+        }
+        .user-dropdown {
+            position: absolute;
+            top: calc(100% + 6px);
+            right: 0;
+            min-width: 190px;
+            background: var(--glass-bg-strong);
+            border: 1px solid var(--border-gold);
+            border-radius: 8px;
+            -webkit-backdrop-filter: blur(14px);
+            backdrop-filter: blur(14px);
+            box-shadow: 0 8px 28px rgba(0,0,0,0.45);
+            z-index: 300;
+            overflow: hidden;
+            display: none;
+        }
+        .user-dropdown.open {
+            display: block;
+        }
+        .user-dropdown-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 0;
+        }
+        .user-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.65rem 1rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+            font-family: 'Cinzel', serif;
+            transition: background 0.15s, color 0.15s;
+            letter-spacing: 0.04em;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            white-space: nowrap;
+        }
+        .user-dropdown-item:hover {
+            background: rgba(201, 168, 76, 0.12);
+            color: var(--gold);
+        }
+        .user-dropdown-item .item-icon {
+            font-size: 1rem;
+            width: 1.2rem;
+            text-align: center;
+            flex-shrink: 0;
         }
 
         .user-info {
@@ -307,6 +340,9 @@
             border: 1px solid var(--border-gold);
             border-radius: 8px;
             background: rgba(201, 168, 76, 0.05);
+            cursor: pointer;
+            position: relative;
+            user-select: none;
         }
 
         .user-info-name {
@@ -1926,11 +1962,6 @@
 </head>
 <body>
 
-    <!-- Theme toggle (top-left, above everything) -->
-    <button type="button" id="themeToggle" class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark mode" title="Toggle light/dark mode">
-        <span id="themeToggleIcon" aria-hidden="true">&#9790;</span>
-    </button>
-
     <!-- Global MTG card-art background — visible behind all views -->
     <div id="app-bg-cards" aria-hidden="true">
         <img src="https://cards.scryfall.io/art_crop/front/8/1/81a40f34-fc26-4d05-9c52-6ffbf1766a3b.jpg?1562859674" alt="" loading="eager">
@@ -2000,10 +2031,17 @@
                 <button class="nav-tab" data-view="admin" id="adminTab" style="display:none;">&#9881; Admin</button>
             </nav>
             <div class="header-right" id="headerRight" style="display:none;">
-                <div class="user-info">
+                <div class="user-info" id="userInfoTrigger" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" onclick="toggleUserDropdown(event)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleUserDropdown(event);}">
                     <div>
                         <div class="user-info-name" id="headerDisplayName"></div>
                         <div class="user-info-role" id="headerRole"></div>
+                    </div>
+                    <span class="user-dropdown-chevron" aria-hidden="true">&#9660;</span>
+                    <div class="user-dropdown" id="userDropdown" role="menu">
+                        <button class="user-dropdown-item" role="menuitem" onclick="toggleTheme(); event.stopPropagation();">
+                            <span class="item-icon" id="themeToggleIcon">&#9790;</span>
+                            <span id="themeToggleLabel">Dark Mode</span>
+                        </button>
                     </div>
                 </div>
                 <button class="btn-logout" onclick="logout()">Logout</button>
@@ -2565,8 +2603,8 @@
             if (meta) meta.setAttribute('content', THEME_COLORS[theme]);
             const icon = document.getElementById('themeToggleIcon');
             if (icon) icon.innerHTML = theme === 'light' ? '&#9728;' : '&#9790;';
-            const btn = document.getElementById('themeToggle');
-            if (btn) btn.setAttribute('aria-label', theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode');
+            const label = document.getElementById('themeToggleLabel');
+            if (label) label.textContent = theme === 'light' ? 'Light Mode' : 'Dark Mode';
         }
 
         function toggleTheme() {
@@ -2575,8 +2613,36 @@
             applyTheme(next);
         }
 
-        // Sync the button icon/label on first load (head script has already set the attribute).
-        document.addEventListener('DOMContentLoaded', () => applyTheme(currentTheme()));
+        function toggleUserDropdown(event) {
+            if (event) event.stopPropagation();
+            const trigger = document.getElementById('userInfoTrigger');
+            const dropdown = document.getElementById('userDropdown');
+            if (!trigger || !dropdown) return;
+            const isOpen = trigger.classList.contains('open');
+            if (isOpen) {
+                trigger.classList.remove('open');
+                dropdown.classList.remove('open');
+                trigger.setAttribute('aria-expanded', 'false');
+            } else {
+                trigger.classList.add('open');
+                dropdown.classList.add('open');
+                trigger.setAttribute('aria-expanded', 'true');
+            }
+        }
+
+        // Close user dropdown when clicking outside
+        document.addEventListener('DOMContentLoaded', () => {
+            applyTheme(currentTheme());
+            document.addEventListener('click', (e) => {
+                const trigger = document.getElementById('userInfoTrigger');
+                const dropdown = document.getElementById('userDropdown');
+                if (trigger && dropdown && !trigger.contains(e.target)) {
+                    trigger.classList.remove('open');
+                    dropdown.classList.remove('open');
+                    trigger.setAttribute('aria-expanded', 'false');
+                }
+            });
+        });
 
         // === Auth-aware fetch ===
         async function authFetch(url, options = {}) {
@@ -3756,7 +3822,7 @@
                 }
                 el.innerHTML = `
                     <table class="admin-table">
-                        <thead><tr><th>Username</th><th>Display Name</th><th>Role</th><th>Created</th><th></th></tr></thead>
+                        <thead><tr><th>Username</th><th>Display Name</th><th>Role</th><th>Created</th><th>Last Login</th><th></th></tr></thead>
                         <tbody>
                             ${users.map(u => `
                                 <tr>
@@ -3764,6 +3830,7 @@
                                     <td>${u.displayName}</td>
                                     <td><span class="badge ${u.role === 'Admin' ? 'badge-admin' : 'badge-user'}">${u.role}</span></td>
                                     <td style="color:var(--text-muted);font-size:0.85rem;">${new Date(u.createdAt).toLocaleDateString()}</td>
+                                    <td style="color:var(--text-muted);font-size:0.85rem;">${u.lastLogin ? new Date(u.lastLogin).toLocaleString() : '<span style="color:var(--text-muted);font-style:italic;">Never</span>'}</td>
                                     <td>${u.username !== currentUser?.username ? `<button class="btn-delete-card" onclick="resetUserPassword('${u.id}', '${u.username}')" title="Reset password" style="margin-right:4px;">&#128273;</button><button class="btn-delete-card" onclick="deleteUser('${u.id}')" title="Delete user">&#128465;</button>` : ''}</td>
                                 </tr>
                             `).join('')}
