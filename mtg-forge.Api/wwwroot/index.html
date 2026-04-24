@@ -3,10 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <meta name="theme-color" content="#0A0A0A">
     <title>Ben's Magic Forge</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&family=MedievalSharp&display=swap" rel="stylesheet">
     <style>
         :root {
+            color-scheme: dark;
             --gold: #C9A84C;
             --gold-light: #E8D48B;
             --gold-dark: #8B6914;
@@ -704,6 +707,20 @@
             outline: none;
             border-color: var(--gold-dark);
             box-shadow: 0 0 0 2px rgba(201, 168, 76, 0.1);
+        }
+
+        /* iOS Safari applies its own pale autofill background when the device is
+           in light mode; pin it to the dark theme so the look stays consistent. */
+        .form-select:-webkit-autofill,
+        .form-input:-webkit-autofill,
+        .form-textarea:-webkit-autofill,
+        .form-select:-webkit-autofill:focus,
+        .form-input:-webkit-autofill:focus,
+        .form-textarea:-webkit-autofill:focus {
+            -webkit-text-fill-color: var(--text-primary);
+            -webkit-box-shadow: 0 0 0 1000px var(--bg-card) inset;
+            box-shadow: 0 0 0 1000px var(--bg-card) inset;
+            caret-color: var(--text-primary);
         }
 
         .form-textarea {
