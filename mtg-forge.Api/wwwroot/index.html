@@ -2080,7 +2080,7 @@
                     <div class="user-dropdown" id="userDropdown" role="menu">
                         <button class="user-dropdown-item" role="menuitem" onclick="toggleTheme(); event.stopPropagation();">
                             <span class="item-icon" id="themeToggleIcon">&#9790;</span>
-                            <span id="themeToggleLabel">Dark Mode</span>
+                            <span id="themeToggleLabel">Light Mode</span>
                         </button>
                     </div>
                 </div>
@@ -2644,7 +2644,7 @@
             const icon = document.getElementById('themeToggleIcon');
             if (icon) icon.innerHTML = theme === 'light' ? '&#9728;' : '&#9790;';
             const label = document.getElementById('themeToggleLabel');
-            if (label) label.textContent = theme === 'light' ? 'Light Mode' : 'Dark Mode';
+            if (label) label.textContent = theme === 'light' ? 'Dark Mode' : 'Light Mode';
         }
 
         function toggleTheme() {
