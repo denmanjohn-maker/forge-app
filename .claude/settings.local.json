@@ -30,12 +30,8 @@
       "Bash(export PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\")",
       "Bash(gh --version)",
       "Bash(git push:*)",
-      "Bash(git -C /Users/johndenman/Desktop/Repos/MtgDeckForge/.claude/worktrees/nervous-chandrasekhar-cf32bd diff)",
-      "Bash(git -C /Users/johndenman/Desktop/Repos/MtgDeckForge/.claude/worktrees/nervous-chandrasekhar-cf32bd add mtg-forge.Api/wwwroot/index.html)",
-      "Bash(git -C /Users/johndenman/Desktop/Repos/MtgDeckForge/.claude/worktrees/nervous-chandrasekhar-cf32bd commit -m ' *)",
-      "Bash(git -C /Users/johndenman/Desktop/Repos/MtgDeckForge/.claude/worktrees/nervous-chandrasekhar-cf32bd status)",
-      "Bash(git -C /Users/johndenman/Desktop/Repos/MtgDeckForge/.claude/worktrees/nervous-chandrasekhar-cf32bd add .claude/settings.local.json)",
-      "Bash(git -C /Users/johndenman/Desktop/Repos/MtgDeckForge/.claude/worktrees/nervous-chandrasekhar-cf32bd push origin claude/nervous-chandrasekhar-cf32bd)"
+      "Bash(git fetch *)",
+      "Bash(git stash *)"
     ]
   }
 }
