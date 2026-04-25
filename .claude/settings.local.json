@@ -29,7 +29,9 @@
       "Read(//usr/local/bin/**)",
       "Bash(export PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\")",
       "Bash(gh --version)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git fetch *)",
+      "Bash(git stash *)"
     ]
   }
 }

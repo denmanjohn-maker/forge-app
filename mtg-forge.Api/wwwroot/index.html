@@ -24,6 +24,8 @@
         :root {
             color-scheme: dark;
             --gold: #C9A84C;
+            --sidebar-w: 200px;
+            --sidebar-w-collapsed: 64px;
             --gold-light: #E8D48B;
             --gold-dark: #8B6914;
             --bg-deep: #0A0A0A;
@@ -389,6 +391,169 @@
             color: var(--danger-hover);
         }
 
+        /* ===== SIDE NAV ===== */
+        .side-nav {
+            position: fixed;
+            top: 121px;
+            left: 0;
+            bottom: 0;
+            width: var(--sidebar-w);
+            background: var(--glass-bg-strong);
+            -webkit-backdrop-filter: blur(14px);
+            backdrop-filter: blur(14px);
+            border-right: 1px solid var(--border-gold);
+            z-index: 90;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: width 0.25s ease;
+        }
+
+        .side-nav.collapsed {
+            width: var(--sidebar-w-collapsed);
+        }
+
+        .side-nav-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 0.6rem 0.85rem;
+            background: none;
+            border: none;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-muted);
+            cursor: pointer;
+            flex-shrink: 0;
+            min-height: 44px;
+            width: 100%;
+            transition: color 0.2s, background 0.2s;
+        }
+
+        .side-nav-toggle:hover {
+            color: var(--gold);
+            background: rgba(201, 168, 76, 0.08);
+        }
+
+        .side-nav-toggle svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            fill: none;
+            flex-shrink: 0;
+            transition: transform 0.25s ease;
+        }
+
+        .side-nav.collapsed .side-nav-toggle {
+            justify-content: center;
+        }
+
+        .side-nav.collapsed .side-nav-toggle svg {
+            transform: rotate(180deg);
+        }
+
+        .side-nav-items {
+            display: flex;
+            flex-direction: column;
+            padding: 0.6rem 0.4rem;
+            gap: 0.2rem;
+            overflow-y: auto;
+            overflow-x: hidden;
+            flex: 1;
+        }
+
+        /* Override nav-tab styles inside the sidebar */
+        .side-nav .nav-tab {
+            flex-direction: row;
+            justify-content: flex-start;
+            min-width: unset;
+            width: 100%;
+            border-radius: 8px;
+            padding: 0.65rem 0.85rem;
+            gap: 0.85rem;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .side-nav .nav-tab .nav-label {
+            font-size: 0.72rem;
+            font-family: 'Cinzel', serif;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            transition: opacity 0.15s ease;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .side-nav.collapsed .nav-tab {
+            justify-content: center;
+            padding: 0.65rem;
+            gap: 0;
+        }
+
+        .side-nav.collapsed .nav-label {
+            opacity: 0;
+            width: 0;
+            overflow: hidden;
+        }
+
+        .side-nav.collapsed .nav-tab.active::after {
+            left: 4px;
+            right: 4px;
+        }
+
+        /* Mobile icon-only nav strip (inside header, visible on mobile only) */
+        .mobile-nav-strip {
+            display: none;
+            justify-content: space-around;
+            align-items: center;
+            padding: 0.35rem 0.5rem;
+            border-top: 1px solid var(--border);
+            gap: 0.25rem;
+        }
+
+        @media (max-width: 900px) {
+            .mobile-nav-strip { display: flex; }
+        }
+
+        .mobile-nav-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: none;
+            border: 1px solid transparent;
+            border-radius: 10px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 0.45rem 0.75rem;
+            flex: 1;
+            transition: all 0.2s ease;
+        }
+
+        .mobile-nav-btn:hover {
+            color: var(--gold-light);
+            background: rgba(201, 168, 76, 0.1);
+        }
+
+        .mobile-nav-btn.active {
+            color: var(--gold);
+            background: rgba(201, 168, 76, 0.15);
+            border-color: rgba(201, 168, 76, 0.35);
+            box-shadow: 0 0 12px rgba(201, 168, 76, 0.15);
+        }
+
+        .mobile-nav-btn svg {
+            width: 22px;
+            height: 22px;
+            stroke: currentColor;
+            fill: none;
+        }
+
+        /* User dropdown logout item — danger tint */
+        .user-dropdown-item.logout-item:hover {
+            background: rgba(139, 32, 32, 0.15);
+            color: var(--danger-hover);
+        }
+
         /* ===== LOGIN VIEW ===== */
         .login-backdrop {
             min-height: 100vh;
@@ -665,10 +830,16 @@
         /* ===== MAIN LAYOUT ===== */
         .app-container {
             max-width: 1400px;
-            margin: 0 auto;
+            margin-left: var(--sidebar-w);
+            margin-right: auto;
             padding: 2rem;
             position: relative;
             z-index: 1;
+            transition: margin-left 0.25s ease;
+        }
+
+        body.sidebar-collapsed .app-container {
+            margin-left: var(--sidebar-w-collapsed);
         }
 
         .view { display: none; }
@@ -1578,11 +1749,6 @@
         }
         .edit-textarea { resize: vertical; min-height: 80px; }
 
-        /* Desktop: leave room on the left of the header for the fixed theme toggle */
-        @media (min-width: 901px) {
-            .app-header { padding-left: 4.5rem; }
-        }
-
         /* Responsive — tablet */
         @media (max-width: 900px) {
             .forge-layout {
@@ -1617,6 +1783,14 @@
             .library-filters {
                 gap: 0.5rem;
             }
+
+            /* Hide sidebar entirely on mobile */
+            .side-nav { display: none !important; }
+            /* Content not shifted on mobile */
+            .app-container,
+            body.sidebar-collapsed .app-container {
+                margin-left: 0;
+            }
         }
 
         /* Responsive — iPhone / small mobile */
@@ -1627,9 +1801,6 @@
             .logo-subtitle { display: none; }
             .logo-dragon { width: 72px; height: 72px; }
             .header-inner { padding: 0.75rem 0; gap: 0.5rem; }
-
-            .nav-tab { padding: 0.4rem 0.55rem; font-size: 0.6rem; letter-spacing: 0; min-width: 54px; }
-            .nav-tab .nav-icon { width: 18px; height: 18px; }
 
             .user-info-role { display: none; }
             .user-info { padding: 0.3rem 0.6rem; }
@@ -1709,7 +1880,6 @@
             }
 
             /* Larger touch targets */
-            .btn-logout { padding: 0.5rem 1rem; font-size: 0.8rem; }
             .btn-delete-card { padding: 0.4rem 0.65rem; min-height: 44px; }
             .filter-pip { width: 36px; height: 36px; }
 
@@ -2041,24 +2211,6 @@
                     <div class="logo-subtitle">Powered by Arcane Intelligence</div>
                 </div>
             </div>
-            <nav class="nav-tabs" id="mainNav">
-                <button class="nav-tab active" data-view="forge">
-                    <svg class="nav-icon" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-                    Forge
-                </button>
-                <button class="nav-tab" data-view="library">
-                    <svg class="nav-icon" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-                    Library
-                </button>
-                <button class="nav-tab" data-view="prices">
-                    <svg class="nav-icon" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                    Price Lookup
-                </button>
-                <button class="nav-tab" data-view="admin" id="adminTab" style="display:none;">
-                    <svg class="nav-icon" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                    Admin
-                </button>
-            </nav>
             <div class="header-right" id="headerRight" style="display:none;">
                 <div class="user-info" id="userInfoTrigger" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" onclick="toggleUserDropdown(event)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleUserDropdown(event);}">
                     <div>
@@ -2069,14 +2221,58 @@
                     <div class="user-dropdown" id="userDropdown" role="menu">
                         <button class="user-dropdown-item" role="menuitem" onclick="toggleTheme(); event.stopPropagation();">
                             <span class="item-icon" id="themeToggleIcon">&#9790;</span>
-                            <span id="themeToggleLabel">Dark Mode</span>
+                            <span id="themeToggleLabel">Light Mode</span>
+                        </button>
+                        <div class="user-dropdown-divider"></div>
+                        <button class="user-dropdown-item logout-item" role="menuitem" onclick="logout(); event.stopPropagation();">
+                            <span class="item-icon">&#x2192;</span>
+                            Logout
                         </button>
                     </div>
                 </div>
-                <button class="btn-logout" onclick="logout()">Logout</button>
             </div>
         </div>
+        <!-- Mobile icon-only nav strip -->
+        <nav class="mobile-nav-strip" id="mobileNavStrip" style="display:none;">
+            <button class="mobile-nav-btn active" data-view="forge">
+                <svg viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            </button>
+            <button class="mobile-nav-btn" data-view="library">
+                <svg viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            </button>
+            <button class="mobile-nav-btn" data-view="prices">
+                <svg viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </button>
+            <button class="mobile-nav-btn" data-view="admin" id="adminTabMobile" style="display:none;">
+                <svg viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </button>
+        </nav>
     </header>
+
+    <!-- SIDE NAV -->
+    <aside class="side-nav" id="sideNav" style="display:none;">
+        <button class="side-nav-toggle" id="sideNavToggle" onclick="toggleSideNav()" title="Collapse navigation" aria-label="Toggle navigation">
+            <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <nav class="side-nav-items">
+            <button class="nav-tab active" data-view="forge">
+                <svg class="nav-icon" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                <span class="nav-label">Forge</span>
+            </button>
+            <button class="nav-tab" data-view="library">
+                <svg class="nav-icon" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                <span class="nav-label">Library</span>
+            </button>
+            <button class="nav-tab" data-view="prices">
+                <svg class="nav-icon" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                <span class="nav-label">Price Lookup</span>
+            </button>
+            <button class="nav-tab" data-view="admin" id="adminTab" style="display:none;">
+                <svg class="nav-icon" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                <span class="nav-label">Admin</span>
+            </button>
+        </nav>
+    </aside>
 
     <!-- LOGIN VIEW -->
     <div id="loginView" class="login-backdrop">
@@ -2633,7 +2829,7 @@
             const icon = document.getElementById('themeToggleIcon');
             if (icon) icon.innerHTML = theme === 'light' ? '&#9728;' : '&#9790;';
             const label = document.getElementById('themeToggleLabel');
-            if (label) label.textContent = theme === 'light' ? 'Light Mode' : 'Dark Mode';
+            if (label) label.textContent = theme === 'light' ? 'Dark Mode' : 'Light Mode';
         }
 
         function toggleTheme() {
@@ -2704,20 +2900,35 @@
             }
         }
 
+        // === Sidebar ===
+        (function initSidebar() {
+            if (localStorage.getItem('sideNavCollapsed') === '1') {
+                document.getElementById('sideNav').classList.add('collapsed');
+                document.body.classList.add('sidebar-collapsed');
+            }
+        })();
+
+        function toggleSideNav() {
+            const sideNav = document.getElementById('sideNav');
+            const collapsed = sideNav.classList.toggle('collapsed');
+            document.body.classList.toggle('sidebar-collapsed', collapsed);
+            localStorage.setItem('sideNavCollapsed', collapsed ? '1' : '0');
+        }
+
         // === Auth ===
         function showApp() {
             document.getElementById('loginView').style.display = 'none';
             document.querySelector('.app-header').style.display = '';
             document.querySelector('.app-container').style.display = '';
             document.getElementById('headerRight').style.display = '';
+            document.getElementById('sideNav').style.display = '';
+            document.getElementById('mobileNavStrip').style.display = '';
             if (currentUser) {
                 document.getElementById('headerDisplayName').textContent = currentUser.displayName;
                 document.getElementById('headerRole').textContent = currentUser.role;
-                if (currentUser.role === 'Admin') {
-                    document.getElementById('adminTab').style.display = '';
-                } else {
-                    document.getElementById('adminTab').style.display = 'none';
-                }
+                const isAdmin = currentUser.role === 'Admin';
+                document.getElementById('adminTab').style.display = isAdmin ? '' : 'none';
+                document.getElementById('adminTabMobile').style.display = isAdmin ? '' : 'none';
             }
         }
 
@@ -2725,6 +2936,8 @@
             document.getElementById('loginView').style.display = '';
             document.querySelector('.app-header').style.display = 'none';
             document.querySelector('.app-container').style.display = 'none';
+            document.getElementById('sideNav').style.display = 'none';
+            document.getElementById('mobileNavStrip').style.display = 'none';
         }
 
 
@@ -3004,16 +3217,20 @@
 
         // === Navigation ===
         document.querySelectorAll('.nav-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                const view = tab.dataset.view;
-                switchView(view);
-            });
+            tab.addEventListener('click', () => switchView(tab.dataset.view));
+        });
+
+        document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => switchView(btn.dataset.view));
         });
 
         function switchView(view) {
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
             const tabEl = document.querySelector(`.nav-tab[data-view="${view}"]`);
             if (tabEl) tabEl.classList.add('active');
+            document.querySelectorAll('.mobile-nav-btn').forEach(t => t.classList.remove('active'));
+            const mobileBtn = document.querySelector(`.mobile-nav-btn[data-view="${view}"]`);
+            if (mobileBtn) mobileBtn.classList.add('active');
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.getElementById(`view-${view}`).classList.add('active');
 
@@ -3258,7 +3475,7 @@
                 renderDetail(deck);
                 document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
                 document.getElementById('view-detail').classList.add('active');
-                document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.nav-tab, .mobile-nav-btn').forEach(t => t.classList.remove('active'));
                 window.scrollTo(0, 0);
             } catch (err) {
                 showToast(err.message, true);
