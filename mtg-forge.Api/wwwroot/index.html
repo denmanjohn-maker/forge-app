@@ -2019,7 +2019,8 @@
         <div class="header-inner">
             <div class="logo-group">
                 <div class="logo-dragon">
-                    <img src="/images/dragon-banner.png" alt="Dragon">
+                    <img id="logoImg" src="/images/dragon-banner.png" alt="Logo">
+                    <script>var _logos=['/images/dragon-banner-original.png','/images/knight-banner.png'];document.getElementById('logoImg').src=_logos[Math.random()<0.5?0:1];</script>
                 </div>
                 <div>
                     <div class="logo-text">BEN'S MAGIC FORGE</div>
