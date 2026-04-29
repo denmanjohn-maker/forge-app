@@ -2655,6 +2655,14 @@
                         <button class="btn-outline" id="btnRefreshPricing" onclick="triggerPricingRefresh()">&#x21bb; Trigger Manual Refresh</button>
                     </div>
                 </div>
+                <div class="admin-section">
+                    <div class="admin-section-title">AI Ingestion</div>
+                    <div id="aiIngestionSummary" style="margin-bottom:1rem;color:var(--text-secondary);font-family:'Crimson Text',serif;"></div>
+                    <div id="aiIngestionDetails"></div>
+                    <div style="margin-top:1rem;">
+                        <button class="btn-outline" id="btnTriggerIngest" onclick="triggerAiReingestion()">&#x21bb; Trigger Re-ingestion</button>
+                    </div>
+                </div>
             </div>
         </div>
     </main>
@@ -4055,7 +4063,7 @@
 
         // === Admin Panel ===
         async function loadAdminPanel() {
-            await Promise.all([loadAdminUsers(), loadAdminGroups(), loadPricingRuns()]);
+            await Promise.all([loadAdminUsers(), loadAdminGroups(), loadPricingRuns(), loadAiIngestionStatus()]);
         }
 
         async function loadAdminUsers() {
@@ -4298,6 +4306,123 @@
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '&#x21bb; Trigger Manual Refresh';
+            }
+        }
+
+        // === AI Ingestion Status ===
+        async function loadAiIngestionStatus() {
+            const summaryEl = document.getElementById('aiIngestionSummary');
+            const detailsEl = document.getElementById('aiIngestionDetails');
+            summaryEl.textContent = 'Loading…';
+            detailsEl.innerHTML = '';
+            try {
+                const res = await authFetch('/api/admin/ai-status');
+                if (!res.ok) throw new Error('Failed to load AI ingestion status');
+                const data = await res.json();
+                renderAiIngestionStatus(data);
+            } catch (err) {
+                summaryEl.textContent = 'Failed to load AI ingestion status';
+                detailsEl.innerHTML = '';
+            }
+        }
+
+        function renderAiIngestionStatus(data) {
+            const summaryEl = document.getElementById('aiIngestionSummary');
+            const detailsEl = document.getElementById('aiIngestionDetails');
+            const btn = document.getElementById('btnTriggerIngest');
+
+            if (!data.available) {
+                summaryEl.innerHTML = '<span style="color:var(--text-muted);font-style:italic;">AI service unavailable</span>';
+                detailsEl.innerHTML = data.error
+                    ? `<p style="color:var(--text-muted);font-size:0.9rem;">${data.error}</p>`
+                    : '';
+                btn.disabled = true;
+                return;
+            }
+
+            btn.disabled = false;
+            const s = data.status || {};
+
+            const totalCards = s.totalCardsIndexed ?? s.total_cards_indexed ?? s.cardCount ?? s.card_count ?? null;
+            const lastRun = s.lastIngestionAt ?? s.last_ingestion_at ?? s.lastRunAt ?? s.last_run_at ?? null;
+            const model = s.model ?? s.embeddingModel ?? s.embedding_model ?? null;
+            const jobStatus = s.status ?? s.ingestionStatus ?? s.ingestion_status ?? null;
+            const collectionSize = s.collectionSize ?? s.collection_size ?? s.vectorCount ?? s.vector_count ?? null;
+
+            const statusColor = jobStatus === 'running'
+                ? 'color:#FFA500'
+                : jobStatus === 'error' || jobStatus === 'failed'
+                    ? 'color:var(--danger,#f44336)'
+                    : 'color:var(--success,#4CAF50)';
+            const statusIcon = jobStatus === 'running' ? '⏳'
+                : jobStatus === 'error' || jobStatus === 'failed' ? '❌'
+                : '✅';
+
+            const cardCountStr = totalCards != null ? `<strong>${Number(totalCards).toLocaleString()}</strong> cards indexed` : null;
+            const vectorStr = collectionSize != null ? ` · <strong>${Number(collectionSize).toLocaleString()}</strong> vectors` : '';
+            summaryEl.innerHTML = cardCountStr
+                ? `${cardCountStr}${vectorStr}`
+                : (collectionSize != null ? `<strong>${Number(collectionSize).toLocaleString()}</strong> vectors in collection` : 'AI service connected');
+
+            const rows = [];
+            if (jobStatus) rows.push(['Status', `<span style="${statusColor}">${statusIcon} ${jobStatus}</span>`]);
+            if (totalCards != null) rows.push(['Cards Indexed', Number(totalCards).toLocaleString()]);
+            if (collectionSize != null) rows.push(['Vector Count', Number(collectionSize).toLocaleString()]);
+            if (model) rows.push(['Model', model]);
+            if (lastRun) {
+                const d = new Date(lastRun);
+                rows.push(['Last Ingestion', `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} ${d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`]);
+            }
+
+            // Surface any extra fields from the status payload
+            const knownKeys = new Set([
+                'totalCardsIndexed','total_cards_indexed','cardCount','card_count',
+                'lastIngestionAt','last_ingestion_at','lastRunAt','last_run_at',
+                'model','embeddingModel','embedding_model',
+                'status','ingestionStatus','ingestion_status',
+                'collectionSize','collection_size','vectorCount','vector_count'
+            ]);
+            for (const [k, v] of Object.entries(s)) {
+                if (!knownKeys.has(k) && v != null && typeof v !== 'object') {
+                    const label = k.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase());
+                    rows.push([label, String(v)]);
+                }
+            }
+
+            if (rows.length === 0) {
+                detailsEl.innerHTML = '<p style="color:var(--text-muted);font-size:0.9rem;">No detailed status fields available.</p>';
+                return;
+            }
+
+            detailsEl.innerHTML = `
+                <table style="width:100%;border-collapse:collapse;font-family:'Crimson Text',serif;font-size:0.95rem;">
+                    <tbody>
+                        ${rows.map(([label, value]) => `
+                            <tr style="border-bottom:1px solid var(--border);">
+                                <td style="padding:0.5rem 0.75rem;font-family:'Cinzel',serif;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);white-space:nowrap;width:40%;">${label}</td>
+                                <td style="padding:0.5rem 0.75rem;">${value}</td>
+                            </tr>`).join('')}
+                    </tbody>
+                </table>`;
+        }
+
+        async function triggerAiReingestion() {
+            const btn = document.getElementById('btnTriggerIngest');
+            btn.disabled = true;
+            btn.textContent = '⏳ Ingesting…';
+            try {
+                const res = await authFetch('/api/admin/ai-ingest', { method: 'POST' });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.error || 'Re-ingestion failed');
+                }
+                showToast('AI re-ingestion triggered successfully');
+                await loadAiIngestionStatus();
+            } catch (err) {
+                showToast(err.message, true);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '&#x21bb; Trigger Re-ingestion';
             }
         }
     </script>
