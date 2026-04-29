@@ -82,7 +82,7 @@ public static class ThemedSetDetector
         new ThemedSet(
             "Assassin's Creed",
             ["assassin's creed", "assassins creed", "ezio", "altair", "altaïr", "edward kenway", "bayek", "kassandra"],
-            "the Universes Beyond Beyond Booster set 'Assassin's Creed'. Pull themed Assassin and historical-figure cards across the requested colors."),
+            "the Universes Beyond 'Assassin's Creed' product (sold in Beyond Boosters). Pull themed Assassin and historical-figure cards across the requested colors."),
 
         new ThemedSet(
             "SpongeBob SquarePants",
@@ -110,9 +110,16 @@ public static class ThemedSetDetector
     /// Builds a multi-line prompt addendum describing the matched themed sets,
     /// or returns null when no themed set is referenced in the notes.
     /// </summary>
-    public static string? BuildPromptAddendum(string? notes)
+    public static string? BuildPromptAddendum(string? notes) =>
+        BuildPromptAddendum(Detect(notes));
+
+    /// <summary>
+    /// Builds a multi-line prompt addendum from pre-computed matches, so callers
+    /// can detect once and reuse the result for both the addendum and logging.
+    /// Returns null when the match list is empty.
+    /// </summary>
+    public static string? BuildPromptAddendum(IReadOnlyList<ThemedSet> matches)
     {
-        var matches = Detect(notes);
         if (matches.Count == 0)
             return null;
 

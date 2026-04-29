@@ -51,16 +51,17 @@ public class RagPipelineService : IDeckGenerationService
 
         var client = CreateMtgForgeClient();
 
-        var themedAddendum = ThemedSetDetector.BuildPromptAddendum(request.AdditionalNotes);
-        var extraContext = string.IsNullOrWhiteSpace(themedAddendum)
+        var themedMatches = ThemedSetDetector.Detect(request.AdditionalNotes);
+        var themedAddendum = ThemedSetDetector.BuildPromptAddendum(themedMatches);
+        var extraContext = themedAddendum is null
             ? request.AdditionalNotes
             : string.IsNullOrWhiteSpace(request.AdditionalNotes)
                 ? themedAddendum
                 : $"{request.AdditionalNotes}\n\n{themedAddendum}";
 
-        if (themedAddendum is not null)
+        if (themedMatches.Count > 0)
         {
-            var matchedNames = string.Join(", ", ThemedSetDetector.Detect(request.AdditionalNotes).Select(s => s.DisplayName));
+            var matchedNames = string.Join(", ", themedMatches.Select(s => s.DisplayName));
             _logger.LogInformation("RagPipelineService: detected themed set reference(s) in notes — {Matches}", matchedNames);
         }
 
