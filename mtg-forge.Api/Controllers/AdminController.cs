@@ -35,10 +35,7 @@ public class AdminController : ControllerBase
     {
         try
         {
-            var client = _httpClientFactory.CreateClient();
-            client.BaseAddress = new Uri(_ragSettings.BaseUrl);
-            client.Timeout = TimeSpan.FromSeconds(10);
-
+            var client = CreateMtgForgeAiClient(TimeSpan.FromSeconds(10));
             var response = await client.GetAsync("/api/ingest/status", cancellationToken);
 
             if (!response.IsSuccessStatusCode)
@@ -74,14 +71,11 @@ public class AdminController : ControllerBase
     {
         try
         {
-            var client = _httpClientFactory.CreateClient();
-            client.BaseAddress = new Uri(_ragSettings.BaseUrl);
-            client.Timeout = TimeSpan.FromMinutes(10);
+            var client = CreateMtgForgeAiClient(TimeSpan.FromMinutes(10));
 
             _logger.LogInformation("AdminController: triggering manual AI re-ingestion via mtg-forge-ai");
 
-            using var emptyContent = new StringContent(string.Empty, System.Text.Encoding.UTF8, "application/json");
-            var response = await client.PostAsync("/api/ingest", emptyContent, cancellationToken);
+            var response = await client.PostAsync("/api/ingest", null, cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -108,5 +102,13 @@ public class AdminController : ControllerBase
             _logger.LogWarning(ex, "AdminController: could not reach mtg-forge-ai to trigger ingestion");
             return StatusCode(503, new { error = "AI service is unreachable" });
         }
+    }
+
+    private HttpClient CreateMtgForgeAiClient(TimeSpan timeout)
+    {
+        var client = _httpClientFactory.CreateClient();
+        client.BaseAddress = new Uri(_ragSettings.BaseUrl);
+        client.Timeout = timeout;
+        return client;
     }
 }

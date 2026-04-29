@@ -4374,13 +4374,14 @@
                 rows.push(['Last Ingestion', `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} ${d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`]);
             }
 
-            // Surface any extra fields from the status payload
+            // Surface any extra fields from the status payload.
+            // The knownKeys set is derived from the same aliases used above so additions stay consistent.
             const knownKeys = new Set([
-                'totalCardsIndexed','total_cards_indexed','cardCount','card_count',
-                'lastIngestionAt','last_ingestion_at','lastRunAt','last_run_at',
-                'model','embeddingModel','embedding_model',
-                'status','ingestionStatus','ingestion_status',
-                'collectionSize','collection_size','vectorCount','vector_count'
+                ...['totalCardsIndexed','total_cards_indexed','cardCount','card_count'],
+                ...['lastIngestionAt','last_ingestion_at','lastRunAt','last_run_at'],
+                ...['model','embeddingModel','embedding_model'],
+                ...['status','ingestionStatus','ingestion_status'],
+                ...['collectionSize','collection_size','vectorCount','vector_count']
             ]);
             for (const [k, v] of Object.entries(s)) {
                 if (!knownKeys.has(k) && v != null && typeof v !== 'object') {
