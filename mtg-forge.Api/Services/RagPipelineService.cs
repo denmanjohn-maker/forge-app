@@ -51,6 +51,19 @@ public class RagPipelineService : IDeckGenerationService
 
         var client = CreateMtgForgeClient();
 
+        var themedAddendum = ThemedSetDetector.BuildPromptAddendum(request.AdditionalNotes);
+        var extraContext = string.IsNullOrWhiteSpace(themedAddendum)
+            ? request.AdditionalNotes
+            : string.IsNullOrWhiteSpace(request.AdditionalNotes)
+                ? themedAddendum
+                : $"{request.AdditionalNotes}\n\n{themedAddendum}";
+
+        if (themedAddendum is not null)
+        {
+            var matchedNames = string.Join(", ", ThemedSetDetector.Detect(request.AdditionalNotes).Select(s => s.DisplayName));
+            _logger.LogInformation("RagPipelineService: detected themed set reference(s) in notes — {Matches}", matchedNames);
+        }
+
         var localRequest = new
         {
             format       = request.Format.ToLowerInvariant(),
@@ -59,7 +72,7 @@ public class RagPipelineService : IDeckGenerationService
             powerLevel   = MapPowerLevel(request.PowerLevel),
             commander    = request.PreferredCommander,
             colorIdentity = request.Colors,
-            extraContext  = request.AdditionalNotes
+            extraContext
         };
 
         var json = JsonSerializer.Serialize(localRequest, new JsonSerializerOptions
