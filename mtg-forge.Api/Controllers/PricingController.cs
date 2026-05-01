@@ -284,7 +284,7 @@ public class PricingController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "PricingController: failed to load import runs");
-            return StatusCode(500, new { error = $"Failed to load pricing data: {ex.Message}" });
+            return StatusCode(500, new { error = ex.Message });
         }
     }
 }

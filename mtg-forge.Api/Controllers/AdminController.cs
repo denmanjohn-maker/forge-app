@@ -64,15 +64,15 @@ public class AdminController : ControllerBase
             return Ok(new { available = false, error = $"Invalid RagPipeline:BaseUrl: {ex.Message}" });
         }
 
-        HttpResponseMessage? lastResponse = null;
+        System.Net.HttpStatusCode? lastStatus = null;
         string? lastPath = null;
 
         foreach (var path in StatusPathCandidates)
         {
             try
             {
-                var response = await client.GetAsync(path, cancellationToken);
-                lastResponse = response;
+                using var response = await client.GetAsync(path, cancellationToken);
+                lastStatus = response.StatusCode;
                 lastPath = path;
 
                 if (!response.IsSuccessStatusCode)
@@ -96,11 +96,11 @@ public class AdminController : ControllerBase
                         jex,
                         "AdminController: mtg-forge-ai returned non-JSON for {Path}: {Body}",
                         path,
-                        Truncate(body, 200));
+                        Truncate(body, 500));
                     return Ok(new
                     {
                         available = false,
-                        error = $"AI service returned non-JSON response from {path}: {Truncate(body, 200)}"
+                        error = $"AI service returned a non-JSON response from {path}."
                     });
                 }
             }
@@ -116,18 +116,18 @@ public class AdminController : ControllerBase
             }
         }
 
-        // All candidates exhausted — surface the last response we saw (likely a 404).
-        if (lastResponse != null)
+        // All candidates exhausted — surface the last status code we saw (likely 404).
+        if (lastStatus.HasValue)
         {
             _logger.LogWarning(
                 "AdminController: mtg-forge-ai returned {Status} for {Path} (no candidate path matched)",
-                lastResponse.StatusCode,
+                lastStatus.Value,
                 lastPath);
 
             return Ok(new
             {
                 available = false,
-                error = $"AI service returned HTTP {(int)lastResponse.StatusCode} for {lastPath}"
+                error = $"AI service returned HTTP {(int)lastStatus.Value} for {lastPath}"
             });
         }
 
@@ -162,12 +162,7 @@ public class AdminController : ControllerBase
 
         try
         {
-            var response = await PostIngestAsync(client, IngestTriggerPath, cancellationToken);
-            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-            {
-                response.Dispose();
-                response = await PostIngestAsync(client, IngestTriggerFallbackPath, cancellationToken);
-            }
+            using var response = await PostWithFallbackAsync(client, cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -175,7 +170,7 @@ public class AdminController : ControllerBase
                 _logger.LogError(
                     "AdminController: mtg-forge-ai returned {Status} for ingest: {Body}",
                     response.StatusCode, err);
-                return StatusCode(502, new { error = $"AI service returned HTTP {(int)response.StatusCode}: {Truncate(err, 500)}" });
+                return StatusCode(502, new { error = $"AI service returned HTTP {(int)response.StatusCode} from ingest endpoint." });
             }
 
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -199,6 +194,17 @@ public class AdminController : ControllerBase
             _logger.LogError(ex, "AdminController: unexpected error triggering AI ingestion");
             return StatusCode(500, new { error = $"Unexpected error: {ex.Message}" });
         }
+    }
+
+    private static async Task<HttpResponseMessage> PostWithFallbackAsync(HttpClient client, CancellationToken ct)
+    {
+        // Try the canonical /api/admin/ingest first; fall back to legacy /api/ingest on 404.
+        var response = await PostIngestAsync(client, IngestTriggerPath, ct);
+        if (response.StatusCode != System.Net.HttpStatusCode.NotFound)
+            return response;
+
+        response.Dispose();
+        return await PostIngestAsync(client, IngestTriggerFallbackPath, ct);
     }
 
     private static Task<HttpResponseMessage> PostIngestAsync(HttpClient client, string path, CancellationToken ct)
