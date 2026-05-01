@@ -2910,6 +2910,12 @@
             }
         }
 
+        function escapeHtml(value) {
+            const div = document.createElement('div');
+            div.textContent = value == null ? '' : String(value);
+            return div.innerHTML;
+        }
+
         // === Sidebar ===
         (function initSidebar() {
             if (localStorage.getItem('sideNavCollapsed') === '1') {
@@ -4233,11 +4239,16 @@
         async function loadPricingRuns() {
             try {
                 const res = await authFetch('/api/pricing/import-runs?limit=10');
-                if (!res.ok) throw new Error('Failed to load pricing data');
+                if (!res.ok) {
+                    const body = await res.json().catch(() => ({}));
+                    throw new Error(body.error || `HTTP ${res.status}`);
+                }
                 const data = await res.json();
                 renderPricingRuns(data.runs, data.totalPricesInDb);
             } catch (err) {
-                document.getElementById('pricingSummary').textContent = 'Failed to load pricing data';
+                console.error('loadPricingRuns failed:', err);
+                const summary = document.getElementById('pricingSummary');
+                summary.innerHTML = `Failed to load pricing data <span style="color:var(--text-muted);font-size:0.85rem;">— ${escapeHtml(err.message || 'unknown error')}</span>`;
                 document.getElementById('pricingRunsList').innerHTML = '';
             }
         }
@@ -4317,11 +4328,15 @@
             detailsEl.innerHTML = '';
             try {
                 const res = await authFetch('/api/admin/ai-status');
-                if (!res.ok) throw new Error('Failed to load AI ingestion status');
+                if (!res.ok) {
+                    const body = await res.json().catch(() => ({}));
+                    throw new Error(body.error || `HTTP ${res.status}`);
+                }
                 const data = await res.json();
                 renderAiIngestionStatus(data);
             } catch (err) {
-                summaryEl.textContent = 'Failed to load AI ingestion status';
+                console.error('loadAiIngestionStatus failed:', err);
+                summaryEl.innerHTML = `Failed to load AI ingestion status <span style="color:var(--text-muted);font-size:0.85rem;">— ${escapeHtml(err.message || 'unknown error')}</span>`;
                 detailsEl.innerHTML = '';
             }
         }

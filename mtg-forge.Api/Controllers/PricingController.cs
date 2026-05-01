@@ -14,12 +14,18 @@ public class PricingController : ControllerBase
     private readonly MtgJsonPricingImportService _importService;
     private readonly AppDbContext _db;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ILogger<PricingController> _logger;
 
-    public PricingController(MtgJsonPricingImportService importService, AppDbContext db, IHttpClientFactory httpClientFactory)
+    public PricingController(
+        MtgJsonPricingImportService importService,
+        AppDbContext db,
+        IHttpClientFactory httpClientFactory,
+        ILogger<PricingController> logger)
     {
         _importService = importService;
         _db = db;
         _httpClientFactory = httpClientFactory;
+        _logger = logger;
     }
 
     [HttpGet("search")]
@@ -255,22 +261,30 @@ public class PricingController : ControllerBase
     [HttpGet("import-runs")]
     public async Task<IActionResult> GetImportRuns([FromQuery] int limit = 10, CancellationToken cancellationToken = default)
     {
-        var runs = await _db.PricingImportRuns
-            .OrderByDescending(r => r.StartedAtUtc)
-            .Take(limit)
-            .Select(r => new
-            {
-                r.Id,
-                r.StartedAtUtc,
-                r.CompletedAtUtc,
-                r.Success,
-                r.ImportedCount,
-                r.Message
-            })
-            .ToListAsync(cancellationToken);
+        try
+        {
+            var runs = await _db.PricingImportRuns
+                .OrderByDescending(r => r.StartedAtUtc)
+                .Take(limit)
+                .Select(r => new
+                {
+                    r.Id,
+                    r.StartedAtUtc,
+                    r.CompletedAtUtc,
+                    r.Success,
+                    r.ImportedCount,
+                    r.Message
+                })
+                .ToListAsync(cancellationToken);
 
-        var totalPrices = await _db.CardPrices.CountAsync(cancellationToken);
+            var totalPrices = await _db.CardPrices.CountAsync(cancellationToken);
 
-        return Ok(new { runs, totalPricesInDb = totalPrices });
+            return Ok(new { runs, totalPricesInDb = totalPrices });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "PricingController: failed to load import runs");
+            return StatusCode(500, new { error = $"Failed to load pricing data: {ex.Message}" });
+        }
     }
 }
