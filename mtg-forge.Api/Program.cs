@@ -51,7 +51,8 @@ if (!string.IsNullOrEmpty(lokiUrl))
     loggerConfig.WriteTo.GrafanaLoki(
         lokiUrl,
         credentials: credentials,
-        labels: [new LokiLabel { Key = "app", Value = "mtg-forge" }]);
+        labels: [new LokiLabel { Key = "app", Value = "mtg-forge" }],
+        propertiesAsLabels: ["level"]);
 }
 
 Log.Logger = loggerConfig.CreateLogger();
