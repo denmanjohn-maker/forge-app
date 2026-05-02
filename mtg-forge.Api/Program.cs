@@ -15,11 +15,16 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using Serilog;
 using Serilog.Events;
+using Serilog.Sinks.Grafana.Loki;
 
 // ── Serilog bootstrap (captures startup errors) ──
 var logStore = new InMemoryLogStore(1000);
 
-Log.Logger = new LoggerConfiguration()
+var lokiUrl = Environment.GetEnvironmentVariable("LOKI__URL") ?? "";
+var lokiLogin = Environment.GetEnvironmentVariable("LOKI__LOGIN") ?? "";
+var lokiPassword = Environment.GetEnvironmentVariable("LOKI__PASSWORD") ?? "";
+
+var loggerConfig = new LoggerConfiguration()
     .MinimumLevel.Information()
     .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
     .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
@@ -35,8 +40,21 @@ Log.Logger = new LoggerConfiguration()
         {
             ["service.name"] = "mtg-forge"
         };
-    })
-    .CreateLogger();
+    });
+
+if (!string.IsNullOrEmpty(lokiUrl))
+{
+    LokiCredentials? credentials = (!string.IsNullOrEmpty(lokiLogin) && !string.IsNullOrEmpty(lokiPassword))
+        ? new LokiCredentials { Login = lokiLogin, Password = lokiPassword }
+        : null;
+
+    loggerConfig.WriteTo.GrafanaLoki(
+        lokiUrl,
+        credentials: credentials,
+        labels: [new LokiLabel { Key = "app", Value = "mtg-forge" }]);
+}
+
+Log.Logger = loggerConfig.CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseSerilog();
