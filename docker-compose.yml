@@ -40,8 +40,11 @@ services:
       MongoDb__ConnectionString: "${MONGODB_CONNECTION_STRING:-mongodb://mongodb:27017}"
       MongoDb__DatabaseName: "mtgdeckforge"
       MongoDb__DecksCollectionName: "decks"
+      LOKI_URI: "http://loki:3100"
     depends_on:
       mongodb:
+        condition: service_healthy
+      loki:
         condition: service_healthy
     networks:
       - mtg-network
@@ -51,6 +54,24 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+
+  # ─── Loki ───────────────────────────────────────────────────
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: mtg-loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./monitoring/loki/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    networks:
+      - mtg-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3100/ready || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   # ─── Prometheus ─────────────────────────────────────────────
   prometheus:
@@ -89,6 +110,7 @@ services:
       - mtg-network
     depends_on:
       - prometheus
+      - loki
 
 volumes:
   mongo_data:
@@ -98,6 +120,8 @@ volumes:
   prometheus_data:
     driver: local
   grafana_data:
+    driver: local
+  loki_data:
     driver: local
 
 networks:
