@@ -59,7 +59,7 @@ if (!string.IsNullOrEmpty(lokiUri))
     Log.Information("Loki sink configured → {Uri}", lokiUri);
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Host.UseSerilog();
+builder.Host.UseSerilog(dispose: true);
 
 // Railway (and other PaaS) inject PORT at runtime — honour it
 var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
