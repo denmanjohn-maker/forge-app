@@ -24,6 +24,8 @@
         :root {
             color-scheme: dark;
             --gold: #C9A84C;
+            --sidebar-w: 200px;
+            --sidebar-w-collapsed: 64px;
             --gold-light: #E8D48B;
             --gold-dark: #8B6914;
             --bg-deep: #0A0A0A;
@@ -169,18 +171,18 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            height: 120px;
+            height: 72px;
         }
 
         .logo-group {
             display: flex;
             align-items: center;
-            gap: 1rem;
+            gap: 0.75rem;
         }
 
         .logo-dragon {
-            width: 90px;
-            height: 90px;
+            width: 52px;
+            height: 52px;
             border-radius: 50%;
             overflow: hidden;
             flex-shrink: 0;
@@ -198,7 +200,7 @@
         .logo-text {
             font-family: 'Cinzel', serif;
             font-weight: 900;
-            font-size: 2rem;
+            font-size: 1.5rem;
             background: linear-gradient(135deg, var(--gold-light), var(--gold), var(--gold-dark));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -209,73 +211,63 @@
 
         .logo-subtitle {
             font-family: 'Cinzel', serif;
-            font-size: 0.8rem;
+            font-size: 0.68rem;
             color: var(--text-secondary);
-            letter-spacing: 0.3em;
+            letter-spacing: 0.25em;
             text-transform: uppercase;
-            margin-top: 4px;
+            margin-top: 2px;
         }
 
         .nav-tabs {
             display: flex;
-            gap: 0.5rem;
+            gap: 0.25rem;
             align-items: center;
         }
 
         .nav-tab {
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(201, 168, 76, 0.12);
-            border-radius: 14px;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
             color: var(--text-secondary);
             font-family: 'Cinzel', serif;
             font-size: 0.72rem;
             font-weight: 600;
-            letter-spacing: 0.08em;
-            padding: 0.7rem 1.2rem;
+            letter-spacing: 0.07em;
+            padding: 0.45rem 0.85rem;
             display: flex;
-            flex-direction: column;
+            flex-direction: row;
             align-items: center;
-            gap: 0.35rem;
+            gap: 0.4rem;
             cursor: pointer;
             position: relative;
-            transition: all 0.25s ease;
-            min-width: 80px;
+            transition: all 0.2s ease;
         }
 
         .nav-tab .nav-icon {
-            width: 28px;
-            height: 28px;
+            width: 16px;
+            height: 16px;
             stroke: currentColor;
             fill: none;
-            transition: all 0.25s ease;
+            transition: all 0.2s ease;
             flex-shrink: 0;
         }
 
         .nav-tab:hover {
             color: var(--gold-light);
-            background: rgba(201, 168, 76, 0.1);
-            border-color: rgba(201, 168, 76, 0.25);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 16px rgba(201, 168, 76, 0.15);
+            background: rgba(201, 168, 76, 0.08);
         }
 
         .nav-tab.active {
             color: var(--gold);
-            background: rgba(201, 168, 76, 0.15);
-            border-color: rgba(201, 168, 76, 0.4);
-            box-shadow: 0 0 20px rgba(201, 168, 76, 0.2), inset 0 1px 0 rgba(201, 168, 76, 0.15);
-        }
-
-        .nav-tab.active .nav-icon {
-            filter: drop-shadow(0 0 6px rgba(201, 168, 76, 0.6));
+            background: rgba(201, 168, 76, 0.12);
         }
 
         .nav-tab.active::after {
             content: '';
             position: absolute;
-            bottom: -1px;
-            left: 1rem;
-            right: 1rem;
+            bottom: -2px;
+            left: 0.6rem;
+            right: 0.6rem;
             height: 2px;
             background: linear-gradient(90deg, transparent, var(--gold), transparent);
             border-radius: 1px;
@@ -396,6 +388,169 @@
 
         .btn-logout:hover {
             border-color: var(--danger);
+            color: var(--danger-hover);
+        }
+
+        /* ===== SIDE NAV ===== */
+        .side-nav {
+            position: fixed;
+            top: 121px;
+            left: 0;
+            bottom: 0;
+            width: var(--sidebar-w);
+            background: var(--glass-bg-strong);
+            -webkit-backdrop-filter: blur(14px);
+            backdrop-filter: blur(14px);
+            border-right: 1px solid var(--border-gold);
+            z-index: 90;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: width 0.25s ease;
+        }
+
+        .side-nav.collapsed {
+            width: var(--sidebar-w-collapsed);
+        }
+
+        .side-nav-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 0.6rem 0.85rem;
+            background: none;
+            border: none;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-muted);
+            cursor: pointer;
+            flex-shrink: 0;
+            min-height: 44px;
+            width: 100%;
+            transition: color 0.2s, background 0.2s;
+        }
+
+        .side-nav-toggle:hover {
+            color: var(--gold);
+            background: rgba(201, 168, 76, 0.08);
+        }
+
+        .side-nav-toggle svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            fill: none;
+            flex-shrink: 0;
+            transition: transform 0.25s ease;
+        }
+
+        .side-nav.collapsed .side-nav-toggle {
+            justify-content: center;
+        }
+
+        .side-nav.collapsed .side-nav-toggle svg {
+            transform: rotate(180deg);
+        }
+
+        .side-nav-items {
+            display: flex;
+            flex-direction: column;
+            padding: 0.6rem 0.4rem;
+            gap: 0.2rem;
+            overflow-y: auto;
+            overflow-x: hidden;
+            flex: 1;
+        }
+
+        /* Override nav-tab styles inside the sidebar */
+        .side-nav .nav-tab {
+            flex-direction: row;
+            justify-content: flex-start;
+            min-width: unset;
+            width: 100%;
+            border-radius: 8px;
+            padding: 0.65rem 0.85rem;
+            gap: 0.85rem;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .side-nav .nav-tab .nav-label {
+            font-size: 0.72rem;
+            font-family: 'Cinzel', serif;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            transition: opacity 0.15s ease;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .side-nav.collapsed .nav-tab {
+            justify-content: center;
+            padding: 0.65rem;
+            gap: 0;
+        }
+
+        .side-nav.collapsed .nav-label {
+            opacity: 0;
+            width: 0;
+            overflow: hidden;
+        }
+
+        .side-nav.collapsed .nav-tab.active::after {
+            left: 4px;
+            right: 4px;
+        }
+
+        /* Mobile icon-only nav strip (inside header, visible on mobile only) */
+        .mobile-nav-strip {
+            display: none;
+            justify-content: space-around;
+            align-items: center;
+            padding: 0.35rem 0.5rem;
+            border-top: 1px solid var(--border);
+            gap: 0.25rem;
+        }
+
+        @media (max-width: 900px) {
+            .mobile-nav-strip { display: flex; }
+        }
+
+        .mobile-nav-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: none;
+            border: 1px solid transparent;
+            border-radius: 10px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 0.45rem 0.75rem;
+            flex: 1;
+            transition: all 0.2s ease;
+        }
+
+        .mobile-nav-btn:hover {
+            color: var(--gold-light);
+            background: rgba(201, 168, 76, 0.1);
+        }
+
+        .mobile-nav-btn.active {
+            color: var(--gold);
+            background: rgba(201, 168, 76, 0.15);
+            border-color: rgba(201, 168, 76, 0.35);
+            box-shadow: 0 0 12px rgba(201, 168, 76, 0.15);
+        }
+
+        .mobile-nav-btn svg {
+            width: 22px;
+            height: 22px;
+            stroke: currentColor;
+            fill: none;
+        }
+
+        /* User dropdown logout item — danger tint */
+        .user-dropdown-item.logout-item:hover {
+            background: rgba(139, 32, 32, 0.15);
             color: var(--danger-hover);
         }
 
@@ -675,10 +830,16 @@
         /* ===== MAIN LAYOUT ===== */
         .app-container {
             max-width: 1400px;
-            margin: 0 auto;
+            margin-left: var(--sidebar-w);
+            margin-right: auto;
             padding: 2rem;
             position: relative;
             z-index: 1;
+            transition: margin-left 0.25s ease;
+        }
+
+        body.sidebar-collapsed .app-container {
+            margin-left: var(--sidebar-w-collapsed);
         }
 
         .view { display: none; }
@@ -1588,11 +1749,6 @@
         }
         .edit-textarea { resize: vertical; min-height: 80px; }
 
-        /* Desktop: leave room on the left of the header for the fixed theme toggle */
-        @media (min-width: 901px) {
-            .app-header { padding-left: 4.5rem; }
-        }
-
         /* Responsive — tablet */
         @media (max-width: 900px) {
             .forge-layout {
@@ -1601,8 +1757,8 @@
             .header-inner {
                 flex-direction: column;
                 height: auto;
-                padding: 1rem 0;
-                gap: 0.75rem;
+                padding: 0.75rem 0;
+                gap: 0.5rem;
             }
             .nav-tabs {
                 width: 100%;
@@ -1610,13 +1766,12 @@
                 flex-wrap: wrap;
             }
             .nav-tab {
-                padding: 0.5rem 0.8rem;
+                padding: 0.4rem 0.7rem;
                 font-size: 0.65rem;
-                min-width: 64px;
             }
             .nav-tab .nav-icon {
-                width: 22px;
-                height: 22px;
+                width: 14px;
+                height: 14px;
             }
             .detail-header {
                 flex-direction: column;
@@ -1628,6 +1783,14 @@
             .library-filters {
                 gap: 0.5rem;
             }
+
+            /* Hide sidebar entirely on mobile */
+            .side-nav { display: none !important; }
+            /* Content not shifted on mobile */
+            .app-container,
+            body.sidebar-collapsed .app-container {
+                margin-left: 0;
+            }
         }
 
         /* Responsive — iPhone / small mobile */
@@ -1638,9 +1801,6 @@
             .logo-subtitle { display: none; }
             .logo-dragon { width: 72px; height: 72px; }
             .header-inner { padding: 0.75rem 0; gap: 0.5rem; }
-
-            .nav-tab { padding: 0.4rem 0.55rem; font-size: 0.6rem; letter-spacing: 0; min-width: 54px; }
-            .nav-tab .nav-icon { width: 18px; height: 18px; }
 
             .user-info-role { display: none; }
             .user-info { padding: 0.3rem 0.6rem; }
@@ -1670,6 +1830,8 @@
                 gap: 0.5rem;
             }
             .card-type-text { display: none; }
+            .card-role-text { font-size: 0.7rem; }
+            .card-price { font-size: 0.75rem; }
             .detail-stats { gap: 0.75rem; }
             .stat-box { padding: 0.75rem; min-width: 70px; }
             .stat-value { font-size: 1.1rem; }
@@ -1720,7 +1882,6 @@
             }
 
             /* Larger touch targets */
-            .btn-logout { padding: 0.5rem 1rem; font-size: 0.8rem; }
             .btn-delete-card { padding: 0.4rem 0.65rem; min-height: 44px; }
             .filter-pip { width: 36px; height: 36px; }
 
@@ -2052,24 +2213,6 @@
                     <div class="logo-subtitle">Powered by Arcane Intelligence</div>
                 </div>
             </div>
-            <nav class="nav-tabs" id="mainNav">
-                <button class="nav-tab active" data-view="forge">
-                    <svg class="nav-icon" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-                    Forge
-                </button>
-                <button class="nav-tab" data-view="library">
-                    <svg class="nav-icon" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-                    Library
-                </button>
-                <button class="nav-tab" data-view="prices">
-                    <svg class="nav-icon" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                    Price Lookup
-                </button>
-                <button class="nav-tab" data-view="admin" id="adminTab" style="display:none;">
-                    <svg class="nav-icon" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                    Admin
-                </button>
-            </nav>
             <div class="header-right" id="headerRight" style="display:none;">
                 <div class="user-info" id="userInfoTrigger" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" onclick="toggleUserDropdown(event)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleUserDropdown(event);}">
                     <div>
@@ -2080,14 +2223,58 @@
                     <div class="user-dropdown" id="userDropdown" role="menu">
                         <button class="user-dropdown-item" role="menuitem" onclick="toggleTheme(); event.stopPropagation();">
                             <span class="item-icon" id="themeToggleIcon">&#9790;</span>
-                            <span id="themeToggleLabel">Dark Mode</span>
+                            <span id="themeToggleLabel">Light Mode</span>
+                        </button>
+                        <div class="user-dropdown-divider"></div>
+                        <button class="user-dropdown-item logout-item" role="menuitem" onclick="logout(); event.stopPropagation();">
+                            <span class="item-icon">&#x2192;</span>
+                            Logout
                         </button>
                     </div>
                 </div>
-                <button class="btn-logout" onclick="logout()">Logout</button>
             </div>
         </div>
+        <!-- Mobile icon-only nav strip -->
+        <nav class="mobile-nav-strip" id="mobileNavStrip" style="display:none;">
+            <button class="mobile-nav-btn active" data-view="forge">
+                <svg viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            </button>
+            <button class="mobile-nav-btn" data-view="library">
+                <svg viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            </button>
+            <button class="mobile-nav-btn" data-view="prices">
+                <svg viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </button>
+            <button class="mobile-nav-btn" data-view="admin" id="adminTabMobile" style="display:none;">
+                <svg viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </button>
+        </nav>
     </header>
+
+    <!-- SIDE NAV -->
+    <aside class="side-nav" id="sideNav" style="display:none;">
+        <button class="side-nav-toggle" id="sideNavToggle" onclick="toggleSideNav()" title="Collapse navigation" aria-label="Toggle navigation">
+            <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <nav class="side-nav-items">
+            <button class="nav-tab active" data-view="forge">
+                <svg class="nav-icon" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                <span class="nav-label">Forge</span>
+            </button>
+            <button class="nav-tab" data-view="library">
+                <svg class="nav-icon" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                <span class="nav-label">Library</span>
+            </button>
+            <button class="nav-tab" data-view="prices">
+                <svg class="nav-icon" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                <span class="nav-label">Price Lookup</span>
+            </button>
+            <button class="nav-tab" data-view="admin" id="adminTab" style="display:none;">
+                <svg class="nav-icon" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                <span class="nav-label">Admin</span>
+            </button>
+        </nav>
+    </aside>
 
     <!-- LOGIN VIEW -->
     <div id="loginView" class="login-backdrop">
@@ -2468,6 +2655,14 @@
                         <button class="btn-outline" id="btnRefreshPricing" onclick="triggerPricingRefresh()">&#x21bb; Trigger Manual Refresh</button>
                     </div>
                 </div>
+                <div class="admin-section">
+                    <div class="admin-section-title">AI Ingestion</div>
+                    <div id="aiIngestionSummary" style="margin-bottom:1rem;color:var(--text-secondary);font-family:'Crimson Text',serif;"></div>
+                    <div id="aiIngestionDetails"></div>
+                    <div style="margin-top:1rem;">
+                        <button class="btn-outline" id="btnTriggerIngest" onclick="triggerAiReingestion()">&#x21bb; Trigger Re-ingestion</button>
+                    </div>
+                </div>
             </div>
         </div>
     </main>
@@ -2644,7 +2839,7 @@
             const icon = document.getElementById('themeToggleIcon');
             if (icon) icon.innerHTML = theme === 'light' ? '&#9728;' : '&#9790;';
             const label = document.getElementById('themeToggleLabel');
-            if (label) label.textContent = theme === 'light' ? 'Light Mode' : 'Dark Mode';
+            if (label) label.textContent = theme === 'light' ? 'Dark Mode' : 'Light Mode';
         }
 
         function toggleTheme() {
@@ -2715,20 +2910,35 @@
             }
         }
 
+        // === Sidebar ===
+        (function initSidebar() {
+            if (localStorage.getItem('sideNavCollapsed') === '1') {
+                document.getElementById('sideNav').classList.add('collapsed');
+                document.body.classList.add('sidebar-collapsed');
+            }
+        })();
+
+        function toggleSideNav() {
+            const sideNav = document.getElementById('sideNav');
+            const collapsed = sideNav.classList.toggle('collapsed');
+            document.body.classList.toggle('sidebar-collapsed', collapsed);
+            localStorage.setItem('sideNavCollapsed', collapsed ? '1' : '0');
+        }
+
         // === Auth ===
         function showApp() {
             document.getElementById('loginView').style.display = 'none';
             document.querySelector('.app-header').style.display = '';
             document.querySelector('.app-container').style.display = '';
             document.getElementById('headerRight').style.display = '';
+            document.getElementById('sideNav').style.display = '';
+            document.getElementById('mobileNavStrip').style.display = '';
             if (currentUser) {
                 document.getElementById('headerDisplayName').textContent = currentUser.displayName;
                 document.getElementById('headerRole').textContent = currentUser.role;
-                if (currentUser.role === 'Admin') {
-                    document.getElementById('adminTab').style.display = '';
-                } else {
-                    document.getElementById('adminTab').style.display = 'none';
-                }
+                const isAdmin = currentUser.role === 'Admin';
+                document.getElementById('adminTab').style.display = isAdmin ? '' : 'none';
+                document.getElementById('adminTabMobile').style.display = isAdmin ? '' : 'none';
             }
         }
 
@@ -2736,6 +2946,8 @@
             document.getElementById('loginView').style.display = '';
             document.querySelector('.app-header').style.display = 'none';
             document.querySelector('.app-container').style.display = 'none';
+            document.getElementById('sideNav').style.display = 'none';
+            document.getElementById('mobileNavStrip').style.display = 'none';
         }
 
 
@@ -3015,16 +3227,20 @@
 
         // === Navigation ===
         document.querySelectorAll('.nav-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                const view = tab.dataset.view;
-                switchView(view);
-            });
+            tab.addEventListener('click', () => switchView(tab.dataset.view));
+        });
+
+        document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => switchView(btn.dataset.view));
         });
 
         function switchView(view) {
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
             const tabEl = document.querySelector(`.nav-tab[data-view="${view}"]`);
             if (tabEl) tabEl.classList.add('active');
+            document.querySelectorAll('.mobile-nav-btn').forEach(t => t.classList.remove('active'));
+            const mobileBtn = document.querySelector(`.mobile-nav-btn[data-view="${view}"]`);
+            if (mobileBtn) mobileBtn.classList.add('active');
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.getElementById(`view-${view}`).classList.add('active');
 
@@ -3269,7 +3485,7 @@
                 renderDetail(deck);
                 document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
                 document.getElementById('view-detail').classList.add('active');
-                document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.nav-tab, .mobile-nav-btn').forEach(t => t.classList.remove('active'));
                 window.scrollTo(0, 0);
             } catch (err) {
                 showToast(err.message, true);
@@ -3847,7 +4063,7 @@
 
         // === Admin Panel ===
         async function loadAdminPanel() {
-            await Promise.all([loadAdminUsers(), loadAdminGroups(), loadPricingRuns()]);
+            await Promise.all([loadAdminUsers(), loadAdminGroups(), loadPricingRuns(), loadAiIngestionStatus()]);
         }
 
         async function loadAdminUsers() {
@@ -4090,6 +4306,124 @@
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '&#x21bb; Trigger Manual Refresh';
+            }
+        }
+
+        // === AI Ingestion Status ===
+        async function loadAiIngestionStatus() {
+            const summaryEl = document.getElementById('aiIngestionSummary');
+            const detailsEl = document.getElementById('aiIngestionDetails');
+            summaryEl.textContent = 'Loading…';
+            detailsEl.innerHTML = '';
+            try {
+                const res = await authFetch('/api/admin/ai-status');
+                if (!res.ok) throw new Error('Failed to load AI ingestion status');
+                const data = await res.json();
+                renderAiIngestionStatus(data);
+            } catch (err) {
+                summaryEl.textContent = 'Failed to load AI ingestion status';
+                detailsEl.innerHTML = '';
+            }
+        }
+
+        function renderAiIngestionStatus(data) {
+            const summaryEl = document.getElementById('aiIngestionSummary');
+            const detailsEl = document.getElementById('aiIngestionDetails');
+            const btn = document.getElementById('btnTriggerIngest');
+
+            if (!data.available) {
+                summaryEl.innerHTML = '<span style="color:var(--text-muted);font-style:italic;">AI service unavailable</span>';
+                detailsEl.innerHTML = data.error
+                    ? `<p style="color:var(--text-muted);font-size:0.9rem;">${data.error}</p>`
+                    : '';
+                btn.disabled = true;
+                return;
+            }
+
+            btn.disabled = false;
+            const s = data.status || {};
+
+            const totalCards = s.totalCardsIndexed ?? s.total_cards_indexed ?? s.cardCount ?? s.card_count ?? null;
+            const lastRun = s.lastIngestionAt ?? s.last_ingestion_at ?? s.lastRunAt ?? s.last_run_at ?? null;
+            const model = s.model ?? s.embeddingModel ?? s.embedding_model ?? null;
+            const jobStatus = s.status ?? s.ingestionStatus ?? s.ingestion_status ?? null;
+            const collectionSize = s.collectionSize ?? s.collection_size ?? s.vectorCount ?? s.vector_count ?? null;
+
+            const statusColor = jobStatus === 'running'
+                ? 'color:#FFA500'
+                : jobStatus === 'error' || jobStatus === 'failed'
+                    ? 'color:var(--danger,#f44336)'
+                    : 'color:var(--success,#4CAF50)';
+            const statusIcon = jobStatus === 'running' ? '⏳'
+                : jobStatus === 'error' || jobStatus === 'failed' ? '❌'
+                : '✅';
+
+            const cardCountStr = totalCards != null ? `<strong>${Number(totalCards).toLocaleString()}</strong> cards indexed` : null;
+            const vectorStr = collectionSize != null ? ` · <strong>${Number(collectionSize).toLocaleString()}</strong> vectors` : '';
+            summaryEl.innerHTML = cardCountStr
+                ? `${cardCountStr}${vectorStr}`
+                : (collectionSize != null ? `<strong>${Number(collectionSize).toLocaleString()}</strong> vectors in collection` : 'AI service connected');
+
+            const rows = [];
+            if (jobStatus) rows.push(['Status', `<span style="${statusColor}">${statusIcon} ${jobStatus}</span>`]);
+            if (totalCards != null) rows.push(['Cards Indexed', Number(totalCards).toLocaleString()]);
+            if (collectionSize != null) rows.push(['Vector Count', Number(collectionSize).toLocaleString()]);
+            if (model) rows.push(['Model', model]);
+            if (lastRun) {
+                const d = new Date(lastRun);
+                rows.push(['Last Ingestion', `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} ${d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`]);
+            }
+
+            // Surface any extra fields from the status payload.
+            // The knownKeys set is derived from the same aliases used above so additions stay consistent.
+            const knownKeys = new Set([
+                ...['totalCardsIndexed','total_cards_indexed','cardCount','card_count'],
+                ...['lastIngestionAt','last_ingestion_at','lastRunAt','last_run_at'],
+                ...['model','embeddingModel','embedding_model'],
+                ...['status','ingestionStatus','ingestion_status'],
+                ...['collectionSize','collection_size','vectorCount','vector_count']
+            ]);
+            for (const [k, v] of Object.entries(s)) {
+                if (!knownKeys.has(k) && v != null && typeof v !== 'object') {
+                    const label = k.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase());
+                    rows.push([label, String(v)]);
+                }
+            }
+
+            if (rows.length === 0) {
+                detailsEl.innerHTML = '<p style="color:var(--text-muted);font-size:0.9rem;">No detailed status fields available.</p>';
+                return;
+            }
+
+            detailsEl.innerHTML = `
+                <table style="width:100%;border-collapse:collapse;font-family:'Crimson Text',serif;font-size:0.95rem;">
+                    <tbody>
+                        ${rows.map(([label, value]) => `
+                            <tr style="border-bottom:1px solid var(--border);">
+                                <td style="padding:0.5rem 0.75rem;font-family:'Cinzel',serif;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);white-space:nowrap;width:40%;">${label}</td>
+                                <td style="padding:0.5rem 0.75rem;">${value}</td>
+                            </tr>`).join('')}
+                    </tbody>
+                </table>`;
+        }
+
+        async function triggerAiReingestion() {
+            const btn = document.getElementById('btnTriggerIngest');
+            btn.disabled = true;
+            btn.textContent = '⏳ Ingesting…';
+            try {
+                const res = await authFetch('/api/admin/ai-ingest', { method: 'POST' });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.error || 'Re-ingestion failed');
+                }
+                showToast('AI re-ingestion triggered successfully');
+                await loadAiIngestionStatus();
+            } catch (err) {
+                showToast(err.message, true);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '&#x21bb; Trigger Re-ingestion';
             }
         }
     </script>
