@@ -7,19 +7,28 @@ namespace MtgForge.Api.Observability;
 // Temporary: logs each Loki push so the feed can be verified. Remove once confirmed working.
 internal sealed class DiagnosticLokiHttpClient : ILokiHttpClient
 {
-    private readonly DefaultLokiHttpClient _inner = new();
+    private readonly HttpClient _httpClient = new();
 
-    public void SetAuthCredentials(LokiCredentials credentials) =>
-        _inner.SetAuthCredentials(credentials);
+    public void SetCredentials(LokiCredentials? credentials)
+    {
+        // No-op for now — credentials are not used in this deployment.
+    }
 
-    public async Task<HttpResponseMessage> PostAsync(string requestUri, HttpContent content)
+    public void SetTenant(string? tenant)
+    {
+        // No-op — single-tenant Loki setup.
+    }
+
+    public async Task<HttpResponseMessage> PostAsync(string requestUri, Stream contentStream)
     {
         var diag = Log.ForContext("SourceContext", "LokiDiag");
         var sw = Stopwatch.StartNew();
         diag.Information("Loki push → {Uri}", requestUri);
         try
         {
-            var response = await _inner.PostAsync(requestUri, content);
+            using var content = new StreamContent(contentStream);
+            content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
+            var response = await _httpClient.PostAsync(requestUri, content);
             sw.Stop();
             if (response.IsSuccessStatusCode)
             {
@@ -41,5 +50,5 @@ internal sealed class DiagnosticLokiHttpClient : ILokiHttpClient
         }
     }
 
-    public void Dispose() => _inner.Dispose();
+    public void Dispose() => _httpClient.Dispose();
 }
