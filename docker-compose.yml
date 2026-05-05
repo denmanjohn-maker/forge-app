@@ -45,6 +45,12 @@ services:
         condition: service_healthy
     networks:
       - mtg-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   # ─── Prometheus ─────────────────────────────────────────────
   prometheus:
@@ -62,7 +68,8 @@ services:
     networks:
       - mtg-network
     depends_on:
-      - mtg-api
+      mtg-api:
+        condition: service_healthy
 
   # ─── Grafana ────────────────────────────────────────────────
   grafana:
