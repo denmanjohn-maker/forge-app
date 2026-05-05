@@ -46,6 +46,14 @@ if (!string.IsNullOrEmpty(otlpEndpoint))
 var lokiUri = Environment.GetEnvironmentVariable("LOKI_URI");
 if (!string.IsNullOrEmpty(lokiUri))
 {
+    // Ensure the URI has a scheme — a common misconfiguration is setting
+    // LOKI_URI=loki.host:3100 (no http://) which .NET treats as an unknown scheme.
+    if (!lokiUri.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+        !lokiUri.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+    {
+        lokiUri = "http://" + lokiUri;
+    }
+
     logConfig = logConfig.WriteTo.GrafanaLoki(
         lokiUri,
         httpClient: new DiagnosticLokiHttpClient(),
