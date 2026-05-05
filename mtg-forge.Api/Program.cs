@@ -15,6 +15,7 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using Serilog;
 using Serilog.Events;
+using Serilog.Sinks.Grafana.Loki;
 
 // ── Serilog bootstrap (captures startup errors) ──
 var logStore = new InMemoryLogStore(1000);
@@ -36,6 +37,9 @@ Log.Logger = new LoggerConfiguration()
             ["service.name"] = "mtg-forge"
         };
     })
+    .WriteTo.GrafanaLoki(
+        Environment.GetEnvironmentVariable("LOKI_URL") ?? "http://loki:3100",
+        labels: new[] { new LokiLabel { Key = "app", Value = "mtg-forge" } })
     .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);

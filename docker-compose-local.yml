@@ -46,6 +46,25 @@ services:
       retries: 5
       start_period: 10s
 
+  # ─── Loki ───────────────────────────────────────────────────
+  loki:
+    image: grafana/loki:3.1.0
+    container_name: mtg-loki-local
+    restart: unless-stopped
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+    volumes:
+      - loki_data_local:/loki
+    networks:
+      - mtg-local
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3100/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
   # ─── Prometheus ─────────────────────────────────────────────
   prometheus:
     image: prom/prometheus:v2.53.0
@@ -80,6 +99,7 @@ services:
       - mtg-local
     depends_on:
       - prometheus
+      - loki
 
 volumes:
   mongo_data_local:
@@ -87,6 +107,8 @@ volumes:
   postgres_data_local:
     driver: local
   prometheus_data_local:
+    driver: local
+  loki_data_local:
     driver: local
   grafana_data_local:
     driver: local
