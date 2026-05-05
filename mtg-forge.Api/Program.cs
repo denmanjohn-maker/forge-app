@@ -19,24 +19,30 @@ using Serilog.Events;
 // ── Serilog bootstrap (captures startup errors) ──
 var logStore = new InMemoryLogStore(1000);
 
-Log.Logger = new LoggerConfiguration()
+var otlpEndpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT");
+
+var logConfig = new LoggerConfiguration()
     .MinimumLevel.Information()
     .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
     .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
     .Enrich.FromLogContext()
     .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
-    .WriteTo.Sink(new InMemoryLogSink(logStore))
-    .WriteTo.OpenTelemetry(options =>
+    .WriteTo.Sink(new InMemoryLogSink(logStore));
+
+if (!string.IsNullOrEmpty(otlpEndpoint))
+{
+    logConfig = logConfig.WriteTo.OpenTelemetry(options =>
     {
-        options.Endpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT")
-            ?? "http://localhost:4317";
+        options.Endpoint = otlpEndpoint;
         options.Protocol = Serilog.Sinks.OpenTelemetry.OtlpProtocol.Grpc;
         options.ResourceAttributes = new Dictionary<string, object>
         {
             ["service.name"] = "mtg-forge"
         };
-    })
-    .CreateLogger();
+    });
+}
+
+Log.Logger = logConfig.CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseSerilog();
