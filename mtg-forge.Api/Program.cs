@@ -15,6 +15,7 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using Serilog;
 using Serilog.Events;
+using Serilog.Sinks.Grafana.Loki;
 
 // ── Serilog bootstrap (captures startup errors) ──
 var logStore = new InMemoryLogStore(1000);
@@ -42,7 +43,20 @@ if (!string.IsNullOrEmpty(otlpEndpoint))
     });
 }
 
+var lokiUri = Environment.GetEnvironmentVariable("LOKI_URI");
+if (!string.IsNullOrEmpty(lokiUri))
+{
+    logConfig = logConfig.WriteTo.GrafanaLoki(
+        lokiUri,
+        httpClient: new DiagnosticLokiHttpClient(),
+        labels: new[] { new LokiLabel { Key = "app", Value = "mtg-forge" } }
+    );
+}
+
 Log.Logger = logConfig.CreateLogger();
+
+if (!string.IsNullOrEmpty(lokiUri))
+    Log.Information("Loki sink configured → {Uri}", lokiUri);
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseSerilog();

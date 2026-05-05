@@ -46,6 +46,21 @@ services:
       retries: 5
       start_period: 10s
 
+  # ─── Loki ───────────────────────────────────────────────────
+  # Set LOKI_URI=http://localhost:3100 in your shell to enable Loki logging from dotnet run.
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: mtg-loki-local
+    restart: unless-stopped
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./monitoring/loki/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki_data_local:/loki
+    networks:
+      - mtg-local
+
   # ─── Prometheus ─────────────────────────────────────────────
   prometheus:
     image: prom/prometheus:v2.53.0
@@ -80,6 +95,7 @@ services:
       - mtg-local
     depends_on:
       - prometheus
+      - loki
 
 volumes:
   mongo_data_local:
@@ -89,6 +105,8 @@ volumes:
   prometheus_data_local:
     driver: local
   grafana_data_local:
+    driver: local
+  loki_data_local:
     driver: local
 
 networks:
