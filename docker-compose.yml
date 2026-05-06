@@ -41,8 +41,8 @@ services:
       MongoDb__DatabaseName: "mtgdeckforge"
       MongoDb__DecksCollectionName: "decks"
       LOKI_URI: "http://loki:3100"
-      # Traces → Tempo (port 4317 OTLP gRPC). Kept separate from OTEL_EXPORTER_OTLP_ENDPOINT
-      # so the Serilog OTLP log sink is NOT accidentally pointed at Tempo (trace-only backend).
+      # Send OTLP traces to Tempo only; do not use the generic OTLP endpoint for logs
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://tempo:4317"
       OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://tempo:4317"
     depends_on:
       mongodb:
