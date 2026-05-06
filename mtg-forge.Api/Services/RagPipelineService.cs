@@ -123,6 +123,10 @@ public class RagPipelineService : IDeckGenerationService
             activity?.SetTag("mtg.deck.estimated_price", (double)deck.EstimatedTotalPrice);
             activity?.SetStatus(ActivityStatusCode.Ok);
 
+            _logger.LogInformation(
+                "RagPipelineService: deck generation complete — '{Name}', {CardCount} cards, ${Price:F2} (TraceId={TraceId})",
+                deck.DeckName, deck.TotalCards, deck.EstimatedTotalPrice, activity?.TraceId);
+
             return deck;
         }
         catch (Exception ex)
@@ -227,6 +231,10 @@ public class RagPipelineService : IDeckGenerationService
             activity?.SetTag("mtg.analysis.upgrades_count", analysis.CardUpgrades?.Count ?? 0);
             activity?.SetStatus(ActivityStatusCode.Ok);
 
+            _logger.LogInformation(
+                "RagPipelineService: deck analysis complete — rating={Rating}, {Weaknesses} weaknesses, {Upgrades} upgrades (TraceId={TraceId})",
+                analysis.OverallRating, analysis.Weaknesses?.Count ?? 0, analysis.CardUpgrades?.Count ?? 0, activity?.TraceId);
+
             return analysis;
         }
         catch (Exception ex)
@@ -261,6 +269,10 @@ public class RagPipelineService : IDeckGenerationService
         activity?.SetTag("mtg.budget.over_by", (double)(currentTotal - budgetMax));
         activity?.SetTag("mtg.budget.expensive_card_count", expensiveCards.Count);
         SetServerAttributes(activity, _settings.LlmBaseUrl);
+
+        _logger.LogInformation(
+            "RagPipelineService: requesting budget replacements for deck '{Name}' via Together.ai ({Count} expensive cards, ${OverBy:F2} over budget, TraceId={TraceId})",
+            deck.DeckName, expensiveCards.Count, currentTotal - budgetMax, activity?.TraceId);
 
         var cardListStr = string.Join("\n", expensiveCards
             .Select(c => $"- {c.Name} (${c.EstimatedPrice:F2}, {c.CardType}, {c.Category}, Role: {c.RoleInDeck})"));
@@ -329,6 +341,11 @@ public class RagPipelineService : IDeckGenerationService
             var replacements = JsonSerializer.Deserialize<List<CardEntry>>(jsonContent, JsonOpts) ?? [];
             activity?.SetTag("mtg.budget.replacements_returned", replacements.Count);
             activity?.SetStatus(ActivityStatusCode.Ok);
+
+            _logger.LogInformation(
+                "RagPipelineService: budget replacements complete — {Count} replacements returned (TraceId={TraceId})",
+                replacements.Count, activity?.TraceId);
+
             return replacements;
         }
         catch (Exception ex)
@@ -356,6 +373,10 @@ public class RagPipelineService : IDeckGenerationService
         activity?.SetTag("mtg.deck.name", deckName);
         activity?.SetTag("mtg.deck.card_count", cards.Count);
         SetServerAttributes(activity, _settings.LlmBaseUrl);
+
+        _logger.LogInformation(
+            "RagPipelineService: generating import description for '{Name}' via Together.ai (TraceId={TraceId})",
+            deckName, activity?.TraceId);
 
         var sample = cards
             .Where(c => c.CardType == null || !c.CardType.Contains("Land", StringComparison.OrdinalIgnoreCase))
@@ -453,11 +474,18 @@ public class RagPipelineService : IDeckGenerationService
             });
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
+            _logger.LogDebug(
+                "CallLlmAsync: sending chat request to {Url} — model={Model}, jsonMode={JsonMode}, temperature={Temperature} (TraceId={TraceId})",
+                _settings.LlmBaseUrl, _settings.Model, jsonMode, temperature, llmActivity?.TraceId);
+
             using var response = await client.PostAsync("/v1/chat/completions", content);
 
             if (!response.IsSuccessStatusCode)
             {
                 var err = await response.Content.ReadAsStringAsync();
+                _logger.LogError(
+                    "CallLlmAsync: Together.ai returned {Status} — {Body} (TraceId={TraceId})",
+                    response.StatusCode, err, llmActivity?.TraceId);
                 llmActivity?.SetStatus(ActivityStatusCode.Error, $"Together.ai {response.StatusCode}");
                 llmActivity?.SetTag("http.response.status_code", (int)response.StatusCode);
                 throw new InvalidOperationException($"Together.ai error {response.StatusCode}: {err}");
@@ -477,6 +505,15 @@ public class RagPipelineService : IDeckGenerationService
             {
                 llmActivity?.SetTag(MtgForgeActivitySource.GenAiUsageInputTokens, usage.PromptTokens);
                 llmActivity?.SetTag(MtgForgeActivitySource.GenAiUsageOutputTokens, usage.CompletionTokens);
+                _logger.LogDebug(
+                    "CallLlmAsync: Together.ai response received — {InputTokens} input tokens, {OutputTokens} output tokens (TraceId={TraceId})",
+                    usage.PromptTokens, usage.CompletionTokens, llmActivity?.TraceId);
+            }
+            else
+            {
+                _logger.LogDebug(
+                    "CallLlmAsync: Together.ai response received — no token usage reported (TraceId={TraceId})",
+                    llmActivity?.TraceId);
             }
 
             llmActivity?.SetStatus(ActivityStatusCode.Ok);
