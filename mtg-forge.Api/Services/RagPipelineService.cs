@@ -1,8 +1,10 @@
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
 using MtgForge.Api.Models;
+using MtgForge.Api.Observability;
 
 namespace MtgForge.Api.Services;
 
@@ -45,6 +47,19 @@ public class RagPipelineService : IDeckGenerationService
 
     public async Task<DeckConfiguration> GenerateDeckAsync(DeckGenerationRequest request)
     {
+        using var activity = MtgForgeActivitySource.Instance.StartActivity(
+            "gen_ai.generate_deck",
+            ActivityKind.Client);
+
+        activity?.SetTag(MtgForgeActivitySource.GenAiSystem, MtgForgeActivitySource.SystemMtgForgeAi);
+        activity?.SetTag(MtgForgeActivitySource.GenAiOperationName, "generate_deck");
+        activity?.SetTag(MtgForgeActivitySource.MtgDeckFormat, request.Format);
+        activity?.SetTag(MtgForgeActivitySource.MtgDeckBudget, request.BudgetRange);
+        activity?.SetTag(MtgForgeActivitySource.MtgDeckPowerLevel, request.PowerLevel);
+        activity?.SetTag("mtg.deck.colors", string.Join(",", request.Colors ?? []));
+        activity?.SetTag("mtg.deck.commander", request.PreferredCommander);
+        activity?.SetTag("server.address", _settings.BaseUrl);
+
         _logger.LogInformation(
             "RagPipelineService: generating {Format} deck via mtg-forge-ai at {Url}",
             request.Format, _settings.BaseUrl);
@@ -63,6 +78,7 @@ public class RagPipelineService : IDeckGenerationService
         {
             var matchedNames = string.Join(", ", themedMatches.Select(s => s.DisplayName));
             _logger.LogInformation("RagPipelineService: detected themed set reference(s) in notes — {Matches}", matchedNames);
+            activity?.SetTag("mtg.themed_sets_detected", matchedNames);
         }
 
         var localRequest = new
@@ -81,28 +97,60 @@ public class RagPipelineService : IDeckGenerationService
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         });
         using var content = new StringContent(json, Encoding.UTF8, "application/json");
-        using var response = await client.PostAsync("/api/decks/generate", content);
 
-        if (!response.IsSuccessStatusCode)
+        try
         {
-            var err = await response.Content.ReadAsStringAsync();
-            _logger.LogError("mtg-forge-ai error {Status}: {Body}", response.StatusCode, err);
-            throw new InvalidOperationException($"mtg-forge-ai returned {response.StatusCode}: {err}");
+            using var response = await client.PostAsync("/api/decks/generate", content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var err = await response.Content.ReadAsStringAsync();
+                _logger.LogError("mtg-forge-ai error {Status}: {Body}", response.StatusCode, err);
+                activity?.SetStatus(ActivityStatusCode.Error, $"mtg-forge-ai returned {response.StatusCode}");
+                activity?.SetTag("http.response.status_code", (int)response.StatusCode);
+                throw new InvalidOperationException($"mtg-forge-ai returned {response.StatusCode}: {err}");
+            }
+
+            var body = await response.Content.ReadAsStringAsync();
+            var localDeck = JsonSerializer.Deserialize<LocalDeckResponse>(body, JsonOpts)
+                ?? throw new InvalidOperationException("Null response from mtg-forge-ai");
+
+            var deck = MapToDeckConfiguration(localDeck, request);
+            EnforceCardCount(deck, request, _logger);
+
+            activity?.SetTag("mtg.deck.name", deck.DeckName);
+            activity?.SetTag("mtg.deck.card_count", deck.TotalCards);
+            activity?.SetTag("mtg.deck.estimated_price", (double)deck.EstimatedTotalPrice);
+            activity?.SetStatus(ActivityStatusCode.Ok);
+
+            return deck;
         }
-
-        var body = await response.Content.ReadAsStringAsync();
-        var localDeck = JsonSerializer.Deserialize<LocalDeckResponse>(body, JsonOpts)
-            ?? throw new InvalidOperationException("Null response from mtg-forge-ai");
-
-        var deck = MapToDeckConfiguration(localDeck, request);
-        EnforceCardCount(deck, request, _logger);
-        return deck;
+        catch (Exception ex)
+        {
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+            activity?.RecordException(ex);
+            throw;
+        }
     }
 
     // ─── Deck Analysis ────────────────────────────────────────────────────────
 
     public async Task<DeckAnalysis> AnalyzeDeckAsync(DeckConfiguration deck)
     {
+        using var activity = MtgForgeActivitySource.Instance.StartActivity(
+            "gen_ai.analyze_deck",
+            ActivityKind.Client);
+
+        activity?.SetTag(MtgForgeActivitySource.GenAiSystem, MtgForgeActivitySource.SystemTogetherAi);
+        activity?.SetTag(MtgForgeActivitySource.GenAiOperationName, "analyze_deck");
+        activity?.SetTag(MtgForgeActivitySource.GenAiRequestModel, _settings.Model);
+        activity?.SetTag(MtgForgeActivitySource.GenAiRequestMaxTokens, 4096);
+        activity?.SetTag(MtgForgeActivitySource.GenAiRequestTemperature, 0.3);
+        activity?.SetTag(MtgForgeActivitySource.MtgDeckId, deck.Id);
+        activity?.SetTag("mtg.deck.name", deck.DeckName);
+        activity?.SetTag(MtgForgeActivitySource.MtgDeckFormat, deck.Format);
+        activity?.SetTag("server.address", _settings.LlmBaseUrl);
+
         _logger.LogInformation("RagPipelineService: analyzing deck '{Name}' via Together.ai", deck.DeckName);
 
         var metrics  = DeckMetricsCalculator.Calculate(deck.Cards);
@@ -172,6 +220,11 @@ public class RagPipelineService : IDeckGenerationService
         var analysis = JsonSerializer.Deserialize<DeckAnalysis>(jsonContent, JsonOpts)
             ?? throw new InvalidOperationException("Failed to deserialize analysis from Together.ai");
 
+        activity?.SetTag("mtg.analysis.rating", analysis.OverallRating);
+        activity?.SetTag("mtg.analysis.weaknesses_count", analysis.Weaknesses?.Count ?? 0);
+        activity?.SetTag("mtg.analysis.upgrades_count", analysis.CardUpgrades?.Count ?? 0);
+        activity?.SetStatus(ActivityStatusCode.Ok);
+
         return analysis;
     }
 
@@ -184,6 +237,22 @@ public class RagPipelineService : IDeckGenerationService
         decimal budgetMax,
         List<(string CardName, decimal Price)> cheapCardPool)
     {
+        using var activity = MtgForgeActivitySource.Instance.StartActivity(
+            "gen_ai.suggest_budget_replacements",
+            ActivityKind.Client);
+
+        activity?.SetTag(MtgForgeActivitySource.GenAiSystem, MtgForgeActivitySource.SystemTogetherAi);
+        activity?.SetTag(MtgForgeActivitySource.GenAiOperationName, "suggest_budget_replacements");
+        activity?.SetTag(MtgForgeActivitySource.GenAiRequestModel, _settings.Model);
+        activity?.SetTag(MtgForgeActivitySource.GenAiRequestMaxTokens, 4096);
+        activity?.SetTag(MtgForgeActivitySource.GenAiRequestTemperature, 0.3);
+        activity?.SetTag(MtgForgeActivitySource.MtgDeckId, deck.Id);
+        activity?.SetTag("mtg.budget.current_total", (double)currentTotal);
+        activity?.SetTag("mtg.budget.max", (double)budgetMax);
+        activity?.SetTag("mtg.budget.over_by", (double)(currentTotal - budgetMax));
+        activity?.SetTag("mtg.budget.expensive_card_count", expensiveCards.Count);
+        activity?.SetTag("server.address", _settings.LlmBaseUrl);
+
         var cardListStr = string.Join("\n", expensiveCards
             .Select(c => $"- {c.Name} (${c.EstimatedPrice:F2}, {c.CardType}, {c.Category}, Role: {c.RoleInDeck})"));
 
@@ -248,11 +317,16 @@ public class RagPipelineService : IDeckGenerationService
         {
             var rawResponse = await CallLlmAsync(systemPrompt, prompt, jsonMode: true, temperature: 0.3);
             var jsonContent = ExtractJson(rawResponse);
-            return JsonSerializer.Deserialize<List<CardEntry>>(jsonContent, JsonOpts) ?? [];
+            var replacements = JsonSerializer.Deserialize<List<CardEntry>>(jsonContent, JsonOpts) ?? [];
+            activity?.SetTag("mtg.budget.replacements_returned", replacements.Count);
+            activity?.SetStatus(ActivityStatusCode.Ok);
+            return replacements;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "RagPipelineService: failed to parse budget replacement suggestions from Together.ai");
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+            activity?.RecordException(ex);
             return [];
         }
     }
@@ -261,6 +335,19 @@ public class RagPipelineService : IDeckGenerationService
 
     public async Task<string> GenerateImportDescriptionAsync(string deckName, List<CardEntry> cards)
     {
+        using var activity = MtgForgeActivitySource.Instance.StartActivity(
+            "gen_ai.generate_import_description",
+            ActivityKind.Client);
+
+        activity?.SetTag(MtgForgeActivitySource.GenAiSystem, MtgForgeActivitySource.SystemTogetherAi);
+        activity?.SetTag(MtgForgeActivitySource.GenAiOperationName, "generate_import_description");
+        activity?.SetTag(MtgForgeActivitySource.GenAiRequestModel, _settings.Model);
+        activity?.SetTag(MtgForgeActivitySource.GenAiRequestMaxTokens, 4096);
+        activity?.SetTag(MtgForgeActivitySource.GenAiRequestTemperature, 0.7);
+        activity?.SetTag("mtg.deck.name", deckName);
+        activity?.SetTag("mtg.deck.card_count", cards.Count);
+        activity?.SetTag("server.address", _settings.LlmBaseUrl);
+
         var sample = cards
             .Where(c => c.CardType == null || !c.CardType.Contains("Land", StringComparison.OrdinalIgnoreCase))
             .Take(20)
@@ -279,11 +366,15 @@ public class RagPipelineService : IDeckGenerationService
 
         try
         {
-            return (await CallLlmAsync(systemPrompt, userPrompt, jsonMode: false, temperature: 0.7)).Trim();
+            var result = (await CallLlmAsync(systemPrompt, userPrompt, jsonMode: false, temperature: 0.7)).Trim();
+            activity?.SetStatus(ActivityStatusCode.Ok);
+            return result;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to generate import description via Together.ai");
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+            activity?.RecordException(ex);
             return $"Imported deck: {deckName}";
         }
     }
@@ -307,6 +398,20 @@ public class RagPipelineService : IDeckGenerationService
         if (string.IsNullOrWhiteSpace(_settings.LlmApiKey))
             throw new InvalidOperationException(
                 "RagPipeline:LlmApiKey is required. Set it via environment variable RAGPIPELINE__LLMAPIKEY.");
+
+        // Child span that covers the raw HTTP call so latency is visible separately
+        // from the parent operation span (analysis, replacements, etc.).
+        using var llmActivity = MtgForgeActivitySource.Instance.StartActivity(
+            "gen_ai.chat",
+            ActivityKind.Client);
+
+        llmActivity?.SetTag(MtgForgeActivitySource.GenAiSystem, MtgForgeActivitySource.SystemTogetherAi);
+        llmActivity?.SetTag(MtgForgeActivitySource.GenAiOperationName, "chat");
+        llmActivity?.SetTag(MtgForgeActivitySource.GenAiRequestModel, _settings.Model);
+        llmActivity?.SetTag(MtgForgeActivitySource.GenAiRequestMaxTokens, 4096);
+        llmActivity?.SetTag(MtgForgeActivitySource.GenAiRequestTemperature, temperature);
+        llmActivity?.SetTag("gen_ai.request.json_mode", jsonMode);
+        llmActivity?.SetTag("server.address", _settings.LlmBaseUrl);
 
         var client = _factory.CreateClient();
         client.BaseAddress = new Uri(_settings.LlmBaseUrl);
@@ -336,11 +441,14 @@ public class RagPipelineService : IDeckGenerationService
             DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
         });
         using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
         using var response = await client.PostAsync("/v1/chat/completions", content);
 
         if (!response.IsSuccessStatusCode)
         {
             var err = await response.Content.ReadAsStringAsync();
+            llmActivity?.SetStatus(ActivityStatusCode.Error, $"Together.ai {response.StatusCode}");
+            llmActivity?.SetTag("http.response.status_code", (int)response.StatusCode);
             throw new InvalidOperationException($"Together.ai error {response.StatusCode}: {err}");
         }
 
@@ -350,8 +458,18 @@ public class RagPipelineService : IDeckGenerationService
             PropertyNameCaseInsensitive = true
         });
 
-        return chatResponse?.Choices?.FirstOrDefault()?.Message?.Content
+        var result = chatResponse?.Choices?.FirstOrDefault()?.Message?.Content
             ?? throw new InvalidOperationException("Empty response from Together.ai");
+
+        // Record token usage when the provider returns it
+        if (chatResponse?.Usage is { } usage)
+        {
+            llmActivity?.SetTag(MtgForgeActivitySource.GenAiUsageInputTokens, usage.PromptTokens);
+            llmActivity?.SetTag(MtgForgeActivitySource.GenAiUsageOutputTokens, usage.CompletionTokens);
+        }
+
+        llmActivity?.SetStatus(ActivityStatusCode.Ok);
+        return result;
     }
 
     private static DeckConfiguration MapToDeckConfiguration(
@@ -569,6 +687,7 @@ public class RagPipelineService : IDeckGenerationService
     private class ChatCompletionResponse
     {
         public List<ChatChoice>? Choices { get; set; }
+        public ChatUsage? Usage { get; set; }
     }
 
     private class ChatChoice
@@ -579,5 +698,12 @@ public class RagPipelineService : IDeckGenerationService
     private class ChatMessage
     {
         public string Content { get; set; } = "";
+    }
+
+    private class ChatUsage
+    {
+        public int PromptTokens { get; set; }
+        public int CompletionTokens { get; set; }
+        public int TotalTokens { get; set; }
     }
 }

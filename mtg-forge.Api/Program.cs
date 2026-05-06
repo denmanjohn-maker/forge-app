@@ -11,8 +11,10 @@ using MtgForge.Api.Data;
 using MtgForge.Api.Models;
 using MtgForge.Api.Observability;
 using MtgForge.Api.Services;
+using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.Grafana.Loki;
@@ -153,13 +155,46 @@ builder.Services.AddHostedService<PricingRefreshHostedService>();
 
 // ── Observability ──
 builder.Services.AddSingleton(logStore);
-builder.Services.AddOpenTelemetry()
-    .ConfigureResource(r => r.AddService("mtg-forge"))
+
+var otelBuilder = builder.Services.AddOpenTelemetry()
+    .ConfigureResource(r => r
+        .AddService("mtg-forge")
+        .AddAttributes(new Dictionary<string, object>
+        {
+            ["deployment.environment"] = builder.Environment.EnvironmentName.ToLowerInvariant()
+        }))
     .WithMetrics(metrics => metrics
         .AddAspNetCoreInstrumentation()
         .AddHttpClientInstrumentation()
         .AddRuntimeInstrumentation()
-        .AddPrometheusExporter());
+        .AddPrometheusExporter())
+    .WithTracing(tracing =>
+    {
+        tracing
+            .AddAspNetCoreInstrumentation(opts =>
+            {
+                // Exclude noisy health/metrics endpoints from traces
+                opts.Filter = ctx =>
+                    ctx.Request.Path != "/healthz" &&
+                    ctx.Request.Path != "/metrics";
+            })
+            .AddHttpClientInstrumentation(opts =>
+            {
+                // Capture request/response bodies would be too large; record URL and status only
+                opts.RecordException = true;
+            })
+            .AddSource(MtgForgeActivitySource.Name);
+
+        if (!string.IsNullOrEmpty(otlpEndpoint))
+        {
+            tracing.AddOtlpExporter(opts =>
+            {
+                opts.Endpoint = new Uri(otlpEndpoint);
+                opts.Protocol = OtlpExportProtocol.Grpc;
+            });
+            Log.Information("OTel tracing → OTLP at {Endpoint}", otlpEndpoint);
+        }
+    });
 
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
