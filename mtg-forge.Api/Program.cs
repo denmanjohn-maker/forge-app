@@ -86,6 +86,7 @@ builder.WebHost.ConfigureKestrel(options =>
 builder.Services.Configure<MongoDbSettings>(
     builder.Configuration.GetSection("MongoDb"));
 builder.Services.AddSingleton<DeckService>();
+builder.Services.AddSingleton<GenerationJobStore>();
 
 // RAG pipeline (mtg-forge-ai + Together.ai)
 builder.Services.Configure<RagPipelineSettings>(

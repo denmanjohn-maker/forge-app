@@ -18,14 +18,18 @@ public class DecksController : ControllerBase
     private readonly ScryfallService _scryfallService;
     private readonly PricingService _pricingService;
     private readonly ILogger<DecksController> _logger;
+    private readonly GenerationJobStore _jobStore;
+    private readonly IServiceScopeFactory _scopeFactory;
 
-    public DecksController(DeckService deckService, IDeckGenerationService llmService, ScryfallService scryfallService, PricingService pricingService, ILogger<DecksController> logger)
+    public DecksController(DeckService deckService, IDeckGenerationService llmService, ScryfallService scryfallService, PricingService pricingService, ILogger<DecksController> logger, GenerationJobStore jobStore, IServiceScopeFactory scopeFactory)
     {
         _deckService = deckService;
         _llmService = llmService;
         _scryfallService = scryfallService;
         _pricingService = pricingService;
         _logger = logger;
+        _jobStore = jobStore;
+        _scopeFactory = scopeFactory;
     }
 
     private string GetUserId() => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -68,95 +72,123 @@ public class DecksController : ControllerBase
 
     [HttpPost("generate")]
     [EnableRateLimiting("deck-generation")]
-    public async Task<ActionResult<DeckConfiguration>> Generate([FromBody] DeckGenerationRequest request)
+    public IActionResult Generate([FromBody] DeckGenerationRequest request)
     {
-        try
+        var userId = GetUserId();
+        var displayName = GetDisplayName();
+        var job = _jobStore.Create(userId);
+
+        _ = Task.Run(async () =>
         {
-            _logger.LogInformation("Generating deck with colors: {Colors}, format: {Format}",
-                string.Join(",", request.Colors), request.Format);
-
-            var deck = await _llmService.GenerateDeckAsync(request);
-            await _pricingService.ApplyPricesAsync(deck.Cards);
-            deck.TotalCards = deck.Cards.Sum(c => c.Quantity);
-            deck.EstimatedTotalPrice = deck.Cards.Sum(c => c.EstimatedPrice * c.Quantity);
-
-            // Budget enforcement: swap expensive cards if real prices exceed budget
-            var budgetMax = BudgetHelper.GetBudgetMax(request.BudgetRange);
-            if (budgetMax.HasValue && deck.EstimatedTotalPrice > budgetMax.Value)
+            job.Status = GenerationJobStatus.Running;
+            try
             {
-                // Determine per-card price ceiling based on budget tier
-                var perCardMax = budgetMax.Value <= 50m ? 1.00m
-                    : budgetMax.Value <= 150m ? 2.00m
-                    : 5.00m;
+                using var scope = _scopeFactory.CreateScope();
+                var llm = scope.ServiceProvider.GetRequiredService<IDeckGenerationService>();
+                var pricing = scope.ServiceProvider.GetRequiredService<PricingService>();
+                var logger = scope.ServiceProvider.GetRequiredService<ILogger<DecksController>>();
+                var deckService = scope.ServiceProvider.GetRequiredService<DeckService>();
 
-                var cheapCardPool = await _pricingService.GetCheapCardsAsync(perCardMax, 300);
+                logger.LogInformation("Generating deck (job {JobId}) with colors: {Colors}, format: {Format}",
+                    job.Id, string.Join(",", request.Colors), request.Format);
 
-                const int maxRetries = 3;
-                for (var attempt = 0; attempt < maxRetries && deck.EstimatedTotalPrice > budgetMax.Value; attempt++)
+                var deck = await llm.GenerateDeckAsync(request);
+                await pricing.ApplyPricesAsync(deck.Cards);
+                deck.TotalCards = deck.Cards.Sum(c => c.Quantity);
+                deck.EstimatedTotalPrice = deck.Cards.Sum(c => c.EstimatedPrice * c.Quantity);
+
+                var budgetMax = BudgetHelper.GetBudgetMax(request.BudgetRange);
+                if (budgetMax.HasValue && deck.EstimatedTotalPrice > budgetMax.Value)
                 {
-                    var overage = deck.EstimatedTotalPrice - budgetMax.Value;
-                    _logger.LogInformation(
-                        "Deck over budget by ${Overage:F2} (${Total:F2} vs ${Max:F2}). Attempt {Attempt} to fix.",
-                        overage, deck.EstimatedTotalPrice, budgetMax.Value, attempt + 1);
+                    var perCardMax = budgetMax.Value <= 50m ? 1.00m
+                        : budgetMax.Value <= 150m ? 2.00m
+                        : 5.00m;
 
-                    // Replace ALL cards that exceed the per-card price ceiling
-                    var expensiveCards = deck.Cards
-                        .Where(c => !c.Category.Equals("Commander", StringComparison.OrdinalIgnoreCase)
-                                 && !c.CardType.Contains("Basic Land", StringComparison.OrdinalIgnoreCase)
-                                 && c.EstimatedPrice > perCardMax)
-                        .OrderByDescending(c => c.EstimatedPrice)
-                        .Take(25)
-                        .ToList();
+                    var cheapCardPool = await pricing.GetCheapCardsAsync(perCardMax, 300);
 
-                    if (expensiveCards.Count == 0) break;
-
-                    var replacements = await _llmService.SuggestBudgetReplacementsAsync(
-                        deck, expensiveCards, deck.EstimatedTotalPrice, budgetMax.Value, cheapCardPool);
-
-                    if (replacements.Count == 0) break;
-
-                    // Swap cards: match by index (replacement[i] replaces expensiveCards[i])
-                    var existingNames = new HashSet<string>(
-                        deck.Cards.Select(c => c.Name), StringComparer.OrdinalIgnoreCase);
-
-                    for (var i = 0; i < Math.Min(expensiveCards.Count, replacements.Count); i++)
+                    const int maxRetries = 3;
+                    for (var attempt = 0; attempt < maxRetries && deck.EstimatedTotalPrice > budgetMax.Value; attempt++)
                     {
-                        var replacement = replacements[i];
-                        // Skip if the replacement is already in the deck (Commander singleton rule)
-                        if (existingNames.Contains(replacement.Name)) continue;
+                        var overage = deck.EstimatedTotalPrice - budgetMax.Value;
+                        logger.LogInformation(
+                            "Deck over budget by ${Overage:F2} (${Total:F2} vs ${Max:F2}). Attempt {Attempt} to fix.",
+                            overage, deck.EstimatedTotalPrice, budgetMax.Value, attempt + 1);
 
-                        var idx = deck.Cards.IndexOf(expensiveCards[i]);
-                        if (idx >= 0)
+                        var expensiveCards = deck.Cards
+                            .Where(c => !c.Category.Equals("Commander", StringComparison.OrdinalIgnoreCase)
+                                     && !c.CardType.Contains("Basic Land", StringComparison.OrdinalIgnoreCase)
+                                     && c.EstimatedPrice > perCardMax)
+                            .OrderByDescending(c => c.EstimatedPrice)
+                            .Take(25)
+                            .ToList();
+
+                        if (expensiveCards.Count == 0) break;
+
+                        var replacements = await llm.SuggestBudgetReplacementsAsync(
+                            deck, expensiveCards, deck.EstimatedTotalPrice, budgetMax.Value, cheapCardPool);
+
+                        if (replacements.Count == 0) break;
+
+                        var existingNames = new HashSet<string>(
+                            deck.Cards.Select(c => c.Name), StringComparer.OrdinalIgnoreCase);
+
+                        for (var i = 0; i < Math.Min(expensiveCards.Count, replacements.Count); i++)
                         {
-                            existingNames.Remove(deck.Cards[idx].Name);
-                            deck.Cards[idx] = replacement;
-                            existingNames.Add(replacement.Name);
+                            var replacement = replacements[i];
+                            if (existingNames.Contains(replacement.Name)) continue;
+
+                            var idx = deck.Cards.IndexOf(expensiveCards[i]);
+                            if (idx >= 0)
+                            {
+                                existingNames.Remove(deck.Cards[idx].Name);
+                                deck.Cards[idx] = replacement;
+                                existingNames.Add(replacement.Name);
+                            }
                         }
+
+                        await pricing.ApplyPricesAsync(deck.Cards);
+                        deck.TotalCards = deck.Cards.Sum(c => c.Quantity);
+                        deck.EstimatedTotalPrice = deck.Cards.Sum(c => c.EstimatedPrice * c.Quantity);
                     }
 
-                    // Re-apply real prices to the new cards
-                    await _pricingService.ApplyPricesAsync(deck.Cards);
-                    deck.TotalCards = deck.Cards.Sum(c => c.Quantity);
-                    deck.EstimatedTotalPrice = deck.Cards.Sum(c => c.EstimatedPrice * c.Quantity);
+                    if (deck.EstimatedTotalPrice > budgetMax.Value)
+                        logger.LogWarning(
+                            "Deck still over budget after replacements: ${Total:F2} vs ${Max:F2}",
+                            deck.EstimatedTotalPrice, budgetMax.Value);
                 }
 
-                if (deck.EstimatedTotalPrice > budgetMax.Value)
-                    _logger.LogWarning(
-                        "Deck still over budget after replacements: ${Total:F2} vs ${Max:F2}",
-                        deck.EstimatedTotalPrice, budgetMax.Value);
+                deck.UserId = userId;
+                deck.UserDisplayName = displayName;
+                var saved = await deckService.CreateAsync(deck);
+
+                job.Deck = saved;
+                job.Status = GenerationJobStatus.Completed;
             }
+            catch (Exception ex)
+            {
+                job.Error = ex.Message;
+                job.Status = GenerationJobStatus.Failed;
+            }
+        });
 
-            deck.UserId = GetUserId();
-            deck.UserDisplayName = GetDisplayName();
-            var saved = await _deckService.CreateAsync(deck);
+        return Accepted(new { jobId = job.Id });
+    }
 
-            return CreatedAtAction(nameof(GetById), new { id = saved.Id }, saved);
-        }
-        catch (Exception ex)
+    [HttpGet("generate/status/{jobId}")]
+    public IActionResult GetGenerationStatus(string jobId)
+    {
+        var job = _jobStore.Get(jobId);
+        if (job is null)
+            return NotFound(new { error = "Job not found or expired" });
+        if (job.UserId != GetUserId() && !IsAdmin())
+            return Forbid();
+
+        return Ok(new
         {
-            _logger.LogError(ex, "Failed to generate deck");
-            return StatusCode(500, new { error = "Failed to generate deck", details = ex.Message });
-        }
+            status = job.Status.ToString().ToLowerInvariant(),
+            deck = job.Deck,
+            error = job.Error
+        });
     }
 
     [HttpPatch("{id}")]
