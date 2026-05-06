@@ -156,7 +156,12 @@ builder.Services.AddHostedService<PricingRefreshHostedService>();
 // ── Observability ──
 builder.Services.AddSingleton(logStore);
 
-var otelBuilder = builder.Services.AddOpenTelemetry()
+// OTEL_EXPORTER_OTLP_ENDPOINT        → Serilog OTLP log sink (already wired above)
+// OTEL_EXPORTER_OTLP_TRACES_ENDPOINT → OTel tracing pipeline (Tempo, Jaeger, etc.)
+var otlpTracesEndpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT")
+    ?? Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT");
+
+builder.Services.AddOpenTelemetry()
     .ConfigureResource(r => r
         .AddService("mtg-forge")
         .AddAttributes(new Dictionary<string, object>
@@ -180,19 +185,18 @@ var otelBuilder = builder.Services.AddOpenTelemetry()
             })
             .AddHttpClientInstrumentation(opts =>
             {
-                // Capture request/response bodies would be too large; record URL and status only
                 opts.RecordException = true;
             })
             .AddSource(MtgForgeActivitySource.Name);
 
-        if (!string.IsNullOrEmpty(otlpEndpoint))
+        if (!string.IsNullOrEmpty(otlpTracesEndpoint))
         {
             tracing.AddOtlpExporter(opts =>
             {
-                opts.Endpoint = new Uri(otlpEndpoint);
+                opts.Endpoint = new Uri(otlpTracesEndpoint);
                 opts.Protocol = OtlpExportProtocol.Grpc;
             });
-            Log.Information("OTel tracing → OTLP at {Endpoint}", otlpEndpoint);
+            Log.Information("OTel tracing → OTLP at {Endpoint}", otlpTracesEndpoint);
         }
     });
 

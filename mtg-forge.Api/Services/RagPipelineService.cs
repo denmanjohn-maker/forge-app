@@ -58,7 +58,7 @@ public class RagPipelineService : IDeckGenerationService
         activity?.SetTag(MtgForgeActivitySource.MtgDeckPowerLevel, request.PowerLevel);
         activity?.SetTag("mtg.deck.colors", string.Join(",", request.Colors ?? []));
         activity?.SetTag("mtg.deck.commander", request.PreferredCommander);
-        activity?.SetTag("server.address", _settings.BaseUrl);
+        SetServerAttributes(activity, _settings.BaseUrl);
 
         _logger.LogInformation(
             "RagPipelineService: generating {Format} deck via mtg-forge-ai at {Url}",
@@ -149,7 +149,7 @@ public class RagPipelineService : IDeckGenerationService
         activity?.SetTag(MtgForgeActivitySource.MtgDeckId, deck.Id);
         activity?.SetTag("mtg.deck.name", deck.DeckName);
         activity?.SetTag(MtgForgeActivitySource.MtgDeckFormat, deck.Format);
-        activity?.SetTag("server.address", _settings.LlmBaseUrl);
+        SetServerAttributes(activity, _settings.LlmBaseUrl);
 
         _logger.LogInformation("RagPipelineService: analyzing deck '{Name}' via Together.ai", deck.DeckName);
 
@@ -214,18 +214,27 @@ public class RagPipelineService : IDeckGenerationService
             When suggesting card upgrades, consider the deck's budget — prefer swaps that stay within ${metrics.TotalCost:F2} total.
             """;
 
-        var rawResponse = await CallLlmAsync(systemPrompt, userPrompt, jsonMode: true, temperature: 0.3);
+        try
+        {
+            var rawResponse = await CallLlmAsync(systemPrompt, userPrompt, jsonMode: true, temperature: 0.3);
 
-        var jsonContent = ExtractJson(rawResponse);
-        var analysis = JsonSerializer.Deserialize<DeckAnalysis>(jsonContent, JsonOpts)
-            ?? throw new InvalidOperationException("Failed to deserialize analysis from Together.ai");
+            var jsonContent = ExtractJson(rawResponse);
+            var analysis = JsonSerializer.Deserialize<DeckAnalysis>(jsonContent, JsonOpts)
+                ?? throw new InvalidOperationException("Failed to deserialize analysis from Together.ai");
 
-        activity?.SetTag("mtg.analysis.rating", analysis.OverallRating);
-        activity?.SetTag("mtg.analysis.weaknesses_count", analysis.Weaknesses?.Count ?? 0);
-        activity?.SetTag("mtg.analysis.upgrades_count", analysis.CardUpgrades?.Count ?? 0);
-        activity?.SetStatus(ActivityStatusCode.Ok);
+            activity?.SetTag("mtg.analysis.rating", analysis.OverallRating);
+            activity?.SetTag("mtg.analysis.weaknesses_count", analysis.Weaknesses?.Count ?? 0);
+            activity?.SetTag("mtg.analysis.upgrades_count", analysis.CardUpgrades?.Count ?? 0);
+            activity?.SetStatus(ActivityStatusCode.Ok);
 
-        return analysis;
+            return analysis;
+        }
+        catch (Exception ex)
+        {
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+            activity?.RecordException(ex);
+            throw;
+        }
     }
 
     // ─── Budget Replacements ──────────────────────────────────────────────────
@@ -251,7 +260,7 @@ public class RagPipelineService : IDeckGenerationService
         activity?.SetTag("mtg.budget.max", (double)budgetMax);
         activity?.SetTag("mtg.budget.over_by", (double)(currentTotal - budgetMax));
         activity?.SetTag("mtg.budget.expensive_card_count", expensiveCards.Count);
-        activity?.SetTag("server.address", _settings.LlmBaseUrl);
+        SetServerAttributes(activity, _settings.LlmBaseUrl);
 
         var cardListStr = string.Join("\n", expensiveCards
             .Select(c => $"- {c.Name} (${c.EstimatedPrice:F2}, {c.CardType}, {c.Category}, Role: {c.RoleInDeck})"));
@@ -346,7 +355,7 @@ public class RagPipelineService : IDeckGenerationService
         activity?.SetTag(MtgForgeActivitySource.GenAiRequestTemperature, 0.7);
         activity?.SetTag("mtg.deck.name", deckName);
         activity?.SetTag("mtg.deck.card_count", cards.Count);
-        activity?.SetTag("server.address", _settings.LlmBaseUrl);
+        SetServerAttributes(activity, _settings.LlmBaseUrl);
 
         var sample = cards
             .Where(c => c.CardType == null || !c.CardType.Contains("Land", StringComparison.OrdinalIgnoreCase))
@@ -411,65 +420,74 @@ public class RagPipelineService : IDeckGenerationService
         llmActivity?.SetTag(MtgForgeActivitySource.GenAiRequestMaxTokens, 4096);
         llmActivity?.SetTag(MtgForgeActivitySource.GenAiRequestTemperature, temperature);
         llmActivity?.SetTag("gen_ai.request.json_mode", jsonMode);
-        llmActivity?.SetTag("server.address", _settings.LlmBaseUrl);
+        SetServerAttributes(llmActivity, _settings.LlmBaseUrl);
 
-        var client = _factory.CreateClient();
-        client.BaseAddress = new Uri(_settings.LlmBaseUrl);
-        client.Timeout = TimeSpan.FromMinutes(5);
-        client.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _settings.LlmApiKey);
-
-        object? responseFormat = jsonMode ? new { type = "json_object" } : null;
-
-        var payload = new
+        try
         {
-            model = _settings.Model,
-            stream = false,
-            max_tokens = 4096,
-            temperature,
-            response_format = responseFormat,
-            messages = new[]
+            var client = _factory.CreateClient();
+            client.BaseAddress = new Uri(_settings.LlmBaseUrl);
+            client.Timeout = TimeSpan.FromMinutes(5);
+            client.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _settings.LlmApiKey);
+
+            object? responseFormat = jsonMode ? new { type = "json_object" } : null;
+
+            var payload = new
             {
-                new { role = "system", content = systemPrompt },
-                new { role = "user",   content = userPrompt   }
+                model = _settings.Model,
+                stream = false,
+                max_tokens = 4096,
+                temperature,
+                response_format = responseFormat,
+                messages = new[]
+                {
+                    new { role = "system", content = systemPrompt },
+                    new { role = "user",   content = userPrompt   }
+                }
+            };
+
+            var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+            });
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            using var response = await client.PostAsync("/v1/chat/completions", content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var err = await response.Content.ReadAsStringAsync();
+                llmActivity?.SetStatus(ActivityStatusCode.Error, $"Together.ai {response.StatusCode}");
+                llmActivity?.SetTag("http.response.status_code", (int)response.StatusCode);
+                throw new InvalidOperationException($"Together.ai error {response.StatusCode}: {err}");
             }
-        };
 
-        var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
-        });
-        using var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var body = await response.Content.ReadAsStringAsync();
+            var chatResponse = JsonSerializer.Deserialize<ChatCompletionResponse>(body, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
 
-        using var response = await client.PostAsync("/v1/chat/completions", content);
+            var result = chatResponse?.Choices?.FirstOrDefault()?.Message?.Content
+                ?? throw new InvalidOperationException("Empty response from Together.ai");
 
-        if (!response.IsSuccessStatusCode)
-        {
-            var err = await response.Content.ReadAsStringAsync();
-            llmActivity?.SetStatus(ActivityStatusCode.Error, $"Together.ai {response.StatusCode}");
-            llmActivity?.SetTag("http.response.status_code", (int)response.StatusCode);
-            throw new InvalidOperationException($"Together.ai error {response.StatusCode}: {err}");
+            // Record token usage when the provider returns it
+            if (chatResponse?.Usage is { } usage)
+            {
+                llmActivity?.SetTag(MtgForgeActivitySource.GenAiUsageInputTokens, usage.PromptTokens);
+                llmActivity?.SetTag(MtgForgeActivitySource.GenAiUsageOutputTokens, usage.CompletionTokens);
+            }
+
+            llmActivity?.SetStatus(ActivityStatusCode.Ok);
+            return result;
         }
-
-        var body = await response.Content.ReadAsStringAsync();
-        var chatResponse = JsonSerializer.Deserialize<ChatCompletionResponse>(body, new JsonSerializerOptions
+        catch (Exception ex)
         {
-            PropertyNameCaseInsensitive = true
-        });
-
-        var result = chatResponse?.Choices?.FirstOrDefault()?.Message?.Content
-            ?? throw new InvalidOperationException("Empty response from Together.ai");
-
-        // Record token usage when the provider returns it
-        if (chatResponse?.Usage is { } usage)
-        {
-            llmActivity?.SetTag(MtgForgeActivitySource.GenAiUsageInputTokens, usage.PromptTokens);
-            llmActivity?.SetTag(MtgForgeActivitySource.GenAiUsageOutputTokens, usage.CompletionTokens);
+            llmActivity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+            llmActivity?.RecordException(ex);
+            throw;
         }
-
-        llmActivity?.SetStatus(ActivityStatusCode.Ok);
-        return result;
     }
 
     private static DeckConfiguration MapToDeckConfiguration(
@@ -521,6 +539,15 @@ public class RagPipelineService : IDeckGenerationService
         "competitive" => 10,
         _             => 5
     };
+
+    // Sets server.address (host only) and server.port per OTel semantic conventions.
+    private static void SetServerAttributes(Activity? activity, string baseUrl)
+    {
+        if (activity is null || !Uri.TryCreate(baseUrl, UriKind.Absolute, out var uri)) return;
+        activity.SetTag("server.address", uri.Host);
+        if (!uri.IsDefaultPort)
+            activity.SetTag("server.port", uri.Port);
+    }
 
     private static string ExtractJson(string text)
     {
