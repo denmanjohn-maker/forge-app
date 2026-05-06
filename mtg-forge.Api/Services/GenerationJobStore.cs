@@ -8,7 +8,14 @@ public enum GenerationJobStatus { Pending, Running, Completed, Failed }
 public class GenerationJob
 {
     public string Id { get; init; } = Guid.NewGuid().ToString("N");
-    public GenerationJobStatus Status { get; set; } = GenerationJobStatus.Pending;
+    // volatile int backing field ensures Status writes are release-fenced:
+    // any reader who sees Completed/Failed is guaranteed to see Deck/Error too.
+    private volatile int _status = (int)GenerationJobStatus.Pending;
+    public GenerationJobStatus Status
+    {
+        get => (GenerationJobStatus)_status;
+        set => _status = (int)value;
+    }
     public DeckConfiguration? Deck { get; set; }
     public string? Error { get; set; }
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
@@ -27,20 +34,19 @@ public class GenerationJobStore
         return job;
     }
 
-    public GenerationJob? Get(string id) =>
-        _jobs.TryGetValue(id, out var job) ? job : null;
+    public GenerationJob? Get(string id)
+    {
+        PurgeExpired();
+        return _jobs.TryGetValue(id, out var job) ? job : null;
+    }
 
     private void PurgeExpired()
     {
         var cutoff = DateTime.UtcNow.AddHours(-1);
         foreach (var key in _jobs.Keys.ToArray())
         {
-            if (_jobs.TryGetValue(key, out var job)
-                && job.CreatedAt < cutoff
-                && job.Status is GenerationJobStatus.Completed or GenerationJobStatus.Failed)
-            {
+            if (_jobs.TryGetValue(key, out var job) && job.CreatedAt < cutoff)
                 _jobs.TryRemove(key, out _);
-            }
         }
     }
 }

@@ -3251,6 +3251,7 @@
         // === Deck Generation ===
         // === Async deck generation with polling (survives iOS screen lock) ===
         let _generationPollTimer = null;
+        let _generationPolling = false;
         const GENERATION_JOB_KEY = 'mtgf_gen_job';
 
         function _setGeneratingUI(active) {
@@ -3261,30 +3262,40 @@
             overlay.classList.toggle('hidden', !active);
         }
 
+        function _stopGeneration(msg, isError) {
+            sessionStorage.removeItem(GENERATION_JOB_KEY);
+            _setGeneratingUI(false);
+            if (msg) showToast(msg, isError);
+        }
+
         async function _pollGenerationJob(jobId) {
+            _generationPollTimer = null;
+            if (_generationPolling) return;
+            _generationPolling = true;
             try {
                 const res = await authFetch(`${API_BASE}/generate/status/${jobId}`);
                 if (!res.ok) {
+                    // Non-transient: job expired (404), forbidden (403), server error (500), etc.
                     const err = await res.json().catch(() => ({}));
-                    throw new Error(err.error || `Status check failed (${res.status})`);
+                    _stopGeneration(err.error || `Generation status unavailable (${res.status})`, true);
+                    return;
                 }
                 const { status, deck, error } = await res.json();
                 if (status === 'completed') {
-                    sessionStorage.removeItem(GENERATION_JOB_KEY);
-                    _setGeneratingUI(false);
+                    _stopGeneration(null);
                     showDeckPreview(deck);
                     showToast('Deck forged successfully!');
                 } else if (status === 'failed') {
-                    sessionStorage.removeItem(GENERATION_JOB_KEY);
-                    _setGeneratingUI(false);
-                    showToast(error || 'Generation failed', true);
+                    _stopGeneration(error || 'Generation failed', true);
                 } else {
                     // still pending/running — schedule next poll
                     _generationPollTimer = setTimeout(() => _pollGenerationJob(jobId), 3000);
                 }
-            } catch (err) {
-                // Network hiccup — keep polling; user may have just unlocked
+            } catch (_) {
+                // Transient network error — retry; user may have just unlocked phone
                 _generationPollTimer = setTimeout(() => _pollGenerationJob(jobId), 5000);
+            } finally {
+                _generationPolling = false;
             }
         }
 
@@ -3292,10 +3303,13 @@
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState !== 'visible') return;
             const jobId = sessionStorage.getItem(GENERATION_JOB_KEY);
-            if (!jobId || _generationPollTimer !== null) return;
-            // Page became visible again and we have a pending job but no active timer
-            _setGeneratingUI(true);
-            _pollGenerationJob(jobId);
+            if (!jobId) return;
+            // Clear any stale timer and restart if not already mid-poll
+            if (_generationPollTimer !== null) { clearTimeout(_generationPollTimer); _generationPollTimer = null; }
+            if (!_generationPolling) {
+                _setGeneratingUI(true);
+                _pollGenerationJob(jobId);
+            }
         });
 
         // On load: resume polling for any job that was in-progress before a page refresh

@@ -166,7 +166,8 @@ public class DecksController : ControllerBase
             }
             catch (Exception ex)
             {
-                job.Error = ex.Message;
+                _logger.LogError(ex, "Deck generation failed for job {JobId} (user {UserId})", job.Id, userId);
+                job.Error = "Deck generation failed. Please try again.";
                 job.Status = GenerationJobStatus.Failed;
             }
         });
