@@ -3249,6 +3249,77 @@
         }
 
         // === Deck Generation ===
+        // === Async deck generation with polling (survives iOS screen lock) ===
+        let _generationPollTimer = null;
+        let _generationPolling = false;
+        const GENERATION_JOB_KEY = 'mtgf_gen_job';
+
+        function _setGeneratingUI(active) {
+            const btn = document.getElementById('btnGenerate');
+            const overlay = document.getElementById('generatingOverlay');
+            btn.disabled = active;
+            btn.classList.toggle('loading', active);
+            overlay.classList.toggle('hidden', !active);
+        }
+
+        function _stopGeneration(msg, isError) {
+            sessionStorage.removeItem(GENERATION_JOB_KEY);
+            _setGeneratingUI(false);
+            if (msg) showToast(msg, isError);
+        }
+
+        async function _pollGenerationJob(jobId) {
+            _generationPollTimer = null;
+            if (_generationPolling) return;
+            _generationPolling = true;
+            try {
+                const res = await authFetch(`${API_BASE}/generate/status/${jobId}`);
+                if (!res.ok) {
+                    // Non-transient: job expired (404), forbidden (403), server error (500), etc.
+                    const err = await res.json().catch(() => ({}));
+                    _stopGeneration(err.error || `Generation status unavailable (${res.status})`, true);
+                    return;
+                }
+                const { status, deck, error } = await res.json();
+                if (status === 'completed') {
+                    _stopGeneration(null);
+                    showDeckPreview(deck);
+                    showToast('Deck forged successfully!');
+                } else if (status === 'failed') {
+                    _stopGeneration(error || 'Generation failed', true);
+                } else {
+                    // still pending/running — schedule next poll
+                    _generationPollTimer = setTimeout(() => _pollGenerationJob(jobId), 3000);
+                }
+            } catch (_) {
+                // Transient network error — retry; user may have just unlocked phone
+                _generationPollTimer = setTimeout(() => _pollGenerationJob(jobId), 5000);
+            } finally {
+                _generationPolling = false;
+            }
+        }
+
+        // Resume polling after screen unlock / tab re-focus
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState !== 'visible') return;
+            const jobId = sessionStorage.getItem(GENERATION_JOB_KEY);
+            if (!jobId) return;
+            // Clear any stale timer and restart if not already mid-poll
+            if (_generationPollTimer !== null) { clearTimeout(_generationPollTimer); _generationPollTimer = null; }
+            if (!_generationPolling) {
+                _setGeneratingUI(true);
+                _pollGenerationJob(jobId);
+            }
+        });
+
+        // On load: resume polling for any job that was in-progress before a page refresh
+        (function resumeJobOnLoad() {
+            const jobId = sessionStorage.getItem(GENERATION_JOB_KEY);
+            if (!jobId) return;
+            _setGeneratingUI(true);
+            _generationPollTimer = setTimeout(() => _pollGenerationJob(jobId), 1000);
+        })();
+
         async function generateDeck() {
             const colors = [...document.querySelectorAll('input[name="colors"]:checked')].map(c => c.value);
             if (colors.length === 0) {
@@ -3273,18 +3344,13 @@
                 additionalNotes: notes || null
             };
 
-            const btn = document.getElementById('btnGenerate');
-            const overlay = document.getElementById('generatingOverlay');
-            btn.disabled = true;
-            btn.classList.add('loading');
-            overlay.classList.remove('hidden');
+            _setGeneratingUI(true);
 
             try {
                 const res = await authFetch(`${API_BASE}/generate`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(request),
-                    _timeout: 300000 // 5 min for AI generation
+                    body: JSON.stringify(request)
                 });
 
                 if (!res.ok) {
@@ -3292,15 +3358,13 @@
                     throw new Error(err.details || err.error || 'Generation failed');
                 }
 
-                const deck = await res.json();
-                showDeckPreview(deck);
-                showToast('Deck forged successfully!');
+                const { jobId } = await res.json();
+                sessionStorage.setItem(GENERATION_JOB_KEY, jobId);
+                _generationPollTimer = null;
+                _pollGenerationJob(jobId);
             } catch (err) {
+                _setGeneratingUI(false);
                 showToast(err.message, true);
-            } finally {
-                btn.disabled = false;
-                btn.classList.remove('loading');
-                overlay.classList.add('hidden');
             }
         }
 
