@@ -128,7 +128,7 @@ public class RagPipelineService : IDeckGenerationService
         catch (Exception ex)
         {
             activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            activity?.RecordException(ex);
+            activity?.AddException(ex);
             throw;
         }
     }
@@ -232,7 +232,7 @@ public class RagPipelineService : IDeckGenerationService
         catch (Exception ex)
         {
             activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            activity?.RecordException(ex);
+            activity?.AddException(ex);
             throw;
         }
     }
@@ -335,7 +335,7 @@ public class RagPipelineService : IDeckGenerationService
         {
             _logger.LogWarning(ex, "RagPipelineService: failed to parse budget replacement suggestions from Together.ai");
             activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            activity?.RecordException(ex);
+            activity?.AddException(ex);
             return [];
         }
     }
@@ -383,7 +383,7 @@ public class RagPipelineService : IDeckGenerationService
         {
             _logger.LogWarning(ex, "Failed to generate import description via Together.ai");
             activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            activity?.RecordException(ex);
+            activity?.AddException(ex);
             return $"Imported deck: {deckName}";
         }
     }
@@ -485,7 +485,7 @@ public class RagPipelineService : IDeckGenerationService
         catch (Exception ex)
         {
             llmActivity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            llmActivity?.RecordException(ex);
+            llmActivity?.AddException(ex);
             throw;
         }
     }
