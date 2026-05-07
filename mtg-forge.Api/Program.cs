@@ -207,9 +207,16 @@ builder.Services.AddOpenTelemetry()
                 opts.Protocol = OtlpExportProtocol.Grpc;
                 opts.TimeoutMilliseconds = 5000;
             });
-            Log.Information("OTel tracing → OTLP gRPC at {Endpoint}", otlpTracesEndpoint);
+            Log.Information("OTel tracing → OTLP gRPC at {Endpoint} " +
+                            "(Tempo gRPC receiver = port 4317; port 3200 is the query API only)",
+                otlpTracesEndpoint);
         }
     });
+
+// Activate OTLP diagnostic listener so export failures surface in Serilog logs
+// (the OTel SDK emits errors via EventSource, not ILogger — silent without this).
+// Registered as a singleton to keep the instance rooted for the application lifetime.
+builder.Services.AddSingleton<OtlpDiagnosticListener>();
 
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
@@ -308,6 +315,10 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// Resolve the OTLP diagnostic listener eagerly so it starts capturing OTel internal
+// EventSource events before the first trace export attempt.
+app.Services.GetRequiredService<OtlpDiagnosticListener>();
 
 // Seed admin user — password from env var, falls back to default only in development
 using (var scope = app.Services.CreateScope())
