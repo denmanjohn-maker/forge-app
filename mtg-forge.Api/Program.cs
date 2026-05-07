@@ -24,6 +24,17 @@ var logStore = new InMemoryLogStore(1000);
 
 var otlpEndpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT");
 
+// Port 3200 is Tempo's HTTP query API; the gRPC receiver listens on 4317.
+// Auto-correct so OTLP/gRPC exports work when only OTEL_EXPORTER_OTLP_ENDPOINT is set.
+static string CorrectTempoGrpcPort(string endpoint)
+{
+    if (string.IsNullOrEmpty(endpoint))
+        return endpoint;
+    if (Uri.TryCreate(endpoint, UriKind.Absolute, out var uri) && uri.Port == 3200)
+        return new UriBuilder(uri) { Port = 4317 }.Uri.ToString().TrimEnd('/');
+    return endpoint;
+}
+
 var logConfig = new LoggerConfiguration()
     .MinimumLevel.Information()
     .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
@@ -34,9 +45,12 @@ var logConfig = new LoggerConfiguration()
 
 if (!string.IsNullOrEmpty(otlpEndpoint))
 {
+    var otlpLogEndpoint = CorrectTempoGrpcPort(otlpEndpoint);
+    if (otlpLogEndpoint != otlpEndpoint)
+        Log.Warning("OTEL log sink: port 3200 (Tempo query API) auto-corrected to gRPC receiver port 4317: {Endpoint}", otlpLogEndpoint);
     logConfig = logConfig.WriteTo.OpenTelemetry(options =>
     {
-        options.Endpoint = otlpEndpoint;
+        options.Endpoint = otlpLogEndpoint;
         options.Protocol = Serilog.Sinks.OpenTelemetry.OtlpProtocol.Grpc;
         options.ResourceAttributes = new Dictionary<string, object>
         {
@@ -201,15 +215,16 @@ builder.Services.AddOpenTelemetry()
 
         if (!string.IsNullOrEmpty(otlpTracesEndpoint))
         {
+            var correctedTracesEndpoint = CorrectTempoGrpcPort(otlpTracesEndpoint);
+            if (correctedTracesEndpoint != otlpTracesEndpoint)
+                Log.Warning("OTel traces: port 3200 (Tempo query API) auto-corrected to gRPC receiver port 4317: {Endpoint}", correctedTracesEndpoint);
             tracing.AddOtlpExporter(opts =>
             {
-                opts.Endpoint = new Uri(otlpTracesEndpoint);
+                opts.Endpoint = new Uri(correctedTracesEndpoint);
                 opts.Protocol = OtlpExportProtocol.Grpc;
                 opts.TimeoutMilliseconds = 5000;
             });
-            Log.Information("OTel tracing → OTLP gRPC at {Endpoint} " +
-                            "(Tempo gRPC receiver = port 4317; port 3200 is the query API only)",
-                otlpTracesEndpoint);
+            Log.Information("OTel tracing → OTLP gRPC at {Endpoint}", correctedTracesEndpoint);
         }
     });
 
