@@ -162,6 +162,15 @@ builder.Services.AddSingleton(logStore);
 var otlpTracesEndpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT")
     ?? Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT");
 
+// Emit startup diagnostics so misconfigured/missing env vars are visible in logs
+Log.Information("OTEL startup: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT={TracesEp} OTEL_EXPORTER_OTLP_ENDPOINT={BaseEp}",
+    Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT") ?? "(not set)",
+    Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT") ?? "(not set)");
+
+if (string.IsNullOrEmpty(otlpTracesEndpoint))
+    Log.Warning("OTel tracing: no OTLP endpoint configured — traces will NOT be exported. " +
+                "Set OTEL_EXPORTER_OTLP_TRACES_ENDPOINT or OTEL_EXPORTER_OTLP_ENDPOINT.");
+
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(r => r
         .AddService("mtg-forge")
@@ -196,8 +205,9 @@ builder.Services.AddOpenTelemetry()
             {
                 opts.Endpoint = new Uri(otlpTracesEndpoint);
                 opts.Protocol = OtlpExportProtocol.Grpc;
+                opts.TimeoutMilliseconds = 5000;
             });
-            Log.Information("OTel tracing → OTLP at {Endpoint}", otlpTracesEndpoint);
+            Log.Information("OTel tracing → OTLP gRPC at {Endpoint}", otlpTracesEndpoint);
         }
     });
 
