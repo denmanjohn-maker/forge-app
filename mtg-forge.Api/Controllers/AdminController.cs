@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using MtgForge.Api.Models;
+using MtgForge.Api.Services;
 
 namespace MtgForge.Api.Controllers;
 
@@ -13,15 +14,95 @@ public class AdminController : ControllerBase
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly RagPipelineSettings _ragSettings;
     private readonly ILogger<AdminController> _logger;
+    private readonly DeckService _deckService;
+    private readonly AiUsageService _aiUsageService;
+    private readonly DeckReanalysisHostedService _reanalysisService;
 
     public AdminController(
         IHttpClientFactory httpClientFactory,
         IOptions<RagPipelineSettings> ragSettings,
-        ILogger<AdminController> logger)
+        ILogger<AdminController> logger,
+        DeckService deckService,
+        AiUsageService aiUsageService,
+        DeckReanalysisHostedService reanalysisService)
     {
         _httpClientFactory = httpClientFactory;
         _ragSettings = ragSettings.Value;
         _logger = logger;
+        _deckService = deckService;
+        _aiUsageService = aiUsageService;
+        _reanalysisService = reanalysisService;
+    }
+
+    [HttpGet("analytics")]
+    public async Task<IActionResult> GetAnalytics()
+    {
+        var allDecks = await _deckService.GetAllAsync();
+        var now = DateTime.UtcNow;
+        var last7 = now.AddDays(-7);
+        var last30 = now.AddDays(-30);
+
+        var byFormat = new Dictionary<string, int>();
+        var byColor = new Dictionary<string, int>();
+        var byPowerLevel = new Dictionary<string, int>();
+        var byBudget = new Dictionary<string, int>();
+
+        foreach (var deck in allDecks)
+        {
+            if (!string.IsNullOrEmpty(deck.Format))
+                byFormat[deck.Format] = byFormat.GetValueOrDefault(deck.Format) + 1;
+
+            if (!string.IsNullOrEmpty(deck.PowerLevel))
+                byPowerLevel[deck.PowerLevel] = byPowerLevel.GetValueOrDefault(deck.PowerLevel) + 1;
+
+            if (!string.IsNullOrEmpty(deck.BudgetRange))
+                byBudget[deck.BudgetRange] = byBudget.GetValueOrDefault(deck.BudgetRange) + 1;
+
+            foreach (var color in deck.Colors ?? [])
+                byColor[color] = byColor.GetValueOrDefault(color) + 1;
+        }
+
+        var topUsers = allDecks
+            .Where(d => !string.IsNullOrEmpty(d.UserId))
+            .GroupBy(d => new { d.UserId, d.UserDisplayName })
+            .Select(g => new UserDeckCount
+            {
+                DisplayName = g.Key.UserDisplayName ?? g.Key.UserId ?? "Unknown",
+                Count = g.Count()
+            })
+            .OrderByDescending(u => u.Count)
+            .Take(10)
+            .ToList();
+
+        var result = new DeckAnalyticsResult
+        {
+            TotalDecks = allDecks.Count,
+            DecksLast7Days = allDecks.Count(d => d.CreatedAt >= last7),
+            DecksLast30Days = allDecks.Count(d => d.CreatedAt >= last30),
+            ByFormat = byFormat,
+            ByColor = byColor,
+            ByPowerLevel = byPowerLevel,
+            ByBudget = byBudget,
+            TopUsers = topUsers
+        };
+
+        return Ok(result);
+    }
+
+    [HttpGet("usage")]
+    public async Task<IActionResult> GetUsage([FromQuery] int days = 30)
+    {
+        var from = DateTime.UtcNow.AddDays(-Math.Clamp(days, 1, 365));
+        var summary = await _aiUsageService.GetSummaryAsync(from);
+        return Ok(summary);
+    }
+
+    [HttpPost("reanalyze")]
+    public async Task<IActionResult> TriggerReanalysis(CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("AdminController: manual deck re-analysis triggered");
+        var count = await _reanalysisService.RunReanalysisAsync(cancellationToken);
+        return Ok(new { reanalyzed = count });
     }
 
     /// <summary>
