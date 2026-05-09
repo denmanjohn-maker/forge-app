@@ -153,6 +153,10 @@ builder.Services.AddHttpClient<MtgJsonPricingImportService>(client =>
     client.DefaultRequestVersion = System.Net.HttpVersion.Version11;
 });
 builder.Services.AddHostedService<PricingRefreshHostedService>();
+builder.Services.AddSingleton<AiUsageService>();
+builder.Services.AddSingleton<DeckReanalysisHostedService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<DeckReanalysisHostedService>());
+builder.Services.AddHttpContextAccessor();
 
 // ── Observability ──
 builder.Services.AddSingleton(logStore);

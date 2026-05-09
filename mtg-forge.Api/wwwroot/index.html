@@ -1278,6 +1278,24 @@
             overflow: hidden;
         }
 
+        .deck-card-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.3rem;
+            margin-top: 0.5rem;
+        }
+
+        .deck-tag {
+            font-size: 0.7rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 999px;
+            background: var(--bg-deep);
+            border: 1px solid var(--border);
+            color: var(--gold);
+            font-family: 'Cinzel', serif;
+            letter-spacing: 0.03em;
+        }
+
         .deck-card-footer {
             padding: 0.75rem 1.5rem;
             border-top: 1px solid var(--border);
@@ -1297,6 +1315,41 @@
             display: flex;
             align-items: center;
             gap: 0.35rem;
+        }
+
+        .btn-fav-card {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0.25rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            line-height: 1;
+        }
+
+        .btn-fav-card:hover, .btn-fav-card.active {
+            color: var(--gold);
+        }
+
+        .btn-filter-fav {
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0.4rem 0.75rem;
+            font-size: 0.82rem;
+            font-family: 'Cinzel', serif;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-filter-fav:hover, .btn-filter-fav.active {
+            border-color: var(--gold);
+            color: var(--gold);
+            background: rgba(212,175,55,0.08);
         }
 
         .btn-delete-card {
@@ -1547,6 +1600,44 @@
         }
 
         /* Toast notifications */
+        .bulk-delete-bar {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 0.75rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            z-index: 1000;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            font-family: 'Cinzel', serif;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .bulk-delete-bar.hidden { display: none; }
+
+        .deck-card.selected {
+            outline: 2px solid var(--gold);
+            outline-offset: -2px;
+        }
+
+        .deck-card-checkbox {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            width: 18px;
+            height: 18px;
+            accent-color: var(--gold);
+            cursor: pointer;
+        }
+
+        .deck-card { position: relative; }
+
         .toast-container {
             position: fixed;
             bottom: 2rem;
@@ -2498,6 +2589,7 @@
                     <div class="library-count" id="libraryCount">Loading...</div>
                 </div>
                 <div style="display:flex;gap:0.75rem;">
+                    <button class="btn-outline" id="btnSelectMode" onclick="toggleSelectMode()">&#9744; Select</button>
                     <button class="btn-outline" onclick="document.getElementById('csvImportInput').click()">&#8593; Import CSV</button>
                     <button class="btn-outline" onclick="loadLibrary()">&#8635; Refresh</button>
                 </div>
@@ -2529,6 +2621,8 @@
                     <option value="Optimized">Optimized</option>
                     <option value="Competitive">cEDH</option>
                 </select>
+                <input type="text" class="filter-input" id="filterTag" placeholder="Filter by tag..." oninput="applyFilters()" style="max-width:160px;">
+                <button id="filterFavorites" class="btn-filter-fav" onclick="toggleFavFilter(this)" title="Show favorites only">&#9733; Favorites</button>
                 <button class="btn-filter-clear" onclick="clearFilters()">&#10005; Clear</button>
             </div>
 
@@ -2619,6 +2713,29 @@
         <!-- ADMIN VIEW -->
         <div id="view-admin" class="view">
             <div class="panel" style="padding:2rem;">
+                <!-- Analytics -->
+                <div class="admin-section">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                        <div class="admin-section-title" style="margin-bottom:0;">&#128202; Usage Analytics</div>
+                        <button class="btn-outline" style="padding:0.35rem 0.75rem;font-size:0.8rem;" onclick="loadAnalytics()">&#8635; Refresh</button>
+                    </div>
+                    <div id="analyticsContent"><div style="color:var(--text-muted);font-size:0.9rem;">Loading…</div></div>
+                </div>
+                <!-- AI Usage -->
+                <div class="admin-section">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                        <div class="admin-section-title" style="margin-bottom:0;">&#129302; AI Token Usage</div>
+                        <div style="display:flex;align-items:center;gap:0.5rem;">
+                            <select id="usageDays" class="filter-select" style="padding:0.3rem 0.5rem;font-size:0.8rem;" onchange="loadAiUsage()">
+                                <option value="7">Last 7 days</option>
+                                <option value="30" selected>Last 30 days</option>
+                                <option value="90">Last 90 days</option>
+                            </select>
+                            <button class="btn-outline" style="padding:0.35rem 0.75rem;font-size:0.8rem;" onclick="loadAiUsage()">&#8635; Refresh</button>
+                        </div>
+                    </div>
+                    <div id="aiUsageContent"><div style="color:var(--text-muted);font-size:0.9rem;">Loading…</div></div>
+                </div>
                 <div class="admin-section">
                     <div class="admin-section-title">Users</div>
                     <div id="adminUsersList"></div>
@@ -2659,8 +2776,9 @@
                     <div class="admin-section-title">AI Ingestion</div>
                     <div id="aiIngestionSummary" style="margin-bottom:1rem;color:var(--text-secondary);font-family:'Crimson Text',serif;"></div>
                     <div id="aiIngestionDetails"></div>
-                    <div style="margin-top:1rem;">
+                    <div style="margin-top:1rem;display:flex;gap:0.75rem;flex-wrap:wrap;">
                         <button class="btn-outline" id="btnTriggerIngest" onclick="triggerAiReingestion()">&#x21bb; Trigger Re-ingestion</button>
+                        <button class="btn-outline" id="btnReanalyze" onclick="triggerReanalysis()">&#9850; Re-analyze Stale Decks</button>
                     </div>
                 </div>
             </div>
@@ -2718,7 +2836,7 @@
     <div class="modal-overlay hidden" id="deleteModal">
         <div class="modal">
             <h3>Banish This Deck?</h3>
-            <p>This action cannot be undone. The deck configuration will be permanently removed from the library.</p>
+            <p id="deleteModalMsg">This action cannot be undone. The deck configuration will be permanently removed from the library.</p>
             <div class="modal-actions">
                 <button class="btn-outline" onclick="closeDeleteModal()">Cancel</button>
                 <button class="btn-danger" id="btnConfirmDelete" onclick="confirmDelete()">&#128293; Banish</button>
@@ -2777,6 +2895,10 @@
                     </select>
                 </div>
                 <div class="edit-field-group">
+                    <label class="edit-label">Tags <span style="font-size:0.75rem;color:var(--text-muted);font-family:'Crimson Text',serif;">(comma-separated)</span></label>
+                    <input type="text" class="edit-input" id="editTags" placeholder="e.g. cEDH, voltron, work in progress">
+                </div>
+                <div class="edit-field-group">
                     <label class="edit-label">Colors</label>
                     <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
                         <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.9rem;cursor:pointer;">
@@ -2804,6 +2926,75 @@
         </div>
     </div>
 
+    <!-- Hand Simulator Modal -->
+    <div class="modal-overlay hidden" id="handSimModal">
+        <div class="modal" style="max-width:860px;width:96%;">
+            <h3 style="margin-bottom:0.25rem;">&#127922; Opening Hand</h3>
+            <p id="handSimSubtitle" style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1.25rem;font-family:'Crimson Text',serif;"></p>
+            <div id="handSimCards" style="display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:center;min-height:200px;align-items:flex-start;"></div>
+            <div class="modal-actions" style="margin-top:1.5rem;">
+                <button class="btn-outline" onclick="closeHandSimulator()">Close</button>
+                <button class="btn-outline" id="btnMulligan" onclick="handSimMulligan()">Mulligan</button>
+                <button class="btn-login" style="width:auto;padding:0.6rem 1.5rem;margin:0;" onclick="handSimDrawNew()">Draw New Hand</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card Editor Modal -->
+    <div class="modal-overlay hidden" id="cardEditorModal">
+        <div class="modal" style="max-width:900px;width:96%;max-height:90vh;display:flex;flex-direction:column;">
+            <h3 style="margin-bottom:1rem;">&#9998; Edit Cards</h3>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;flex:1;min-height:0;overflow:hidden;">
+                <!-- Search panel -->
+                <div style="display:flex;flex-direction:column;gap:0.75rem;overflow:hidden;">
+                    <div style="font-family:'Cinzel',serif;font-size:0.8rem;color:var(--gold);text-transform:uppercase;letter-spacing:0.05em;">Search Cards</div>
+                    <div style="display:flex;gap:0.5rem;">
+                        <input type="text" id="cardSearchInput" class="filter-input" placeholder="Card name..." style="flex:1;" onkeydown="if(event.key==='Enter') searchCardsForEditor()">
+                        <button class="btn-outline" style="padding:0.4rem 0.75rem;font-size:0.82rem;" onclick="searchCardsForEditor()">Search</button>
+                    </div>
+                    <div id="cardSearchResults" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:0.4rem;"></div>
+                </div>
+                <!-- Deck card list panel -->
+                <div style="display:flex;flex-direction:column;gap:0.75rem;overflow:hidden;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <div style="font-family:'Cinzel',serif;font-size:0.8rem;color:var(--gold);text-transform:uppercase;letter-spacing:0.05em;">Deck Cards</div>
+                        <span id="cardEditorCount" style="font-size:0.8rem;color:var(--text-muted);"></span>
+                    </div>
+                    <div id="cardEditorList" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:0.3rem;"></div>
+                </div>
+            </div>
+            <div class="modal-actions" style="margin-top:1.25rem;">
+                <button class="btn-outline" onclick="closeCardEditorModal()">Cancel</button>
+                <button class="btn-login" id="btnSaveCardEdits" style="width:auto;padding:0.6rem 1.5rem;margin:0;" onclick="saveCardEdits()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Deck Compare Modal -->
+    <div class="modal-overlay hidden" id="compareModal">
+        <div class="modal" style="max-width:960px;width:96%;max-height:90vh;display:flex;flex-direction:column;">
+            <h3 style="margin-bottom:0.75rem;">&#8644; Compare Decks</h3>
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
+                <span style="font-size:0.88rem;color:var(--text-secondary);">Compare with:</span>
+                <select id="comparePickerSelect" class="filter-select" style="flex:1;" onchange="loadCompareTarget(this.value)">
+                    <option value="">— Pick a deck —</option>
+                </select>
+                <button class="btn-outline" style="padding:0.4rem 0.75rem;font-size:0.82rem;" onclick="closeCompareModal()">Close</button>
+            </div>
+            <div id="compareBody" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;flex:1;min-height:0;overflow:hidden;">
+                <div style="text-align:center;color:var(--text-muted);padding-top:3rem;font-family:'Crimson Text',serif;font-size:1rem;">Select a deck to compare</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Delete Bar -->
+    <div id="bulkDeleteBar" class="bulk-delete-bar hidden">
+        <span id="bulkSelectCount">0 selected</span>
+        <button class="btn-outline" style="padding:0.4rem 1rem;font-size:0.85rem;" onclick="selectAllDecks()">Select All</button>
+        <button class="btn-danger" style="padding:0.4rem 1rem;font-size:0.85rem;" onclick="openBulkDeleteModal()">&#128465; Delete Selected</button>
+        <button class="btn-outline" style="padding:0.4rem 1rem;font-size:0.85rem;" onclick="toggleSelectMode()">Cancel</button>
+    </div>
+
     <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
 
@@ -2817,6 +3008,8 @@
         let deleteTargetId = null;
         let currentDetailDeck = null;
         let libActiveColor = null;
+        let selectMode = false;
+        let selectedDeckIds = new Set();
         let _searchTimer = null;
         let authToken = localStorage.getItem('authToken');
         let currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
@@ -3485,6 +3678,8 @@
             document.getElementById('filterName').value = '';
             document.getElementById('filterFormat').value = '';
             document.getElementById('filterPower').value = '';
+            document.getElementById('filterTag').value = '';
+            document.getElementById('filterFavorites')?.classList.remove('active');
             if (libActiveColor) {
                 document.querySelector(`.filter-pip[data-color="${libActiveColor}"]`)?.classList.remove('active');
                 libActiveColor = null;
@@ -3495,12 +3690,17 @@
         function renderLibrary() {
             const grid = document.getElementById('deckGrid');
             const count = document.getElementById('libraryCount');
+            const tagFilter = (document.getElementById('filterTag')?.value || '').trim().toLowerCase();
+            const favFilter = document.getElementById('filterFavorites')?.classList.contains('active');
+            let decks = currentDecks;
+            if (tagFilter) decks = decks.filter(d => (d.tags || []).some(t => t.toLowerCase().includes(tagFilter)));
+            if (favFilter) decks = decks.filter(d => d.isFavorite);
             count.textContent = `${totalDecks} deck${totalDecks !== 1 ? 's' : ''} in your library`;
 
             const loadMoreWrap = document.getElementById('loadMoreWrap');
             loadMoreWrap.style.display = (currentSkip + PAGE_SIZE < totalDecks) ? '' : 'none';
 
-            if (currentDecks.length === 0) {
+            if (decks.length === 0) {
                 grid.innerHTML = `
                     <div class="library-empty" style="grid-column:1/-1;">
                         <svg class="sigil" viewBox="0 0 80 80" fill="none">
@@ -3517,8 +3717,9 @@
                 return;
             }
 
-            grid.innerHTML = currentDecks.map(deck => `
-                <div class="deck-card" onclick="viewDeckDetail('${deck.id}')">
+            grid.innerHTML = decks.map(deck => `
+                <div class="deck-card ${selectMode && selectedDeckIds.has(deck.id) ? 'selected' : ''}" onclick="${selectMode ? `toggleDeckSelect('${deck.id}', this)` : `viewDeckDetail('${deck.id}')`}">
+                    ${selectMode ? `<input type="checkbox" class="deck-card-checkbox" ${selectedDeckIds.has(deck.id) ? 'checked' : ''} onclick="event.stopPropagation(); toggleDeckSelect('${deck.id}', this.closest('.deck-card'))">` : ''}
                     <div class="deck-card-top">
                         <div class="deck-card-colors">
                             ${(deck.colors || []).map(c => `<span class="mana-pip ${c}">${c}</span>`).join('')}
@@ -3526,6 +3727,7 @@
                         <div class="deck-card-name">${deck.deckName || 'Untitled'}</div>
                         ${deck.commander ? `<div class="deck-card-commander">${deck.commander}</div>` : ''}
                         <div class="deck-card-desc">${deck.deckDescription || deck.strategy || ''}</div>
+                        ${(deck.tags || []).length ? `<div class="deck-card-tags">${(deck.tags).map(t => `<span class="deck-tag">${t}</span>`).join('')}</div>` : ''}
                     </div>
                     <div class="deck-card-footer">
                         <div class="deck-card-meta">
@@ -3533,6 +3735,7 @@
                             <span>&#128176; $${(deck.estimatedTotalPrice || 0).toFixed(0)}</span>
                             <span>${deck.format || ''}</span>
                         </div>
+                        <button class="btn-fav-card ${deck.isFavorite ? 'active' : ''}" onclick="event.stopPropagation(); toggleFavorite('${deck.id}', this)" title="${deck.isFavorite ? 'Unfavorite' : 'Favorite'}">&#9733;</button>
                         <button class="btn-delete-card" onclick="event.stopPropagation(); openDeleteModal('${deck.id}')">&#128465;</button>
                     </div>
                 </div>
@@ -3554,6 +3757,67 @@
             } catch (err) {
                 showToast(err.message, true);
             }
+        }
+
+        function buildColorChartHtml(cards) {
+            const nonLands = (cards || []).filter(c => c.category !== 'Land' && c.category !== 'Commander');
+            const colorMap = { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 };
+            const colorLabels = { W: 'White', U: 'Blue', B: 'Black', R: 'Red', G: 'Green', C: 'Colorless' };
+            const colorBg = { W: '#f9f6e8', U: '#4a90d9', B: '#3a3a4a', R: '#d94a4a', G: '#4a9d5a', C: '#aaaaaa' };
+            const colorText = { W: '#333', U: '#fff', B: '#fff', R: '#fff', G: '#fff', C: '#333' };
+            nonLands.forEach(c => {
+                const mc = c.manaCost || '';
+                (mc.match(/\{([WUBRG])\}/g) || []).forEach(sym => {
+                    const col = sym[1];
+                    if (col in colorMap) colorMap[col] += c.quantity;
+                });
+                if (!mc.match(/\{[WUBRG]\}/) && mc.match(/\{[0-9C]\}/)) colorMap.C += c.quantity;
+            });
+            const entries = Object.entries(colorMap).filter(([,v]) => v > 0);
+            if (!entries.length) return '';
+            const max = Math.max(...entries.map(([,v]) => v), 1);
+            const rows = entries.map(([col, count]) => {
+                const pct = Math.max(Math.round((count / max) * 100), 4);
+                return `<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:4px;">
+                    <span class="mana-pip ${col}" style="width:22px;height:22px;font-size:0.7rem;flex-shrink:0;">${col}</span>
+                    <div style="flex:1;height:16px;background:var(--bg-deep);border-radius:4px;overflow:hidden;">
+                        <div style="width:${pct}%;height:100%;background:${colorBg[col]};border-radius:4px;"></div>
+                    </div>
+                    <span style="font-size:0.78rem;color:var(--text-secondary);min-width:20px;text-align:right;">${count}</span>
+                    <span style="font-size:0.75rem;color:var(--text-muted);min-width:54px;">${colorLabels[col]}</span>
+                </div>`;
+            }).join('');
+            return `<div style="margin-bottom:2rem;">
+                <div style="font-family:'Cinzel',serif;font-size:1rem;color:var(--gold);margin-bottom:0.75rem;text-transform:uppercase;letter-spacing:0.05em;">Color Distribution</div>
+                ${rows}
+            </div>`;
+        }
+
+        function buildTypeChartHtml(cards) {
+            const typeOrder = ['Creature', 'Instant', 'Sorcery', 'Artifact', 'Enchantment', 'Planeswalker', 'Land', 'Other'];
+            const counts = Object.fromEntries(typeOrder.map(t => [t, 0]));
+            (cards || []).forEach(c => {
+                const t = c.cardType || '';
+                const matched = typeOrder.slice(0, -1).find(type => t.includes(type));
+                counts[matched || 'Other'] += c.quantity;
+            });
+            const entries = typeOrder.map(t => [t, counts[t]]).filter(([,v]) => v > 0);
+            if (!entries.length) return '';
+            const max = Math.max(...entries.map(([,v]) => v), 1);
+            const rows = entries.map(([type, count]) => {
+                const pct = Math.max(Math.round((count / max) * 100), 4);
+                return `<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:4px;">
+                    <span style="font-size:0.78rem;color:var(--text-secondary);min-width:80px;">${type}</span>
+                    <div style="flex:1;height:16px;background:var(--bg-deep);border-radius:4px;overflow:hidden;">
+                        <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,var(--gold-dark),var(--gold));border-radius:4px;"></div>
+                    </div>
+                    <span style="font-size:0.78rem;color:var(--text-secondary);min-width:20px;text-align:right;">${count}</span>
+                </div>`;
+            }).join('');
+            return `<div style="margin-bottom:2rem;">
+                <div style="font-family:'Cinzel',serif;font-size:1rem;color:var(--gold);margin-bottom:0.75rem;text-transform:uppercase;letter-spacing:0.05em;">Card Types</div>
+                ${rows}
+            </div>`;
         }
 
         function buildManaCurveHtml(cards) {
@@ -3626,7 +3890,11 @@
 
                 ${deck.deckDescription ? `<div class="deck-description-box">${deck.deckDescription}</div>` : ''}
 
-                ${buildManaCurveHtml(deck.cards)}
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem;margin-bottom:0.5rem;">
+                    <div>${buildManaCurveHtml(deck.cards)}</div>
+                    <div>${buildColorChartHtml(deck.cards)}</div>
+                    <div>${buildTypeChartHtml(deck.cards)}</div>
+                </div>
 
                 ${Object.entries(categories).map(([cat, cards]) => `
                     <div class="category-section">
@@ -3660,6 +3928,9 @@
                     <button class="btn-outline" onclick="exportDeck('deckbox')">&#8659; Deckbox</button>
                     <button class="btn-outline" onclick="exportDeck('deckstats')">&#8659; Deckstats</button>
                     <button class="btn-outline" onclick="openEditModal(currentDetailDeck)">&#9998; Edit</button>
+                    <button class="btn-outline" onclick="openCardEditorModal()">&#9998; Edit Cards</button>
+                    <button class="btn-outline" onclick="openHandSimulator()">&#127922; Hand Simulator</button>
+                    <button class="btn-outline" onclick="openCompareModal()">&#8644; Compare</button>
                     <button class="btn-outline" onclick="copyDeck('${deck.id}')">&#10064; Copy</button>
                     <button class="btn-outline" onclick="reAnalyzeDeck('${deck.id}')">&#9879; ${deck.lastAnalysis ? 'Re-Analyze' : 'Analyze with AI'}</button>
                     <button class="btn-danger" onclick="openDeleteModal('${deck.id}')">&#128293; Banish Deck</button>
@@ -3707,7 +3978,7 @@
         }
 
         async function confirmDelete() {
-            if (!deleteTargetId) return;
+            if (!deleteTargetId) { await confirmBulkDelete(); return; }
             try {
                 const res = await authFetch(`${API_BASE}/${deleteTargetId}`, { method: 'DELETE' });
                 if (!res.ok) throw new Error('Delete failed');
@@ -3724,6 +3995,63 @@
             }
         }
 
+        // === Bulk Delete ===
+        function toggleSelectMode() {
+            selectMode = !selectMode;
+            selectedDeckIds.clear();
+            const bar = document.getElementById('bulkDeleteBar');
+            const btn = document.getElementById('btnSelectMode');
+            bar.classList.toggle('hidden', !selectMode);
+            btn.textContent = selectMode ? '✕ Cancel Select' : '⊠ Select';
+            renderLibrary();
+        }
+
+        function toggleDeckSelect(id, cardEl) {
+            if (selectedDeckIds.has(id)) {
+                selectedDeckIds.delete(id);
+                cardEl.classList.remove('selected');
+            } else {
+                selectedDeckIds.add(id);
+                cardEl.classList.add('selected');
+            }
+            document.getElementById('bulkSelectCount').textContent =
+                `${selectedDeckIds.size} selected`;
+        }
+
+        function selectAllDecks() {
+            const tagFilter = (document.getElementById('filterTag')?.value || '').trim().toLowerCase();
+            const favFilter = document.getElementById('filterFavorites')?.classList.contains('active');
+            let decks = currentDecks;
+            if (tagFilter) decks = decks.filter(d => (d.tags || []).some(t => t.toLowerCase().includes(tagFilter)));
+            if (favFilter) decks = decks.filter(d => d.isFavorite);
+            decks.forEach(d => selectedDeckIds.add(d.id));
+            document.getElementById('bulkSelectCount').textContent = `${selectedDeckIds.size} selected`;
+            renderLibrary();
+        }
+
+        function openBulkDeleteModal() {
+            if (selectedDeckIds.size === 0) return;
+            document.getElementById('deleteModalMsg').textContent =
+                `Are you sure you want to banish ${selectedDeckIds.size} deck${selectedDeckIds.size !== 1 ? 's' : ''}? This cannot be undone.`;
+            deleteTargetId = null;
+            document.getElementById('deleteModal').classList.remove('hidden');
+        }
+
+        async function confirmBulkDelete() {
+            const ids = [...selectedDeckIds];
+            let failed = 0;
+            for (const id of ids) {
+                try {
+                    const res = await authFetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+                    if (!res.ok) failed++;
+                } catch { failed++; }
+            }
+            closeDeleteModal();
+            toggleSelectMode();
+            loadLibrary();
+            showToast(failed > 0 ? `Deleted ${ids.length - failed}, ${failed} failed` : `${ids.length} deck${ids.length !== 1 ? 's' : ''} banished`);
+        }
+
         // === Edit ===
         function openEditModal(deck) {
             if (!deck) return;
@@ -3737,6 +4065,7 @@
             ['W','U','B','R','G'].forEach(c => {
                 document.getElementById(`editColor${c}`).checked = (deck.colors || []).includes(c);
             });
+            document.getElementById('editTags').value = (deck.tags || []).join(', ');
             document.getElementById('editModal').classList.remove('hidden');
         }
         function closeEditModal() {
@@ -3753,7 +4082,8 @@
                 format: document.getElementById('editFormat').value,
                 powerLevel: document.getElementById('editPowerLevel').value,
                 budgetRange: document.getElementById('editBudget').value,
-                colors
+                colors,
+                tags: document.getElementById('editTags').value.split(',').map(t => t.trim()).filter(Boolean)
             };
             try {
                 const res = await authFetch(`${API_BASE}/${currentDetailDeck.id}`, {
@@ -3773,6 +4103,269 @@
             } catch (err) {
                 showToast(err.message, true);
             }
+        }
+
+        // === Hand Simulator ===
+        let _handSimSize = 7;
+
+        function _buildDeckPool(cards) {
+            const basicLands = ['Plains','Island','Swamp','Mountain','Forest','Wastes','Snow-Covered Plains','Snow-Covered Island','Snow-Covered Swamp','Snow-Covered Mountain','Snow-Covered Forest'];
+            const pool = [];
+            (cards || []).forEach(c => {
+                if (basicLands.includes(c.name)) return;
+                for (let i = 0; i < c.quantity; i++) pool.push(c);
+            });
+            for (let i = pool.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [pool[i], pool[j]] = [pool[j], pool[i]];
+            }
+            return pool;
+        }
+
+        function openHandSimulator() {
+            if (!currentDetailDeck) return;
+            _handSimSize = 7;
+            document.getElementById('handSimModal').classList.remove('hidden');
+            _drawHand();
+        }
+
+        function closeHandSimulator() {
+            document.getElementById('handSimModal').classList.add('hidden');
+        }
+
+        function handSimDrawNew() { _handSimSize = 7; _drawHand(); }
+
+        function handSimMulligan() {
+            if (_handSimSize > 1) { _handSimSize--; _drawHand(); }
+        }
+
+        async function _drawHand() {
+            const pool = _buildDeckPool(currentDetailDeck.cards);
+            const hand = pool.slice(0, _handSimSize);
+            const mulBtn = document.getElementById('btnMulligan');
+            mulBtn.textContent = `Mulligan to ${_handSimSize - 1}`;
+            mulBtn.disabled = _handSimSize <= 1;
+            document.getElementById('handSimSubtitle').textContent =
+                `Drawing ${_handSimSize} of ${pool.length} non-basic cards`;
+            const container = document.getElementById('handSimCards');
+            container.innerHTML = hand.map(c =>
+                `<div style="text-align:center;width:120px;">
+                    <img data-hsc="${c.name.replace(/"/g,'&quot;')}" src="" alt="${c.name}"
+                        style="width:120px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.4);background:var(--bg-deep);min-height:167px;display:block;">
+                    <div style="font-size:0.7rem;color:var(--text-secondary);margin-top:0.3rem;line-height:1.2;">${c.name}</div>
+                </div>`
+            ).join('');
+            container.querySelectorAll('[data-hsc]').forEach(async img => {
+                const name = img.dataset.hsc;
+                try {
+                    let url = _cardImageCache.get(name);
+                    if (!url) {
+                        const r = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(name)}`);
+                        if (r.ok) {
+                            const d = await r.json();
+                            url = d.image_uris?.normal ?? d.card_faces?.[0]?.image_uris?.normal ?? null;
+                            if (url) _cardImageCache.set(name, url);
+                        }
+                    }
+                    if (url) img.src = url;
+                } catch {}
+            });
+        }
+
+        // === Card Editor ===
+        let _editingCards = [];
+
+        function openCardEditorModal() {
+            if (!currentDetailDeck) return;
+            _editingCards = currentDetailDeck.cards.map(c => ({ ...c }));
+            document.getElementById('cardSearchInput').value = '';
+            document.getElementById('cardSearchResults').innerHTML = '';
+            _renderEditorList();
+            document.getElementById('cardEditorModal').classList.remove('hidden');
+        }
+
+        function closeCardEditorModal() {
+            document.getElementById('cardEditorModal').classList.add('hidden');
+        }
+
+        function _renderEditorList() {
+            const total = _editingCards.reduce((s, c) => s + c.quantity, 0);
+            document.getElementById('cardEditorCount').textContent = `${total} cards`;
+            const grouped = {};
+            _editingCards.forEach(c => {
+                const cat = c.category || 'Other';
+                if (!grouped[cat]) grouped[cat] = [];
+                grouped[cat].push(c);
+            });
+            const order = ['Commander','Creature','Instant','Sorcery','Enchantment','Artifact','Planeswalker','Land','Mainboard','Other'];
+            const list = document.getElementById('cardEditorList');
+            list.innerHTML = order.flatMap(cat => (grouped[cat] || []).map(c => {
+                const idx = _editingCards.indexOf(c);
+                return `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0.4rem;border-radius:5px;background:var(--bg-deep);">
+                    <button onclick="editorQty(${idx},-1)" style="background:none;border:1px solid var(--border);color:var(--text-secondary);border-radius:3px;width:20px;height:20px;cursor:pointer;font-size:0.8rem;line-height:1;padding:0;">−</button>
+                    <span style="min-width:18px;text-align:center;font-size:0.82rem;color:var(--text-primary);">${c.quantity}</span>
+                    <button onclick="editorQty(${idx},+1)" style="background:none;border:1px solid var(--border);color:var(--text-secondary);border-radius:3px;width:20px;height:20px;cursor:pointer;font-size:0.8rem;line-height:1;padding:0;">+</button>
+                    <span style="flex:1;font-size:0.82rem;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${c.name}">${c.name}</span>
+                    <span style="font-size:0.72rem;color:var(--text-muted);white-space:nowrap;">${c.category || ''}</span>
+                    <button onclick="editorRemove(${idx})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.9rem;padding:0 0.25rem;" title="Remove">&#10005;</button>
+                </div>`;
+            })).join('') || '<div style="color:var(--text-muted);font-size:0.9rem;padding:1rem;">No cards in deck</div>';
+        }
+
+        function editorQty(idx, delta) {
+            _editingCards[idx].quantity = Math.max(1, (_editingCards[idx].quantity || 1) + delta);
+            _renderEditorList();
+        }
+
+        function editorRemove(idx) {
+            _editingCards.splice(idx, 1);
+            _renderEditorList();
+        }
+
+        async function searchCardsForEditor() {
+            const q = document.getElementById('cardSearchInput').value.trim();
+            if (!q) return;
+            const resultsEl = document.getElementById('cardSearchResults');
+            resultsEl.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;padding:0.5rem;">Searching…</div>';
+            try {
+                const r = await fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(q)}+game:paper&order=name&unique=cards`);
+                if (!r.ok) throw new Error('No results');
+                const data = await r.json();
+                const cards = (data.data || []).slice(0, 12);
+                resultsEl.innerHTML = cards.map((sc, i) => {
+                    const name = sc.name;
+                    const type = sc.type_line || '';
+                    const price = sc.prices?.usd ? `$${sc.prices.usd}` : '';
+                    const cmc = sc.cmc || 0;
+                    const manaCost = sc.mana_cost || '';
+                    const cardType = type.split('—')[0].trim();
+                    return `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0.4rem;border-radius:5px;background:var(--bg-deep);cursor:pointer;" onclick="editorAddCard(${JSON.stringify(JSON.stringify({name,manaCost,cmc,cardType,type}))})">
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-size:0.82rem;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
+                            <div style="font-size:0.7rem;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${type}</div>
+                        </div>
+                        <span style="font-size:0.72rem;color:var(--gold);white-space:nowrap;">${price}</span>
+                        <button style="background:var(--gold-dark);border:none;color:#1a1a1a;border-radius:4px;padding:0.2rem 0.5rem;font-size:0.75rem;cursor:pointer;font-family:'Cinzel',serif;">Add</button>
+                    </div>`;
+                }).join('') || '<div style="color:var(--text-muted);font-size:0.85rem;padding:0.5rem;">No results</div>';
+            } catch {
+                resultsEl.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;padding:0.5rem;">No results found</div>';
+            }
+        }
+
+        function editorAddCard(jsonStr) {
+            const sc = JSON.parse(jsonStr);
+            const existing = _editingCards.find(c => c.name.toLowerCase() === sc.name.toLowerCase());
+            if (existing) { existing.quantity++; }
+            else {
+                _editingCards.push({
+                    name: sc.name, quantity: 1, manaCost: sc.manaCost || '',
+                    cmc: sc.cmc || 0, cardType: sc.cardType || sc.type || '',
+                    category: 'Mainboard', roleInDeck: '', estimatedPrice: 0
+                });
+            }
+            _renderEditorList();
+        }
+
+        async function saveCardEdits() {
+            if (!currentDetailDeck) return;
+            const btn = document.getElementById('btnSaveCardEdits');
+            btn.disabled = true; btn.textContent = 'Saving…';
+            try {
+                const res = await authFetch(`${API_BASE}/${currentDetailDeck.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cards: _editingCards })
+                });
+                if (!res.ok) throw new Error('Save failed');
+                const updated = await res.json();
+                currentDetailDeck = updated;
+                renderDetail(updated);
+                closeCardEditorModal();
+                showToast('Cards updated!');
+            } catch (err) { showToast(err.message, true); }
+            finally { btn.disabled = false; btn.textContent = 'Save Changes'; }
+        }
+
+        // === Deck Compare ===
+        function openCompareModal() {
+            const select = document.getElementById('comparePickerSelect');
+            select.innerHTML = '<option value="">— Pick a deck —</option>' +
+                currentDecks
+                    .filter(d => d.id !== currentDetailDeck?.id)
+                    .map(d => `<option value="${d.id}">${d.deckName || 'Untitled'} (${d.format || ''})</option>`)
+                    .join('');
+            document.getElementById('compareBody').innerHTML =
+                '<div style="text-align:center;color:var(--text-muted);padding-top:3rem;font-family:\'Crimson Text\',serif;font-size:1rem;grid-column:1/-1;">Select a deck to compare</div>';
+            document.getElementById('compareModal').classList.remove('hidden');
+        }
+
+        function closeCompareModal() {
+            document.getElementById('compareModal').classList.add('hidden');
+        }
+
+        async function loadCompareTarget(id) {
+            if (!id) return;
+            const body = document.getElementById('compareBody');
+            body.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--text-muted);padding:2rem;">Loading…</div>';
+            try {
+                const res = await authFetch(`${API_BASE}/${id}`);
+                if (!res.ok) throw new Error('Failed to load deck');
+                const other = await res.json();
+                _renderCompareSideBySide(currentDetailDeck, other);
+            } catch (err) { showToast(err.message, true); }
+        }
+
+        function _renderCompareSideBySide(deckA, deckB) {
+            const namesA = new Set((deckA.cards || []).map(c => c.name.toLowerCase()));
+            const namesB = new Set((deckB.cards || []).map(c => c.name.toLowerCase()));
+            const renderCol = (deck, otherNames) => {
+                const order = ['Commander','Creature','Instant','Sorcery','Enchantment','Artifact','Planeswalker','Land','Mainboard','Other'];
+                const grouped = {};
+                (deck.cards || []).forEach(c => {
+                    const cat = c.category || 'Other';
+                    if (!grouped[cat]) grouped[cat] = [];
+                    grouped[cat].push(c);
+                });
+                return `<div style="display:flex;flex-direction:column;overflow:hidden;">
+                    <div style="font-family:'Cinzel',serif;font-size:0.9rem;color:var(--gold);margin-bottom:0.5rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${deck.deckName || 'Untitled'}</div>
+                    <div style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:0.25rem;">
+                        ${order.flatMap(cat => (grouped[cat] || []).map(c => {
+                            const unique = !otherNames.has(c.name.toLowerCase());
+                            return `<div style="display:flex;gap:0.4rem;padding:0.2rem 0.4rem;border-radius:4px;${unique ? 'background:rgba(212,175,55,0.12);border-left:2px solid var(--gold);' : ''}">
+                                <span style="font-size:0.75rem;color:var(--text-muted);min-width:18px;">${c.quantity}x</span>
+                                <span style="font-size:0.78rem;color:${unique ? 'var(--gold)' : 'var(--text-secondary)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.name}</span>
+                            </div>`;
+                        })).join('')}
+                    </div>
+                </div>`;
+            };
+            document.getElementById('compareBody').innerHTML =
+                renderCol(deckA, namesB) + renderCol(deckB, namesA);
+        }
+
+        // === Favorites ===
+        function toggleFavFilter(btn) {
+            btn.classList.toggle('active');
+            renderLibrary();
+        }
+
+        async function toggleFavorite(id, btn) {
+            const deck = currentDecks.find(d => d.id === id);
+            if (!deck) return;
+            const newVal = !deck.isFavorite;
+            try {
+                const res = await authFetch(`${API_BASE}/${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ isFavorite: newVal })
+                });
+                if (!res.ok) throw new Error('Update failed');
+                deck.isFavorite = newVal;
+                btn.classList.toggle('active', newVal);
+                btn.title = newVal ? 'Unfavorite' : 'Favorite';
+                if (document.getElementById('filterFavorites')?.classList.contains('active')) renderLibrary();
+            } catch (err) { showToast(err.message, true); }
         }
 
         // === Copy ===
@@ -4127,7 +4720,111 @@
 
         // === Admin Panel ===
         async function loadAdminPanel() {
-            await Promise.all([loadAdminUsers(), loadAdminGroups(), loadPricingRuns(), loadAiIngestionStatus()]);
+            await Promise.all([loadAnalytics(), loadAiUsage(), loadAdminUsers(), loadAdminGroups(), loadPricingRuns(), loadAiIngestionStatus()]);
+        }
+
+        // === Analytics ===
+        async function loadAnalytics() {
+            const el = document.getElementById('analyticsContent');
+            try {
+                const res = await authFetch('/api/admin/analytics');
+                if (!res.ok) throw new Error('Failed');
+                const d = await res.json();
+                const colorNames = { W: 'White', U: 'Blue', B: 'Black', R: 'Red', G: 'Green' };
+                const colorBg = { W: '#f9f6e8', U: '#4a90d9', B: '#3a3a4a', R: '#d94a4a', G: '#4a9d5a' };
+
+                const statBoxes = `
+                    <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem;">
+                        ${[['Total Decks', d.totalDecks], ['Last 7 Days', d.decksLast7Days], ['Last 30 Days', d.decksLast30Days]]
+                            .map(([label, val]) => `<div class="stat-box"><div class="stat-value">${val}</div><div class="stat-label">${label}</div></div>`).join('')}
+                    </div>`;
+
+                const makeBar = (label, val, max, color) => {
+                    const pct = max > 0 ? Math.max(Math.round((val / max) * 100), 4) : 0;
+                    return `<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:4px;">
+                        <span style="font-size:0.78rem;color:var(--text-secondary);min-width:90px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${label}</span>
+                        <div style="flex:1;height:14px;background:var(--bg-deep);border-radius:4px;overflow:hidden;">
+                            <div style="width:${pct}%;height:100%;background:${color};border-radius:4px;"></div>
+                        </div>
+                        <span style="font-size:0.75rem;color:var(--text-secondary);min-width:22px;text-align:right;">${val}</span>
+                    </div>`;
+                };
+
+                const chartHeader = t => `<div style="font-family:'Cinzel',serif;font-size:0.82rem;color:var(--gold);margin-bottom:0.6rem;text-transform:uppercase;letter-spacing:0.05em;">${t}</div>`;
+
+                const fmtMax = Math.max(...Object.values(d.byFormat || {}), 1);
+                const fmtChart = chartHeader('By Format') + Object.entries(d.byFormat || {}).sort((a,b) => b[1]-a[1])
+                    .map(([k,v]) => makeBar(k, v, fmtMax, 'linear-gradient(90deg,var(--gold-dark),var(--gold))')).join('');
+
+                const pwrMax = Math.max(...Object.values(d.byPowerLevel || {}), 1);
+                const pwrChart = chartHeader('By Power Level') + ['Casual','Focused','Optimized','Competitive']
+                    .filter(k => d.byPowerLevel?.[k] != null)
+                    .map(k => makeBar(k, d.byPowerLevel[k], pwrMax, 'linear-gradient(90deg,var(--gold-dark),var(--gold))')).join('');
+
+                const colMax = Math.max(...Object.values(d.byColor || {}), 1);
+                const colChart = chartHeader('By Color') + Object.entries(d.byColor || {}).sort((a,b) => b[1]-a[1])
+                    .map(([k,v]) => makeBar(colorNames[k] || k, v, colMax, colorBg[k] || 'var(--gold)')).join('');
+
+                const topUsers = d.topUsers?.length
+                    ? `<div style="margin-top:1rem;">${chartHeader('Top Users')}${d.topUsers.map((u,i) =>
+                        `<div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:3px;">
+                            <span style="font-size:0.72rem;color:var(--text-muted);min-width:18px;">#${i+1}</span>
+                            <span style="font-size:0.8rem;color:var(--text-secondary);flex:1;">${u.displayName}</span>
+                            <span style="font-size:0.78rem;color:var(--gold);">${u.count} deck${u.count !== 1 ? 's' : ''}</span>
+                        </div>`).join('')}</div>` : '';
+
+                el.innerHTML = statBoxes +
+                    `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem;">
+                        <div>${fmtChart}</div><div>${pwrChart}</div><div>${colChart}</div>
+                    </div>` + topUsers;
+            } catch { el.innerHTML = '<div style="color:var(--text-muted);font-size:0.9rem;">Could not load analytics.</div>'; }
+        }
+
+        // === AI Usage ===
+        async function loadAiUsage() {
+            const el = document.getElementById('aiUsageContent');
+            const days = document.getElementById('usageDays')?.value || 30;
+            try {
+                const res = await authFetch(`/api/admin/usage?days=${days}`);
+                if (!res.ok) throw new Error('Failed');
+                const d = await res.json();
+                const totalTokens = (d.totalInputTokens || 0) + (d.totalOutputTokens || 0);
+                el.innerHTML = `
+                    <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
+                        ${[['Input Tokens', (d.totalInputTokens||0).toLocaleString()], ['Output Tokens', (d.totalOutputTokens||0).toLocaleString()], ['Total Tokens', totalTokens.toLocaleString()]]
+                            .map(([label,val]) => `<div class="stat-box"><div class="stat-value" style="font-size:1.1rem;">${val}</div><div class="stat-label">${label}</div></div>`).join('')}
+                    </div>
+                    ${d.byUser?.length ? `<table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+                        <thead><tr style="color:var(--text-muted);text-align:left;border-bottom:1px solid var(--border);">
+                            <th style="padding:0.4rem 0.5rem;">User</th>
+                            <th style="padding:0.4rem 0.5rem;text-align:right;">Generates</th>
+                            <th style="padding:0.4rem 0.5rem;text-align:right;">Analyses</th>
+                            <th style="padding:0.4rem 0.5rem;text-align:right;">Input Tokens</th>
+                            <th style="padding:0.4rem 0.5rem;text-align:right;">Output Tokens</th>
+                        </tr></thead>
+                        <tbody>${d.byUser.map(u => `<tr style="border-bottom:1px solid var(--border);">
+                            <td style="padding:0.4rem 0.5rem;color:var(--text-primary);">${u.displayName}</td>
+                            <td style="padding:0.4rem 0.5rem;text-align:right;color:var(--text-secondary);">${u.generateCount}</td>
+                            <td style="padding:0.4rem 0.5rem;text-align:right;color:var(--text-secondary);">${u.analyzeCount}</td>
+                            <td style="padding:0.4rem 0.5rem;text-align:right;color:var(--text-secondary);">${(u.totalInputTokens||0).toLocaleString()}</td>
+                            <td style="padding:0.4rem 0.5rem;text-align:right;color:var(--gold);">${(u.totalOutputTokens||0).toLocaleString()}</td>
+                        </tr>`).join('')}</tbody>
+                    </table>` : '<div style="color:var(--text-muted);font-size:0.9rem;">No AI usage recorded yet.</div>'}`;
+            } catch { el.innerHTML = '<div style="color:var(--text-muted);font-size:0.9rem;">Could not load AI usage.</div>'; }
+        }
+
+        // === Scheduled Re-analysis ===
+        async function triggerReanalysis() {
+            const btn = document.getElementById('btnReanalyze');
+            btn.disabled = true;
+            btn.textContent = 'Re-analyzing…';
+            try {
+                const res = await authFetch('/api/admin/reanalyze', { method: 'POST' });
+                if (!res.ok) throw new Error('Failed');
+                const d = await res.json();
+                showToast(`Re-analyzed ${d.reanalyzed} deck${d.reanalyzed !== 1 ? 's' : ''}`);
+            } catch (err) { showToast(err.message, true); }
+            finally { btn.disabled = false; btn.textContent = '♻ Re-analyze Stale Decks'; }
         }
 
         async function loadAdminUsers() {

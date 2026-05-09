@@ -115,6 +115,8 @@ public class DeckService
         if (req.PowerLevel != null)      updates.Add(builder.Set(d => d.PowerLevel, req.PowerLevel));
         if (req.BudgetRange != null)     updates.Add(builder.Set(d => d.BudgetRange, req.BudgetRange));
         if (req.Colors != null)          updates.Add(builder.Set(d => d.Colors, req.Colors));
+        if (req.Tags != null)            updates.Add(builder.Set(d => d.Tags, req.Tags));
+        if (req.IsFavorite.HasValue)     updates.Add(builder.Set(d => d.IsFavorite, req.IsFavorite.Value));
         if (req.Cards != null)
         {
             updates.Add(builder.Set(d => d.Cards, req.Cards));

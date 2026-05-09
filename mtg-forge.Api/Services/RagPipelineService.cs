@@ -26,6 +26,8 @@ public class RagPipelineService : IDeckGenerationService
     private readonly IHttpClientFactory _factory;
     private readonly RagPipelineSettings _settings;
     private readonly ILogger<RagPipelineService> _logger;
+    private readonly AiUsageService? _aiUsageService;
+    private readonly IHttpContextAccessor? _httpContextAccessor;
 
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
@@ -36,11 +38,15 @@ public class RagPipelineService : IDeckGenerationService
     public RagPipelineService(
         IHttpClientFactory factory,
         IOptions<RagPipelineSettings> settings,
-        ILogger<RagPipelineService> logger)
+        ILogger<RagPipelineService> logger,
+        AiUsageService? aiUsageService = null,
+        IHttpContextAccessor? httpContextAccessor = null)
     {
         _factory = factory;
         _settings = settings.Value;
         _logger = logger;
+        _aiUsageService = aiUsageService;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     // ─── Deck Generation ──────────────────────────────────────────────────────
@@ -220,7 +226,8 @@ public class RagPipelineService : IDeckGenerationService
 
         try
         {
-            var rawResponse = await CallLlmAsync(systemPrompt, userPrompt, jsonMode: true, temperature: 0.3);
+            var rawResponse = await CallLlmAsync(systemPrompt, userPrompt, jsonMode: true, temperature: 0.3,
+                operation: "analyze", deckId: deck.Id, format: deck.Format);
 
             var jsonContent = ExtractJson(rawResponse);
             var analysis = JsonSerializer.Deserialize<DeckAnalysis>(jsonContent, JsonOpts)
@@ -336,7 +343,8 @@ public class RagPipelineService : IDeckGenerationService
 
         try
         {
-            var rawResponse = await CallLlmAsync(systemPrompt, prompt, jsonMode: true, temperature: 0.3);
+            var rawResponse = await CallLlmAsync(systemPrompt, prompt, jsonMode: true, temperature: 0.3,
+                operation: "budget_replace");
             var jsonContent = ExtractJson(rawResponse);
             var replacements = JsonSerializer.Deserialize<List<CardEntry>>(jsonContent, JsonOpts) ?? [];
             activity?.SetTag("mtg.budget.replacements_returned", replacements.Count);
@@ -396,7 +404,8 @@ public class RagPipelineService : IDeckGenerationService
 
         try
         {
-            var result = (await CallLlmAsync(systemPrompt, userPrompt, jsonMode: false, temperature: 0.7)).Trim();
+            var result = (await CallLlmAsync(systemPrompt, userPrompt, jsonMode: false, temperature: 0.7,
+                operation: "import_description")).Trim();
             activity?.SetStatus(ActivityStatusCode.Ok);
             return result;
         }
@@ -423,7 +432,10 @@ public class RagPipelineService : IDeckGenerationService
         string systemPrompt,
         string userPrompt,
         bool jsonMode = false,
-        double temperature = 0.7)
+        double temperature = 0.7,
+        string operation = "unknown",
+        string? deckId = null,
+        string? format = null)
     {
         if (string.IsNullOrWhiteSpace(_settings.LlmApiKey))
             throw new InvalidOperationException(
@@ -508,6 +520,25 @@ public class RagPipelineService : IDeckGenerationService
                 _logger.LogDebug(
                     "CallLlmAsync: Together.ai response received — {InputTokens} input tokens, {OutputTokens} output tokens (TraceId={TraceId})",
                     usage.PromptTokens, usage.CompletionTokens, llmActivity?.TraceId);
+
+                if (_aiUsageService != null)
+                {
+                    var ctx = _httpContextAccessor?.HttpContext;
+                    var userId = ctx?.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "system";
+                    var displayName = ctx?.User?.FindFirst("displayName")?.Value ?? userId;
+                    _ = _aiUsageService.LogAsync(new MtgForge.Api.Models.AiUsageRecord
+                    {
+                        UserId = userId,
+                        UserDisplayName = displayName,
+                        Operation = operation,
+                        Model = _settings.Model,
+                        InputTokens = usage.PromptTokens,
+                        OutputTokens = usage.CompletionTokens,
+                        DeckId = deckId,
+                        Format = format,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
             }
             else
             {

@@ -28,6 +28,9 @@ public class DeckConfiguration
     // Persisted analysis
     public DeckAnalysis? LastAnalysis { get; set; }
     public DateTime? LastAnalyzedAt { get; set; }
+
+    public List<string> Tags { get; set; } = new();
+    public bool IsFavorite { get; set; } = false;
 }
 
 public class CardEntry
@@ -64,6 +67,8 @@ public class DeckUpdateRequest
     public string? BudgetRange { get; set; }
     public List<string>? Colors { get; set; }
     public List<CardEntry>? Cards { get; set; }
+    public List<string>? Tags { get; set; }
+    public bool? IsFavorite { get; set; }
 }
 
 public class DeckAnalysis
