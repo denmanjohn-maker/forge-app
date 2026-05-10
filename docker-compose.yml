@@ -41,9 +41,10 @@ services:
       MongoDb__DatabaseName: "mtgdeckforge"
       MongoDb__DecksCollectionName: "decks"
       LOKI_URI: "http://loki:3100"
-      # Send OTLP traces to Tempo only; do not use the generic OTLP endpoint for logs
-      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://tempo:4317"
-      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://tempo:4317"
+      # Traces (and the optional Serilog OTLP log sink) go here via gRPC.
+      # Metrics are exported separately via the Prometheus scrape endpoint (/metrics).
+      # Override via .env for Railway: OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy.railway.internal:4317
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://tempo:4317}"
     depends_on:
       mongodb:
         condition: service_healthy
