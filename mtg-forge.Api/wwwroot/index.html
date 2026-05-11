@@ -2414,7 +2414,7 @@
         </button>
         <nav class="side-nav-items">
             <button class="nav-tab active" data-view="forge">
-                <svg class="nav-icon" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                <svg class="nav-icon" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" y1="19" x2="19" y2="13"/><line x1="16" y1="16" x2="20" y2="20"/><line x1="19" y1="21" x2="21" y2="19"/></svg>
                 <span class="nav-label">Forge</span>
             </button>
             <button class="nav-tab" data-view="library">
@@ -2993,7 +2993,7 @@
 
     <!-- Hand Simulator Modal -->
     <div class="modal-overlay hidden" id="handSimModal">
-        <div class="modal" style="max-width:860px;width:96%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;">
+        <div class="modal" style="max-width:1100px;width:96%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;">
             <h3 style="margin-bottom:0.25rem;">&#127922; Opening Hand</h3>
             <p id="handSimSubtitle" style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1.25rem;font-family:'Crimson Text',serif;flex-shrink:0;"></p>
             <div id="handSimCards" style="display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:center;align-items:flex-start;overflow-y:auto;flex:1;min-height:0;padding:0.25rem 0;"></div>
@@ -4214,10 +4214,10 @@
                 `Drawing ${_handSimSize} of ${pool.length} non-basic cards`;
             const container = document.getElementById('handSimCards');
             container.innerHTML = hand.map(c =>
-                `<div style="text-align:center;width:120px;">
+                `<div style="text-align:center;width:180px;">
                     <img data-hsc="${c.name.replace(/"/g,'&quot;')}" src="" alt="${c.name}"
-                        style="width:120px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.4);background:var(--bg-deep);min-height:167px;display:block;">
-                    <div style="font-size:0.7rem;color:var(--text-secondary);margin-top:0.3rem;line-height:1.2;">${c.name}</div>
+                        style="width:180px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.4);background:var(--bg-deep);min-height:251px;display:block;">
+                    <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.3rem;line-height:1.2;">${c.name}</div>
                 </div>`
             ).join('');
             container.querySelectorAll('[data-hsc]').forEach(async img => {
