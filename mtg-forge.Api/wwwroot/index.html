@@ -1994,9 +1994,16 @@
             /* Category tree — tap-friendly header */
             .category-header { min-height: 44px; padding: 0.6rem 0; }
 
-            /* Hand simulator — smaller cards on narrow screens */
+            /* Hand simulator — smaller cards on narrow screens, keep action buttons horizontal */
             #handSimCards > div { width: 80px !important; }
             #handSimCards > div img { width: 80px !important; min-height: 112px !important; }
+            #handSimModal .modal-actions { flex-direction: row !important; flex-wrap: wrap; gap: 0.5rem; }
+            #handSimModal .modal-actions button { width: auto !important; flex: 1; min-width: 80px; }
+
+            /* Deck compare — stack columns vertically, each half takes equal scroll height */
+            #compareBody { grid-template-columns: 1fr !important; grid-template-rows: 1fr 1fr !important; }
+            /* Placeholder/loading div should fill the full grid when it's the only child */
+            #compareBody > div:only-child { grid-column: 1 / -1 !important; grid-row: 1 / -1 !important; }
 
             /* Admin — scrollable tables */
             .admin-section { overflow-x: auto; -webkit-overflow-scrolling: touch; }
