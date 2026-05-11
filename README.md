@@ -59,10 +59,10 @@ Railway project
 ├── mtg-forge-ai         (.NET — separate repo, internal only)
 │     ├── /api/decks/generate  ← receives requests from mtg-api
 │     ├── CardSearchService  ──► qdrant.railway.internal:6333
-│     └── LLM calls          ──► api.together.xyz (Together.ai)
+│     └── LLM calls          ──► api.deepinfra.com (DeepInfra)
 │
 ├── qdrant               (Docker: qdrant/qdrant, volume on /qdrant/storage)
-│     └── "cards" collection — ~30k vectors, 384 dimensions
+│     └── "cards" collection — ~30k vectors, 1024 dimensions (BAAI/bge-m3 via DeepInfra)
 │         payload per card: name, price, color_identity, format legality flags
 │
 ├── mongodb              (deck documents + users + groups)
@@ -110,7 +110,7 @@ DecksController.Generate (mtg-forge.Api)
   │     │     Annotates each candidate card with its tournament play-rate
   │     │     High-frequency staples are surfaced to the LLM as preferred picks
   │     │
-  │     ├─► LLM (Together.ai — meta-llama/Llama-3.3-70B-Instruct-Turbo)
+  │     ├─► LLM (DeepInfra — meta-llama/Llama-3.3-70B-Instruct)
   │     │     Input: candidate cards (with tournament signals) + format rules + deck request
   │     │     Output: 100-card deck list as structured JSON
   │     │
@@ -502,9 +502,9 @@ curl http://qdrant.railway.internal:6333/collections/cards
 |-----------------------------|-------------------------------------------------|------------------------------------|
 | `LlmProvider`               | `Rag`                                           | Routes to RAG pipeline             |
 | `RagPipeline__BaseUrl`      | `http://mtg-forge-ai.railway.internal:8080`     | mtg-forge-ai internal DNS          |
-| `RagPipeline__LlmBaseUrl`   | `https://api.together.xyz`                      | Together.ai API base               |
-| `RagPipeline__LlmApiKey`    | `<your Together.ai API key>`                    | Required for deck analysis         |
-| `RagPipeline__Model`        | `meta-llama/Llama-3.3-70B-Instruct-Turbo`       | LLM for analysis + import descriptions |
+| `RagPipeline__LlmBaseUrl`   | `https://api.deepinfra.com/v1/openai`           | DeepInfra API base                 |
+| `RagPipeline__LlmApiKey`    | `<your DeepInfra API key>`                      | Required for deck analysis         |
+| `RagPipeline__Model`        | `meta-llama/Llama-3.3-70B-Instruct`             | LLM for analysis + import descriptions |
 | `MongoDb__ConnectionString` | `<Railway MongoDB internal URL>`                | Deck + user storage                |
 | `DATABASE_URL`              | *(Railway auto-injects)*                        | PostgreSQL for Identity + pricing  |
 | `JWT_SECRET`                | A long random string (32+ chars)                | JWT signing key                    |
@@ -543,9 +543,9 @@ Generation takes 30–90 seconds (Qdrant search + LLM inference).
 |-----------------------------|----------------------------------------------|------------------------------------------------|
 | `LlmProvider`               | `Rag` routes to mtg-forge-ai                 | `Rag`                                          |
 | `RagPipeline__BaseUrl`      | mtg-forge-ai internal URL                    | `http://mtg-forge-ai.railway.internal:8080`    |
-| `RagPipeline__LlmBaseUrl`   | Together.ai (or any OpenAI-compat) base URL  | `https://api.together.xyz`                     |
-| `RagPipeline__LlmApiKey`    | Together.ai API key                          | *(required for analysis)*                      |
-| `RagPipeline__Model`        | LLM model name for analysis                  | `meta-llama/Llama-3.3-70B-Instruct-Turbo`      |
+| `RagPipeline__LlmBaseUrl`   | DeepInfra (or any OpenAI-compat) base URL    | `https://api.deepinfra.com/v1/openai`  |
+| `RagPipeline__LlmApiKey`    | DeepInfra API key                            | *(required for analysis)*                      |
+| `RagPipeline__Model`        | LLM model name for analysis                  | `meta-llama/Llama-3.3-70B-Instruct`            |
 | `MongoDb__ConnectionString` | MongoDB connection string                    | `mongodb://mongodb:27017`                      |
 | `MongoDb__DatabaseName`     | MongoDB database name                        | `mtgdeckforge`                                 |
 | `DATABASE_URL`              | PostgreSQL URI (Railway auto-injects)        | Required                                       |
@@ -564,7 +564,7 @@ Generation takes 30–90 seconds (Qdrant search + LLM inference).
 
 - .NET 10 SDK
 - Docker (for local dependencies)
-- A Together.ai API key (for deck analysis; free tier available)
+- A DeepInfra API key (for deck analysis; free credits available)
 
 ### Start local dependencies
 
@@ -608,9 +608,9 @@ For local RAG generation, run `mtg-forge-ai` locally and set in `appsettings.jso
 "LlmProvider": "Rag",
 "RagPipeline": {
   "BaseUrl": "http://localhost:8080",
-  "LlmBaseUrl": "https://api.together.xyz",
+  "LlmBaseUrl": "https://api.deepinfra.com/v1/openai",
   "LlmApiKey": "<your-key>",
-  "Model": "meta-llama/Llama-3.3-70B-Instruct-Turbo"
+  "Model": "meta-llama/Llama-3.3-70B-Instruct"
 }
 ```
 
@@ -637,7 +637,7 @@ mtg-forge/
     │   └── PricingController.cs      # Admin: manual pricing refresh trigger
     ├── Services/
     │   ├── IDeckGenerationService.cs # Abstraction: GenerateDeck, AnalyzeDeck, SuggestReplacements
-    │   ├── RagPipelineService.cs     # Calls mtg-forge-ai (Qdrant+LLM) + Together.ai directly
+    │   ├── RagPipelineService.cs     # Calls mtg-forge-ai (Qdrant+LLM) + DeepInfra directly
     │   ├── DeckService.cs            # MongoDB CRUD for DeckConfiguration documents
     │   ├── UserService.cs            # MongoDB CRUD for User documents
     │   ├── AuthService.cs            # Password hashing, JWT generation
