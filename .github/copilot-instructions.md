@@ -30,6 +30,8 @@ cd mtg-forge.Api && dotnet ef database update
 
 There is no dedicated lint command or lint configuration checked into this repository.
 
+The repository's main automated verification lives in `.github/workflows/post-merge-review.yml`, which restores, builds in Release, runs `dotnet test`, and checks vulnerable NuGet packages with `dotnet list ... --vulnerable`.
+
 ## High-level architecture
 
 - `mtg-forge.Api` is a single ASP.NET Core web app that serves three surfaces from one process: REST controllers, Razor Pages under `Pages/`, and the static SPA in `wwwroot/index.html`.
@@ -48,10 +50,14 @@ There is no dedicated lint command or lint configuration checked into this repos
 - `ScryfallService.EnrichCardsAsync` is intentionally non-destructive: it fills missing mana cost, CMC, type, and price fields, but does not overwrite populated values. It batches requests in groups of 75 to match Scryfall's collection API limits.
 - The SPA is a single large `wwwroot/index.html` file with no frontend build step. If you touch the CSS or layout, preserve the existing iOS/Safari compatibility details such as `min-height: 100dvh` and `-webkit-backdrop-filter`.
 - Tests are xUnit-only and avoid mocking libraries. HTTP-dependent services are tested with hand-rolled `HttpMessageHandler` stubs, and private static CSV helper methods in `DecksController` are tested via reflection rather than being made public just for tests.
-- The repository's main automated verification lives in `.github/workflows/post-merge-review.yml`, which restores, builds in Release, runs `dotnet test`, and checks vulnerable NuGet packages with `dotnet list ... --vulnerable`.
 
 ## Local environment details
 
 - Host-based local development uses `docker-compose-local.yml` for dependencies only: MongoDB on `localhost:27018`, PostgreSQL on `localhost:5433`, Prometheus on `localhost:9090`, and Grafana on `localhost:3000`.
 - The app honors the `PORT` environment variable and otherwise listens on `5000`.
 - Key runtime configuration comes from environment variables or `appsettings.json`, especially `ANTHROPIC_API_KEY`, `DATABASE_URL` or `SqlStorage:ConnectionString`, `JWT_SECRET`, and `ADMIN_PASSWORD`.
+
+## Companion repositories
+
+- **forge-ai-api** (`../forge-ai-api`) — the local RAG pipeline this app calls when `LlmProvider = Rag`. It runs MongoDB + Qdrant + Ollama and exposes `/api/decks/generate`. The `RagPipelineService` in this repo proxies to it.
+- **forge-observability** (`../forge-observability`) — a standalone Grafana / Prometheus / Loki / Tempo / Alloy stack. The `docker-compose-local.yml` here includes Prometheus and Grafana for convenience; the observability repo is used for full-stack or Railway deployments.
