@@ -1987,6 +1987,8 @@
 
             /* Deck compare — stack columns vertically, each half takes equal scroll height */
             #compareBody { grid-template-columns: 1fr !important; grid-template-rows: 1fr 1fr !important; }
+            /* Placeholder/loading div should fill the full grid when it's the only child */
+            #compareBody > div:only-child { grid-column: 1 / -1 !important; grid-row: 1 / -1 !important; }
 
             /* Admin — scrollable tables */
             .admin-section { overflow-x: auto; -webkit-overflow-scrolling: touch; }
