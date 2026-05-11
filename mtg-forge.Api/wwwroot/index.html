@@ -548,11 +548,9 @@
             fill: none;
         }
 
-        /* Tactile press feedback on touch */
-        button:active, [role="button"]:active {
-            transform: scale(0.96);
-            transition: transform 0.08s ease;
-        }
+        /* Tactile press feedback on touch — transition on base so release also animates */
+        button, [role="button"] { transition: transform 0.08s ease; }
+        button:active, [role="button"]:active { transform: scale(0.96); }
 
         /* User dropdown logout item — danger tint */
         .user-dropdown-item.logout-item:hover {
@@ -1609,7 +1607,7 @@
         .bulk-delete-bar {
             position: fixed;
             bottom: 2rem;
-            bottom: max(2rem, env(safe-area-inset-bottom, 0px));
+            bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
             left: 50%;
             transform: translateX(-50%);
             background: var(--bg-panel);
@@ -1897,7 +1895,7 @@
             .radio-group { flex-wrap: wrap; }
             .radio-option { min-width: 45%; }
 
-            /* Card editor modal two-column grid */
+            /* Collapse card-editor modal to single column at ≤768px */
             .card-editor-grid { grid-template-columns: 1fr !important; }
         }
 
