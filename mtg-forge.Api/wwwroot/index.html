@@ -230,8 +230,8 @@
             border-radius: 6px;
             color: var(--text-secondary);
             font-family: 'Cinzel', serif;
-            font-size: 0.72rem;
-            font-weight: 600;
+            font-size: 0.9rem;
+            font-weight: 700;
             letter-spacing: 0.07em;
             padding: 0.45rem 0.85rem;
             display: flex;
@@ -244,8 +244,8 @@
         }
 
         .nav-tab .nav-icon {
-            width: 16px;
-            height: 16px;
+            width: 20px;
+            height: 20px;
             stroke: currentColor;
             fill: none;
             transition: all 0.2s ease;
@@ -475,9 +475,9 @@
         }
 
         .side-nav .nav-tab .nav-label {
-            font-size: 0.72rem;
+            font-size: 0.9rem;
             font-family: 'Cinzel', serif;
-            font-weight: 600;
+            font-weight: 700;
             letter-spacing: 0.08em;
             transition: opacity 0.15s ease;
             overflow: hidden;
@@ -4214,10 +4214,10 @@
                 `Drawing ${_handSimSize} of ${pool.length} non-basic cards`;
             const container = document.getElementById('handSimCards');
             container.innerHTML = hand.map(c =>
-                `<div style="text-align:center;width:180px;">
+                `<div style="text-align:center;width:230px;">
                     <img data-hsc="${c.name.replace(/"/g,'&quot;')}" src="" alt="${c.name}"
-                        style="width:180px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.4);background:var(--bg-deep);min-height:251px;display:block;">
-                    <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.3rem;line-height:1.2;">${c.name}</div>
+                        style="width:230px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.4);background:var(--bg-deep);min-height:321px;display:block;">
+                    <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.3rem;line-height:1.2;">${c.name}</div>
                 </div>`
             ).join('');
             container.querySelectorAll('[data-hsc]').forEach(async img => {
