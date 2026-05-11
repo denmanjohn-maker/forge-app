@@ -23,8 +23,8 @@ See above.
 The RAG pipeline service. Responsible for card ingestion from Scryfall into Qdrant (vector store), semantic card search, and LLM-based deck generation. forge-app calls this when `LlmProvider = Rag`.
 
 - **Port:** 8080 (Railway) / mapped to 5001 locally
-- **Databases:** MongoDB (cards, saved decks in `mtgforge` db) + Qdrant (384-dimensional vectors using `all-minilm`)
-- **LLM backends:** Ollama (local) or any OpenAI-compatible API — Together.ai in production
+- **Databases:** MongoDB (cards, saved decks in `mtgforge` db) + Qdrant (1024-dimensional vectors using DeepInfra `BAAI/bge-m3` in production; 384-dim `all-minilm` for local Ollama)
+- **LLM backends:** Ollama (local) or any OpenAI-compatible API — DeepInfra in production
 
 ### forge-observability (`../forge-observability`)
 The shared observability stack. Collects telemetry from both application services.
@@ -46,7 +46,7 @@ The shared observability stack. Collects telemetry from both application service
 
 `RagPipelineService` in this repo makes a single `POST /api/decks/generate` to forge-ai-api and receives a complete `DeckConfiguration` JSON response. After that call returns, this service overlays local prices (`PricingService.ApplyPricesAsync`) and persists the deck to its own MongoDB.
 
-> **Note:** When `LlmProvider = Rag`, this service also calls Together.ai **directly** (not through forge-ai-api) for deck analysis, budget replacement suggestions, and CSV import descriptions. Those calls use `RagPipeline:LlmBaseUrl` (`https://api.together.xyz`) and `RagPipeline:LlmApiKey`.
+> **Note:** When `LlmProvider = Rag`, this service also calls DeepInfra **directly** (not through forge-ai-api) for deck analysis, budget replacement suggestions, and CSV import descriptions. Those calls use `RagPipeline:LlmBaseUrl` (`https://api.deepinfra.com/v1/openai`) and `RagPipeline:LlmApiKey`.
 
 ### forge-app → forge-observability
 
@@ -70,7 +70,7 @@ Client
     → RagPipelineService
       → POST /api/decks/generate    (forge-ai-api :8080)
           → CardSearchService → Qdrant (200-card semantic pool)
-          → DeckGenerationService → ILlmService → Ollama or Together.ai
+          → DeckGenerationService → ILlmService → Ollama (local) or DeepInfra (production)
           → MongoService (save in forge-ai-api MongoDB)
         ← DeckConfiguration JSON
       → PricingService.ApplyPricesAsync (PostgreSQL pricing cache)
@@ -98,7 +98,7 @@ GitHub Action or admin curl
     → CardIngestionService
       → Scryfall bulk data API (download)
       → MongoDB (upsert cards)
-      → OllamaEmbedService → Ollama :11434 (embed each card, 384-dim)
+      → IEmbedService → DeepInfra (embed each card, 1024-dim via BAAI/bge-m3)
       → Qdrant (upsert vectors with legality + color identity payload)
 ```
 
@@ -127,9 +127,9 @@ All three repos are deployed as independent Railway services. Services communica
 | Variable | Value |
 |----------|-------|
 | `RagPipeline__BaseUrl` | `http://mtg-forge-ai.railway.internal:8080` |
-| `RagPipeline__LlmBaseUrl` | `https://api.together.xyz` |
-| `RagPipeline__LlmApiKey` | Together.ai API key |
-| `RagPipeline__Model` | `meta-llama/Llama-3.3-70B-Instruct-Turbo` |
+| `RagPipeline__LlmBaseUrl` | `https://api.deepinfra.com/v1/openai` |
+| `RagPipeline__LlmApiKey` | DeepInfra API key |
+| `RagPipeline__Model` | `meta-llama/Llama-3.3-70B-Instruct` |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://alloy.railway.internal:4317` |
 | `LOKI_URI` | `http://loki.railway.internal:3100` |
 | `DATABASE_URL` | PostgreSQL connection string |

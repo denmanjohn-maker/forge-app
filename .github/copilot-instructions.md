@@ -36,20 +36,27 @@ The repository's main automated verification lives in `.github/workflows/post-me
 
 - `mtg-forge.Api` is a single ASP.NET Core web app that serves three surfaces from one process: REST controllers, Razor Pages under `Pages/`, and the static SPA in `wwwroot/index.html`.
 - The app uses **two databases**. MongoDB stores deck documents plus the app's own `User` and `Group` records. PostgreSQL stores ASP.NET Identity tables and the MTGJSON pricing cache in `AppDbContext`.
-- Deck generation uses `IDeckGenerationService`, an abstraction with two implementations: `ClaudeService` (Anthropic API) and `RagPipelineService` (mtg-forge-ai + Ollama). The provider is selected via the `LlmProvider` config key (`Claude` or `Rag`). `DecksController.Generate` calls the active implementation, then `PricingService.ApplyPricesAsync`, then persists the finished `DeckConfiguration` through `DeckService`.
+- Deck generation is handled exclusively by `RagPipelineService` (the sole `IDeckGenerationService` registration). It proxies deck generation to **forge-ai-api** (`RagPipeline:BaseUrl`), which runs Qdrant vector search + a hosted LLM. Post-generation, `RagPipelineService` calls Together.ai (OpenAI-compatible `/v1/chat/completions`) directly for deck analysis, budget replacement suggestions, and CSV import descriptions — configured via `RagPipeline:LlmBaseUrl` / `RagPipeline:LlmApiKey`.
+- `DecksController.Generate` is **fire-and-forget**: it immediately creates a `GenerationJob` via `GenerationJobStore`, starts the work in a background `Task.Run`, and returns the job ID (202). The SPA polls `GET /api/decks/jobs/{jobId}` until the status is `Completed` or `Failed`. The job store is singleton, backed by a `ConcurrentDictionary`, and auto-purges jobs older than 1 hour.
+- After `RagPipelineService` returns a deck, the generate pipeline applies a **budget enforcement loop** (up to 3 retries): it identifies cards over the per-card price ceiling and replaces them with cheap cards fetched from `PricingService.GetCheapCardsAsync`.
 - CSV import is a multi-step pipeline in `DecksController.ImportCsv`: parse CSV with private static helpers, enrich cards through `ScryfallService`, overlay local prices from `PricingService`, derive deck colors, generate an import description with `IDeckGenerationService`, then save to MongoDB.
 - Pricing data is refreshed in the background. `PricingRefreshHostedService` runs daily and calls `MtgJsonPricingImportService`, which streams large MTGJSON payloads into PostgreSQL instead of loading them fully into memory.
+- `DeckReanalysisHostedService` runs daily (5-minute startup delay) and re-analyzes decks whose `AnalysisUpdatedAt` is more than 7 days stale (up to 20 per run).
+- `AiUsageService` records every LLM call (user, operation, token counts) into a MongoDB `aiUsage` collection. This data is exposed via admin endpoints.
 - Authentication is split by client type. `Program.cs` configures a `"smart"` auth policy that uses JWT bearer tokens for API clients with an `Authorization: Bearer ...` header and falls back to the ASP.NET Identity cookie flow for Razor Pages.
-- Observability is built in. Serilog writes to console and an in-memory log store, OpenTelemetry exposes Prometheus metrics, and `/metrics` plus `/logging` are protected by `InternalOnlyMiddleware`.
+- Observability is built in. Serilog writes to console, an in-memory log store, optional OTLP (via `OTEL_EXPORTER_OTLP_ENDPOINT`), and optional Loki (via `LOKI_URI`). OpenTelemetry exposes Prometheus metrics. `/metrics` and `/logging` are protected by `InternalOnlyMiddleware`. Custom OTel spans use `MtgForgeActivitySource` with semantic `gen_ai.*` attributes.
+- See `ARCHITECTURE.md` for the full multi-service picture (forge-app, forge-ai-api, forge-observability) and Railway deployment topology.
 
 ## Key conventions
 
-- Most API controllers are `[Authorize]` by default. `GroupsController` and several auth-management endpoints are admin-only, and deck ownership checks are enforced in controllers by comparing `DeckConfiguration.UserId` to the current claim unless the caller is in the `Admin` role.
-- `DeckService` and `UserService` are Mongo-backed singleton services that create indexes themselves. `PricingService` is scoped because it depends on `AppDbContext`.
+- Most API controllers are `[Authorize]` by default. `GroupsController` and several auth-management endpoints are admin-only. Deck ownership checks compare `DeckConfiguration.UserId` to the current claim; callers in the `Admin` role bypass the check.
+- `DeckService`, `UserService`, `GenerationJobStore`, and `AiUsageService` are registered as **singletons**. `PricingService` is **scoped** because it depends on `AppDbContext`. Background tasks that need scoped services must call `_scopeFactory.CreateScope()` — see `DecksController.Generate` for the pattern.
 - Price lookups depend on normalized card names. Reuse `PricingService.NormalizeCardName` instead of introducing alternate normalization logic.
-- `ScryfallService.EnrichCardsAsync` is intentionally non-destructive: it fills missing mana cost, CMC, type, and price fields, but does not overwrite populated values. It batches requests in groups of 75 to match Scryfall's collection API limits.
+- `ScryfallService.EnrichCardsAsync` is intentionally non-destructive: it fills missing mana cost, CMC, type, and price fields but does not overwrite populated values. It batches requests in groups of 75 to match Scryfall's collection API limits.
+- `ThemedSetDetector.Detect` / `BuildPromptAddendum` augments `DeckGenerationRequest.AdditionalNotes` before it is sent to forge-ai-api. Call these methods when forwarding generation requests to keep Universes Beyond themed-set handling intact.
 - The SPA is a single large `wwwroot/index.html` file with no frontend build step. If you touch the CSS or layout, preserve the existing iOS/Safari compatibility details such as `min-height: 100dvh` and `-webkit-backdrop-filter`.
 - Tests are xUnit-only and avoid mocking libraries. HTTP-dependent services are tested with hand-rolled `HttpMessageHandler` stubs, and private static CSV helper methods in `DecksController` are tested via reflection rather than being made public just for tests.
+- API login/JWT auth uses MongoDB `User` records via `UserService`/`AuthService`. ASP.NET Identity (`ApplicationUser`) is used only for the Razor Pages cookie flow and Identity table migrations — not for API registration or login.
 
 ## Local environment details
 

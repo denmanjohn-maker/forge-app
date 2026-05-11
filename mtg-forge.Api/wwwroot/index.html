@@ -100,7 +100,7 @@
 
         body {
             font-family: 'Crimson Text', Georgia, serif;
-            font-size: 12pt;
+            font-size: 14pt;
             background: var(--bg-deep);
             color: var(--text-primary);
             min-height: 100vh;
@@ -166,7 +166,7 @@
         }
 
         .header-inner {
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
             display: flex;
             align-items: center;
@@ -833,7 +833,7 @@
 
         /* ===== MAIN LAYOUT ===== */
         .app-container {
-            max-width: 1400px;
+            max-width: 1600px;
             margin-left: var(--sidebar-w);
             margin-right: auto;
             padding: 2rem;
@@ -1440,7 +1440,7 @@
             font-size: 1rem;
             color: var(--text-secondary);
             line-height: 1.6;
-            max-width: 700px;
+            max-width: 960px;
         }
 
         .detail-stats {
@@ -2030,6 +2030,19 @@
 
             /* Mobile nav strip — larger tap area */
             .mobile-nav-btn { padding: 0.6rem 0.75rem; min-height: 44px; }
+        }
+
+        /* Responsive — desktop upscale */
+        /* Boost rem base on non-mobile viewports so all rem-sized elements scale up proportionally. */
+        @media (min-width: 901px) {
+            html { font-size: 112.5%; } /* 1rem = 18px */
+        }
+
+        @media (min-width: 1800px) {
+            html { font-size: 118.75%; } /* 1rem = 19px */
+            .app-container { max-width: 1800px; }
+            .header-inner { max-width: 1800px; }
+            .deck-grid { grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); }
         }
 
         /* Loading shimmer for generation */
