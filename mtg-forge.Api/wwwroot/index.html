@@ -1979,6 +1979,10 @@
             /* Category tree — tap-friendly header */
             .category-header { min-height: 44px; padding: 0.6rem 0; }
 
+            /* Hand simulator — smaller cards on narrow screens */
+            #handSimCards > div { width: 80px !important; }
+            #handSimCards > div img { width: 80px !important; min-height: 112px !important; }
+
             /* Admin — scrollable tables */
             .admin-section { overflow-x: auto; -webkit-overflow-scrolling: touch; }
             .admin-table { min-width: 420px; }
@@ -2928,11 +2932,11 @@
 
     <!-- Hand Simulator Modal -->
     <div class="modal-overlay hidden" id="handSimModal">
-        <div class="modal" style="max-width:860px;width:96%;">
+        <div class="modal" style="max-width:860px;width:96%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;">
             <h3 style="margin-bottom:0.25rem;">&#127922; Opening Hand</h3>
-            <p id="handSimSubtitle" style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1.25rem;font-family:'Crimson Text',serif;"></p>
-            <div id="handSimCards" style="display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:center;min-height:200px;align-items:flex-start;"></div>
-            <div class="modal-actions" style="margin-top:1.5rem;">
+            <p id="handSimSubtitle" style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1.25rem;font-family:'Crimson Text',serif;flex-shrink:0;"></p>
+            <div id="handSimCards" style="display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:center;align-items:flex-start;overflow-y:auto;flex:1;min-height:0;padding:0.25rem 0;"></div>
+            <div class="modal-actions" style="margin-top:1.5rem;flex-shrink:0;">
                 <button class="btn-outline" onclick="closeHandSimulator()">Close</button>
                 <button class="btn-outline" id="btnMulligan" onclick="handSimMulligan()">Mulligan</button>
                 <button class="btn-login" style="width:auto;padding:0.6rem 1.5rem;margin:0;" onclick="handSimDrawNew()">Draw New Hand</button>
@@ -2981,7 +2985,7 @@
                 </select>
                 <button class="btn-outline" style="padding:0.4rem 0.75rem;font-size:0.82rem;" onclick="closeCompareModal()">Close</button>
             </div>
-            <div id="compareBody" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;flex:1;min-height:0;overflow:hidden;">
+            <div id="compareBody" style="display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr;gap:1rem;flex:1;min-height:0;overflow:hidden;">
                 <div style="text-align:center;color:var(--text-muted);padding-top:3rem;font-family:'Crimson Text',serif;font-size:1rem;">Select a deck to compare</div>
             </div>
         </div>
@@ -4327,9 +4331,9 @@
                     if (!grouped[cat]) grouped[cat] = [];
                     grouped[cat].push(c);
                 });
-                return `<div style="display:flex;flex-direction:column;overflow:hidden;">
-                    <div style="font-family:'Cinzel',serif;font-size:0.9rem;color:var(--gold);margin-bottom:0.5rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${deck.deckName || 'Untitled'}</div>
-                    <div style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:0.25rem;">
+                return `<div style="display:flex;flex-direction:column;overflow:hidden;min-height:0;">
+                    <div style="font-family:'Cinzel',serif;font-size:0.9rem;color:var(--gold);margin-bottom:0.5rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;">${deck.deckName || 'Untitled'}</div>
+                    <div style="overflow-y:auto;flex:1;min-height:0;display:flex;flex-direction:column;gap:0.25rem;">
                         ${order.flatMap(cat => (grouped[cat] || []).map(c => {
                             const unique = !otherNames.has(c.name.toLowerCase());
                             return `<div style="display:flex;gap:0.4rem;padding:0.2rem 0.4rem;border-radius:4px;${unique ? 'background:rgba(212,175,55,0.12);border-left:2px solid var(--gold);' : ''}">
@@ -5104,11 +5108,17 @@
             btn.disabled = false;
             const s = data.status || {};
 
-            const totalCards = s.totalCardsIndexed ?? s.total_cards_indexed ?? s.cardCount ?? s.card_count ?? null;
+            const fmtDate = v => { try { const d = new Date(v); if (isNaN(d.getTime())) return String(v); return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} ${d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`; } catch { return String(v); } };
+
+            const totalCards = s.totalCardsIndexed ?? s.total_cards_indexed ?? s.cardCount ?? s.card_count ?? s.mongoCardCount ?? s.mongo_card_count ?? null;
             const lastRun = s.lastIngestionAt ?? s.last_ingestion_at ?? s.lastRunAt ?? s.last_run_at ?? null;
-            const model = s.model ?? s.embeddingModel ?? s.embedding_model ?? null;
-            const jobStatus = s.status ?? s.ingestionStatus ?? s.ingestion_status ?? null;
-            const collectionSize = s.collectionSize ?? s.collection_size ?? s.vectorCount ?? s.vector_count ?? null;
+            const lastStarted = s.lastStartedAt ?? s.last_started_at ?? null;
+            const lastCompleted = s.lastCompletedAt ?? s.last_completed_at ?? null;
+            const model = s.model ?? s.embeddingModel ?? s.embedding_model ?? s.embedModel ?? s.embed_model ?? null;
+            const rawStatus = s.status ?? s.ingestionStatus ?? s.ingestion_status ?? null;
+            const isRunning = s.isRunning ?? s.is_running ?? null;
+            const jobStatus = rawStatus ?? (isRunning === true ? 'running' : isRunning === false ? 'idle' : null);
+            const collectionSize = s.collectionSize ?? s.collection_size ?? s.vectorCount ?? s.vector_count ?? s.qdrantVectorCount ?? s.qdrant_vector_count ?? null;
 
             const statusColor = jobStatus === 'running'
                 ? 'color:#FFA500'
@@ -5130,19 +5140,19 @@
             if (totalCards != null) rows.push(['Cards Indexed', Number(totalCards).toLocaleString()]);
             if (collectionSize != null) rows.push(['Vector Count', Number(collectionSize).toLocaleString()]);
             if (model) rows.push(['Model', model]);
-            if (lastRun) {
-                const d = new Date(lastRun);
-                rows.push(['Last Ingestion', `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} ${d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`]);
-            }
+            if (lastRun) rows.push(['Last Ingestion', fmtDate(lastRun)]);
+            if (lastStarted) rows.push(['Last Started', fmtDate(lastStarted)]);
+            if (lastCompleted) rows.push(['Last Completed', fmtDate(lastCompleted)]);
 
             // Surface any extra fields from the status payload.
             // The knownKeys set is derived from the same aliases used above so additions stay consistent.
             const knownKeys = new Set([
-                ...['totalCardsIndexed','total_cards_indexed','cardCount','card_count'],
+                ...['totalCardsIndexed','total_cards_indexed','cardCount','card_count','mongoCardCount','mongo_card_count'],
                 ...['lastIngestionAt','last_ingestion_at','lastRunAt','last_run_at'],
-                ...['model','embeddingModel','embedding_model'],
-                ...['status','ingestionStatus','ingestion_status'],
-                ...['collectionSize','collection_size','vectorCount','vector_count']
+                ...['lastStartedAt','last_started_at','lastCompletedAt','last_completed_at'],
+                ...['model','embeddingModel','embedding_model','embedModel','embed_model'],
+                ...['status','ingestionStatus','ingestion_status','isRunning','is_running'],
+                ...['collectionSize','collection_size','vectorCount','vector_count','qdrantVectorCount','qdrant_vector_count']
             ]);
             for (const [k, v] of Object.entries(s)) {
                 if (!knownKeys.has(k) && v != null && typeof v !== 'object') {
@@ -5162,7 +5172,7 @@
                         ${rows.map(([label, value]) => `
                             <tr style="border-bottom:1px solid var(--border);">
                                 <td style="padding:0.5rem 0.75rem;font-family:'Cinzel',serif;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);white-space:nowrap;width:40%;">${label}</td>
-                                <td style="padding:0.5rem 0.75rem;">${value}</td>
+                                <td style="padding:0.5rem 0.75rem;word-break:break-word;overflow-wrap:anywhere;">${value}</td>
                             </tr>`).join('')}
                     </tbody>
                 </table>`;
