@@ -548,6 +548,12 @@
             fill: none;
         }
 
+        /* Tactile press feedback on touch */
+        button:active, [role="button"]:active {
+            transform: scale(0.96);
+            transition: transform 0.08s ease;
+        }
+
         /* User dropdown logout item — danger tint */
         .user-dropdown-item.logout-item:hover {
             background: rgba(139, 32, 32, 0.15);
@@ -1603,6 +1609,7 @@
         .bulk-delete-bar {
             position: fixed;
             bottom: 2rem;
+            bottom: max(2rem, env(safe-area-inset-bottom, 0px));
             left: 50%;
             transform: translateX(-50%);
             background: var(--bg-panel);
@@ -1884,6 +1891,16 @@
             }
         }
 
+        /* Responsive — tablet/large phone */
+        @media (max-width: 768px) {
+            /* Segmented controls wrap on narrow tablets */
+            .radio-group { flex-wrap: wrap; }
+            .radio-option { min-width: 45%; }
+
+            /* Card editor modal two-column grid */
+            .card-editor-grid { grid-template-columns: 1fr !important; }
+        }
+
         /* Responsive — iPhone / small mobile */
         @media (max-width: 480px) {
             .app-container { padding: 1rem; }
@@ -1986,6 +2003,24 @@
             /* Admin — stack form fields */
             .admin-form { grid-template-columns: 1fr !important; }
             .admin-form-full { grid-column: 1 !important; }
+
+            /* Minimum 44px touch targets on outline/filter buttons */
+            .btn-outline { padding: 0.65rem 1rem; min-height: 44px; }
+            .btn-filter-fav { min-height: 44px; min-width: 44px; }
+            .library-filter-btn { min-height: 44px; padding: 0.5rem 0.75rem; }
+
+            /* Legible secondary text in card detail rows */
+            .card-role-text { font-size: 0.85rem; }
+            .card-price { font-size: 0.85rem; }
+
+            /* Segmented control wraps on small phones */
+            .radio-group { flex-wrap: wrap; border-radius: 8px; }
+            .radio-option { min-width: 45%; }
+            .radio-option label { border-right: none; border-bottom: 1px solid var(--border); }
+            .radio-option:nth-last-child(-n+2) label { border-bottom: none; }
+
+            /* Mobile nav strip — larger tap area */
+            .mobile-nav-btn { padding: 0.6rem 0.75rem; min-height: 44px; }
         }
 
         /* Loading shimmer for generation */
@@ -2111,10 +2146,10 @@
             box-shadow: 0 8px 32px rgba(0,0,0,0.75);
             border: 1px solid var(--border-gold);
             overflow: hidden;
-            width: 476px;
+            width: min(92vw, 476px);
         }
         .card-img-tooltip.visible { opacity: 1; }
-        .card-img-tooltip img { display: block; width: 476px; height: auto; }
+        .card-img-tooltip img { display: block; width: min(92vw, 476px); height: auto; }
 
         /* Card image lightbox (touch/mobile fullscreen) */
         .card-lightbox {
@@ -2236,6 +2271,14 @@
             padding: 1.5rem;
             color: var(--text-secondary);
             font-style: italic;
+        }
+
+        /* Disable hover-only effects on touch devices — prevents states from sticking after tap */
+        @media (hover: none) {
+            .card-row:hover { background: none; }
+            .deck-card:hover { transform: none; box-shadow: none; }
+            .nav-tab:hover, .mobile-nav-btn:hover { background: none; color: inherit; }
+            .btn-outline:hover { background: none; }
         }
 
     </style>
