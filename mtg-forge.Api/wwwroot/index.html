@@ -2935,7 +2935,7 @@
         <div class="modal" style="max-width:860px;width:96%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;">
             <h3 style="margin-bottom:0.25rem;">&#127922; Opening Hand</h3>
             <p id="handSimSubtitle" style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1.25rem;font-family:'Crimson Text',serif;flex-shrink:0;"></p>
-            <div id="handSimCards" style="display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:center;align-items:flex-start;overflow-y:auto;flex:1;padding:0.25rem 0;"></div>
+            <div id="handSimCards" style="display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:center;align-items:flex-start;overflow-y:auto;flex:1;min-height:0;padding:0.25rem 0;"></div>
             <div class="modal-actions" style="margin-top:1.5rem;flex-shrink:0;">
                 <button class="btn-outline" onclick="closeHandSimulator()">Close</button>
                 <button class="btn-outline" id="btnMulligan" onclick="handSimMulligan()">Mulligan</button>
@@ -5108,7 +5108,7 @@
             btn.disabled = false;
             const s = data.status || {};
 
-            const fmtDate = v => { try { const d = new Date(v); return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} ${d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`; } catch { return String(v); } };
+            const fmtDate = v => { try { const d = new Date(v); if (isNaN(d.getTime())) return String(v); return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} ${d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`; } catch { return String(v); } };
 
             const totalCards = s.totalCardsIndexed ?? s.total_cards_indexed ?? s.cardCount ?? s.card_count ?? s.mongoCardCount ?? s.mongo_card_count ?? null;
             const lastRun = s.lastIngestionAt ?? s.last_ingestion_at ?? s.lastRunAt ?? s.last_run_at ?? null;
