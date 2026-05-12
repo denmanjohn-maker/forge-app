@@ -9,14 +9,14 @@ using MtgForge.Api.Observability;
 namespace MtgForge.Api.Services;
 
 /// <summary>
-/// Implements IDeckGenerationService using the RAG pipeline: mtg-forge-ai + Together.ai.
+/// Implements IDeckGenerationService using the RAG pipeline: mtg-forge-ai + DeepInfra.
 ///
 /// Deck generation calls mtg-forge-ai, which uses Qdrant vector search to pre-filter
 /// cards by price and color identity before passing them to the hosted LLM — solving
 /// the budget compliance and card legality problems without relying on the LLM to
 /// estimate prices or enforce color restrictions.
 ///
-/// Deck analysis and import descriptions call Together.ai directly using the
+/// Deck analysis and import descriptions call DeepInfra directly using the
 /// OpenAI-compatible /v1/chat/completions endpoint.
 ///
 /// Works both locally (localhost endpoints) and on Railway (internal DNS endpoints).
@@ -128,7 +128,28 @@ public class RagPipelineService : IDeckGenerationService
             activity?.SetTag("mtg.deck.name", deck.DeckName);
             activity?.SetTag("mtg.deck.card_count", deck.TotalCards);
             activity?.SetTag("mtg.deck.estimated_price", (double)deck.EstimatedTotalPrice);
+            activity?.SetTag(MtgForgeActivitySource.GenAiUsageInputTokens, localDeck.InputTokens);
+            activity?.SetTag(MtgForgeActivitySource.GenAiUsageOutputTokens, localDeck.OutputTokens);
             activity?.SetStatus(ActivityStatusCode.Ok);
+
+            if (_aiUsageService != null && (localDeck.InputTokens > 0 || localDeck.OutputTokens > 0))
+            {
+                var ctx = _httpContextAccessor?.HttpContext;
+                var userId      = ctx?.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "system";
+                var displayName = ctx?.User?.FindFirst("displayName")?.Value ?? userId;
+                _ = _aiUsageService.LogAsync(new MtgForge.Api.Models.AiUsageRecord
+                {
+                    UserId          = userId,
+                    UserDisplayName = displayName,
+                    Operation       = "generate",
+                    Model           = _settings.Model,
+                    InputTokens     = localDeck.InputTokens,
+                    OutputTokens    = localDeck.OutputTokens,
+                    DeckId          = deck.Id,
+                    Format          = deck.Format,
+                    CreatedAt       = DateTime.UtcNow
+                });
+            }
 
             _logger.LogInformation(
                 "RagPipelineService: deck generation complete — '{Name}', {CardCount} cards, ${Price:F2} (TraceId={TraceId})",
@@ -152,7 +173,7 @@ public class RagPipelineService : IDeckGenerationService
             "gen_ai.analyze_deck",
             ActivityKind.Client);
 
-        activity?.SetTag(MtgForgeActivitySource.GenAiSystem, MtgForgeActivitySource.SystemTogetherAi);
+        activity?.SetTag(MtgForgeActivitySource.GenAiSystem, MtgForgeActivitySource.SystemDeepInfra);
         activity?.SetTag(MtgForgeActivitySource.GenAiOperationName, "analyze_deck");
         activity?.SetTag(MtgForgeActivitySource.GenAiRequestModel, _settings.Model);
         activity?.SetTag(MtgForgeActivitySource.GenAiRequestMaxTokens, 4096);
@@ -162,7 +183,7 @@ public class RagPipelineService : IDeckGenerationService
         activity?.SetTag(MtgForgeActivitySource.MtgDeckFormat, deck.Format);
         SetServerAttributes(activity, _settings.LlmBaseUrl);
 
-        _logger.LogInformation("RagPipelineService: analyzing deck '{Name}' via Together.ai", deck.DeckName);
+        _logger.LogInformation("RagPipelineService: analyzing deck '{Name}' via DeepInfra", deck.DeckName);
 
         var metrics  = DeckMetricsCalculator.Calculate(deck.Cards);
         var cardList = string.Join("\n", deck.Cards.Select(c =>
@@ -232,7 +253,7 @@ public class RagPipelineService : IDeckGenerationService
 
             var jsonContent = ExtractJson(rawResponse);
             var analysis = JsonSerializer.Deserialize<DeckAnalysis>(jsonContent, JsonOpts)
-                ?? throw new InvalidOperationException("Failed to deserialize analysis from Together.ai");
+                ?? throw new InvalidOperationException("Failed to deserialize analysis from DeepInfra");
 
             activity?.SetTag("mtg.analysis.rating", analysis.OverallRating);
             activity?.SetTag("mtg.analysis.weaknesses_count", analysis.Weaknesses?.Count ?? 0);
@@ -266,7 +287,7 @@ public class RagPipelineService : IDeckGenerationService
             "gen_ai.suggest_budget_replacements",
             ActivityKind.Client);
 
-        activity?.SetTag(MtgForgeActivitySource.GenAiSystem, MtgForgeActivitySource.SystemTogetherAi);
+        activity?.SetTag(MtgForgeActivitySource.GenAiSystem, MtgForgeActivitySource.SystemDeepInfra);
         activity?.SetTag(MtgForgeActivitySource.GenAiOperationName, "suggest_budget_replacements");
         activity?.SetTag(MtgForgeActivitySource.GenAiRequestModel, _settings.Model);
         activity?.SetTag(MtgForgeActivitySource.GenAiRequestMaxTokens, 4096);
@@ -279,7 +300,7 @@ public class RagPipelineService : IDeckGenerationService
         SetServerAttributes(activity, _settings.LlmBaseUrl);
 
         _logger.LogInformation(
-            "RagPipelineService: requesting budget replacements for deck '{Name}' via Together.ai ({Count} expensive cards, ${OverBy:F2} over budget, TraceId={TraceId})",
+            "RagPipelineService: requesting budget replacements for deck '{Name}' via DeepInfra ({Count} expensive cards, ${OverBy:F2} over budget, TraceId={TraceId})",
             deck.DeckName, expensiveCards.Count, currentTotal - budgetMax, activity?.TraceId);
 
         var cardListStr = string.Join("\n", expensiveCards
@@ -359,7 +380,7 @@ public class RagPipelineService : IDeckGenerationService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "RagPipelineService: failed to parse budget replacement suggestions from Together.ai");
+            _logger.LogWarning(ex, "RagPipelineService: failed to parse budget replacement suggestions from DeepInfra");
             activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
             activity?.AddException(ex);
             return [];
@@ -374,7 +395,7 @@ public class RagPipelineService : IDeckGenerationService
             "gen_ai.generate_import_description",
             ActivityKind.Client);
 
-        activity?.SetTag(MtgForgeActivitySource.GenAiSystem, MtgForgeActivitySource.SystemTogetherAi);
+        activity?.SetTag(MtgForgeActivitySource.GenAiSystem, MtgForgeActivitySource.SystemDeepInfra);
         activity?.SetTag(MtgForgeActivitySource.GenAiOperationName, "generate_import_description");
         activity?.SetTag(MtgForgeActivitySource.GenAiRequestModel, _settings.Model);
         activity?.SetTag(MtgForgeActivitySource.GenAiRequestMaxTokens, 4096);
@@ -384,7 +405,7 @@ public class RagPipelineService : IDeckGenerationService
         SetServerAttributes(activity, _settings.LlmBaseUrl);
 
         _logger.LogInformation(
-            "RagPipelineService: generating import description for '{Name}' via Together.ai (TraceId={TraceId})",
+            "RagPipelineService: generating import description for '{Name}' via DeepInfra (TraceId={TraceId})",
             deckName, activity?.TraceId);
 
         var sample = cards
@@ -412,7 +433,7 @@ public class RagPipelineService : IDeckGenerationService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to generate import description via Together.ai");
+            _logger.LogWarning(ex, "Failed to generate import description via DeepInfra");
             activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
             activity?.AddException(ex);
             return $"Imported deck: {deckName}";
@@ -461,7 +482,7 @@ public class RagPipelineService : IDeckGenerationService
             "gen_ai.chat",
             ActivityKind.Client);
 
-        llmActivity?.SetTag(MtgForgeActivitySource.GenAiSystem, MtgForgeActivitySource.SystemTogetherAi);
+        llmActivity?.SetTag(MtgForgeActivitySource.GenAiSystem, MtgForgeActivitySource.SystemDeepInfra);
         llmActivity?.SetTag(MtgForgeActivitySource.GenAiOperationName, "chat");
         llmActivity?.SetTag(MtgForgeActivitySource.GenAiRequestModel, _settings.Model);
         llmActivity?.SetTag(MtgForgeActivitySource.GenAiRequestMaxTokens, 4096);
@@ -510,21 +531,22 @@ public class RagPipelineService : IDeckGenerationService
             {
                 var err = await response.Content.ReadAsStringAsync();
                 _logger.LogError(
-                    "CallLlmAsync: Together.ai returned {Status} — {Body} (TraceId={TraceId})",
+                    "CallLlmAsync: DeepInfra returned {Status} — {Body} (TraceId={TraceId})",
                     response.StatusCode, err, llmActivity?.TraceId);
-                llmActivity?.SetStatus(ActivityStatusCode.Error, $"Together.ai {response.StatusCode}");
+                llmActivity?.SetStatus(ActivityStatusCode.Error, $"DeepInfra {response.StatusCode}");
                 llmActivity?.SetTag("http.response.status_code", (int)response.StatusCode);
-                throw new InvalidOperationException($"Together.ai error {response.StatusCode}: {err}");
+                throw new InvalidOperationException($"DeepInfra error {response.StatusCode}: {err}");
             }
 
             var body = await response.Content.ReadAsStringAsync();
             var chatResponse = JsonSerializer.Deserialize<ChatCompletionResponse>(body, new JsonSerializerOptions
             {
-                PropertyNameCaseInsensitive = true
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy        = JsonNamingPolicy.SnakeCaseLower
             });
 
             var result = chatResponse?.Choices?.FirstOrDefault()?.Message?.Content
-                ?? throw new InvalidOperationException("Empty response from Together.ai");
+                ?? throw new InvalidOperationException("Empty response from DeepInfra");
 
             // Record token usage when the provider returns it
             if (chatResponse?.Usage is { } usage)
@@ -772,6 +794,8 @@ public class RagPipelineService : IDeckGenerationService
         public List<LocalSection> Sections { get; set; } = [];
         public double EstimatedCost { get; set; }
         public string Reasoning { get; set; } = "";
+        public int InputTokens { get; set; }
+        public int OutputTokens { get; set; }
     }
 
     private class LocalSection
@@ -791,7 +815,7 @@ public class RagPipelineService : IDeckGenerationService
         public string? TypeLine { get; set; }
     }
 
-    // ─── Together.ai / OpenAI-compatible Response DTOs ───────────────────────
+    // ─── DeepInfra / OpenAI-compatible Response DTOs ───────────────────────
 
     private class ChatCompletionResponse
     {

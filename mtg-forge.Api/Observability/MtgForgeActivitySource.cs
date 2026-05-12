@@ -34,6 +34,7 @@ public static class MtgForgeActivitySource
     public const string MtgOperationType = "mtg.operation.type";
 
     // ── Well-known gen_ai.system values used in this project ─────────────────
-    public const string SystemTogetherAi  = "together_ai";
+    public const string SystemDeepInfra   = "deep_infra";
+    public const string SystemTogetherAi  = "together_ai"; // kept for backwards compat
     public const string SystemMtgForgeAi  = "mtg_forge_ai";
 }
