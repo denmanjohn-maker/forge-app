@@ -4353,16 +4353,24 @@
         }
 
         // === Deck Compare ===
-        function openCompareModal() {
+        async function openCompareModal() {
             const select = document.getElementById('comparePickerSelect');
-            select.innerHTML = '<option value="">— Pick a deck —</option>' +
-                currentDecks
-                    .filter(d => d.id !== currentDetailDeck?.id)
-                    .map(d => `<option value="${d.id}">${d.deckName || 'Untitled'} (${d.format || ''})</option>`)
-                    .join('');
+            select.innerHTML = '<option value="">— Loading decks… —</option>';
             document.getElementById('compareBody').innerHTML =
                 '<div style="text-align:center;color:var(--text-muted);padding-top:3rem;font-family:\'Crimson Text\',serif;font-size:1rem;grid-column:1/-1;">Select a deck to compare</div>';
             document.getElementById('compareModal').classList.remove('hidden');
+            try {
+                const res = await authFetch(`${API_BASE}?limit=500`);
+                if (!res.ok) throw new Error('Failed to load decks');
+                const data = await res.json();
+                const all = Array.isArray(data) ? data : (data.items || []);
+                const others = all.filter(d => d.id !== currentDetailDeck?.id);
+                select.innerHTML = '<option value="">— Pick a deck —</option>' +
+                    others.map(d => `<option value="${d.id}">${d.deckName || 'Untitled'} (${d.format || ''})</option>`).join('');
+            } catch (err) {
+                select.innerHTML = '<option value="">— Failed to load —</option>';
+                showToast(err.message, true);
+            }
         }
 
         function closeCompareModal() {
