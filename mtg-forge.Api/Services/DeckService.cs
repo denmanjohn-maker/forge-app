@@ -155,4 +155,77 @@ public class DeckService
         var result = await _decksCollection.DeleteOneAsync(x => x.Id == id);
         return result.DeletedCount > 0;
     }
+
+    /// <summary>
+    /// Returns decks whose analysis is stale (missing or older than cutoff).
+    /// Uses a server-side filter to avoid loading the full collection into memory.
+    /// </summary>
+    public async Task<List<DeckConfiguration>> GetStaleDecksAsync(DateTime cutoff, int limit)
+    {
+        var filter = Builders<DeckConfiguration>.Filter.Or(
+            Builders<DeckConfiguration>.Filter.Exists(d => d.LastAnalysis, false),
+            Builders<DeckConfiguration>.Filter.Lt(d => d.LastAnalyzedAt, cutoff));
+
+        return await _decksCollection.Find(filter)
+            .SortBy(d => d.LastAnalyzedAt)
+            .Limit(limit)
+            .ToListAsync();
+    }
+
+    /// <summary>
+    /// Runs analytics aggregations directly in MongoDB instead of loading all decks into memory.
+    /// </summary>
+    public async Task<DeckAnalyticsResult> GetAnalyticsAsync(DateTime last7, DateTime last30)
+    {
+        var totalDecks = (int)await _decksCollection.CountDocumentsAsync(_ => true);
+        var decksLast7 = (int)await _decksCollection.CountDocumentsAsync(d => d.CreatedAt >= last7);
+        var decksLast30 = (int)await _decksCollection.CountDocumentsAsync(d => d.CreatedAt >= last30);
+
+        var byFormatAgg = await _decksCollection.Aggregate()
+            .Group(d => d.Format, g => new { Key = g.Key, Count = g.Count() })
+            .ToListAsync();
+        var byFormat = byFormatAgg.ToDictionary(x => x.Key ?? "Unknown", x => x.Count);
+
+        var byPowerLevelAgg = await _decksCollection.Aggregate()
+            .Group(d => d.PowerLevel, g => new { Key = g.Key, Count = g.Count() })
+            .ToListAsync();
+        var byPowerLevel = byPowerLevelAgg.ToDictionary(x => x.Key ?? "Unknown", x => x.Count);
+
+        var byBudgetAgg = await _decksCollection.Aggregate()
+            .Group(d => d.BudgetRange, g => new { Key = g.Key, Count = g.Count() })
+            .ToListAsync();
+        var byBudget = byBudgetAgg.ToDictionary(x => x.Key ?? "Unknown", x => x.Count);
+
+        var byColor = new Dictionary<string, int>();
+        var colorAgg = await _decksCollection.Aggregate()
+            .Unwind(d => d.Colors)
+            .Group(d => d["Colors"], g => new { Key = g.Key.AsString, Count = g.Count() })
+            .ToListAsync();
+        foreach (var c in colorAgg)
+            byColor[c.Key] = c.Count;
+
+        var topUsersAgg = await _decksCollection.Aggregate()
+            .Match(d => d.UserId != null)
+            .Group(d => new { d.UserId, d.UserDisplayName }, g => new { g.Key, Count = g.Count() })
+            .SortByDescending(g => g.Count)
+            .Limit(10)
+            .ToListAsync();
+        var topUsers = topUsersAgg.Select(g => new UserDeckCount
+        {
+            DisplayName = g.Key.UserDisplayName ?? g.Key.UserId ?? "Unknown",
+            Count = g.Count
+        }).ToList();
+
+        return new DeckAnalyticsResult
+        {
+            TotalDecks = totalDecks,
+            DecksLast7Days = decksLast7,
+            DecksLast30Days = decksLast30,
+            ByFormat = byFormat,
+            ByColor = byColor,
+            ByPowerLevel = byPowerLevel,
+            ByBudget = byBudget,
+            TopUsers = topUsers
+        };
+    }
 }

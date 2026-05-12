@@ -72,13 +72,14 @@ public class RagPipelineService : IDeckGenerationService
 
         var client = CreateMtgForgeClient();
 
-        var themedMatches = ThemedSetDetector.Detect(request.AdditionalNotes);
+        var sanitizedNotes = SanitizeNotes(request.AdditionalNotes);
+        var themedMatches = ThemedSetDetector.Detect(sanitizedNotes);
         var themedAddendum = ThemedSetDetector.BuildPromptAddendum(themedMatches);
         var extraContext = themedAddendum is null
-            ? request.AdditionalNotes
-            : string.IsNullOrWhiteSpace(request.AdditionalNotes)
+            ? sanitizedNotes
+            : string.IsNullOrWhiteSpace(sanitizedNotes)
                 ? themedAddendum
-                : $"{request.AdditionalNotes}\n\n{themedAddendum}";
+                : $"{sanitizedNotes}\n\n{themedAddendum}";
 
         if (themedMatches.Count > 0)
         {
@@ -419,6 +420,19 @@ public class RagPipelineService : IDeckGenerationService
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
+
+    private static string? SanitizeNotes(string? notes)
+    {
+        if (string.IsNullOrWhiteSpace(notes)) return notes;
+
+        var sanitized = new string(notes.Where(c => !char.IsControl(c)).ToArray());
+
+        const int maxLength = 2000;
+        if (sanitized.Length > maxLength)
+            sanitized = sanitized[..maxLength];
+
+        return sanitized;
+    }
 
     private HttpClient CreateMtgForgeClient()
     {

@@ -12,7 +12,27 @@ public class PricingService
         _db = db;
     }
 
-    public static string NormalizeCardName(string name) => name.Trim().ToLowerInvariant();
+    public static string NormalizeCardName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return string.Empty;
+
+        var normalized = name.Trim().ToLowerInvariant();
+
+        // Replace smart quotes with regular quotes
+        normalized = normalized.Replace('\u2018', '\'').Replace('\u2019', '\'');
+        normalized = normalized.Replace('\u201c', '"').Replace('\u201d', '"');
+
+        // Remove punctuation except apostrophes, hyphens, and whitespace
+        normalized = new string(normalized
+            .Where(c => char.IsLetterOrDigit(c) || c == '\'' || c == '-' || char.IsWhiteSpace(c))
+            .ToArray());
+
+        // Collapse multiple spaces into one
+        while (normalized.Contains("  "))
+            normalized = normalized.Replace("  ", " ");
+
+        return normalized;
+    }
 
     public async Task<decimal?> GetCardPriceAsync(string cardName)
     {
@@ -47,7 +67,7 @@ public class PricingService
     {
         return await _db.CardPrices.AsNoTracking()
             .Where(x => x.PriceUsd > 0 && x.PriceUsd <= maxPrice)
-            .OrderBy(x => Guid.NewGuid()) // random sample
+            .OrderBy(x => EF.Functions.Random())
             .Take(count)
             .Select(x => new ValueTuple<string, decimal>(x.CardName, x.PriceUsd))
             .ToListAsync();

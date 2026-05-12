@@ -80,9 +80,9 @@ public class DecksController : ControllerBase
 
         _ = Task.Run(async () =>
         {
-            job.Status = GenerationJobStatus.Running;
             try
             {
+                _jobStore.Update(job.Id, GenerationJobStatus.Running);
                 using var scope = _scopeFactory.CreateScope();
                 var llm = scope.ServiceProvider.GetRequiredService<IDeckGenerationService>();
                 var pricing = scope.ServiceProvider.GetRequiredService<PricingService>();
@@ -161,14 +161,12 @@ public class DecksController : ControllerBase
                 deck.UserDisplayName = displayName;
                 var saved = await deckService.CreateAsync(deck);
 
-                job.Deck = saved;
-                job.Status = GenerationJobStatus.Completed;
+                _jobStore.Update(job.Id, GenerationJobStatus.Completed, deck: saved);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Deck generation failed for job {JobId} (user {UserId})", job.Id, userId);
-                job.Error = "Deck generation failed. Please try again.";
-                job.Status = GenerationJobStatus.Failed;
+                _jobStore.Update(job.Id, GenerationJobStatus.Failed, error: "Deck generation failed. Please try again.");
             }
         });
 
@@ -268,7 +266,7 @@ public class DecksController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to analyze deck {Id}", id);
-            return StatusCode(500, new { error = "Failed to analyze deck", details = ex.Message });
+            return StatusCode(500, new { error = "Failed to analyze deck" });
         }
     }
 
@@ -452,7 +450,7 @@ public class DecksController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to import CSV");
-            return StatusCode(500, new { error = "Failed to import deck", details = ex.Message });
+            return StatusCode(500, new { error = "Failed to import deck" });
         }
     }
 

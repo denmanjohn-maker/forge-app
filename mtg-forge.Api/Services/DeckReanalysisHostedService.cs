@@ -41,11 +41,7 @@ public class DeckReanalysisHostedService : BackgroundService
         var generationService = scope.ServiceProvider.GetRequiredService<IDeckGenerationService>();
 
         var cutoff = DateTime.UtcNow.AddDays(-StaleAfterDays);
-        var allDecks = await deckService.GetAllAsync();
-        var stale = allDecks
-            .Where(d => d.LastAnalysis == null || d.LastAnalyzedAt < cutoff)
-            .Take(MaxDecksPerRun)
-            .ToList();
+        var stale = await deckService.GetStaleDecksAsync(cutoff, MaxDecksPerRun);
 
         _logger.LogInformation(
             "DeckReanalysisHostedService: re-analyzing {Count} stale decks", stale.Count);

@@ -7,4 +7,5 @@ public class MongoDbSettings
     public string DecksCollectionName { get; set; } = null!;
     public string UsersCollectionName { get; set; } = null!;
     public string GroupsCollectionName { get; set; } = null!;
+    public string JobsCollectionName { get; set; } = "generationJobs";
 }

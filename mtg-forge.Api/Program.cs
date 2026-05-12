@@ -113,8 +113,12 @@ string sqlConnectionString;
 if (!string.IsNullOrEmpty(databaseUrl))
 {
     var uri = new Uri(databaseUrl);
-    var userInfo = uri.UserInfo.Split(':');
-    sqlConnectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true";
+    var lastColonIndex = uri.UserInfo.LastIndexOf(':');
+    if (lastColonIndex < 0)
+        throw new InvalidOperationException("DATABASE_URL user info must contain a username and password separated by a colon.");
+    var username = System.Net.WebUtility.UrlDecode(uri.UserInfo[..lastColonIndex]);
+    var password = System.Net.WebUtility.UrlDecode(uri.UserInfo[(lastColonIndex + 1)..]);
+    sqlConnectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true";
 }
 else
 {
@@ -370,7 +374,7 @@ using (var scope = app.Services.CreateScope())
     if (string.IsNullOrEmpty(adminPassword))
         adminPassword = builder.Configuration["AdminPassword"];
     if (string.IsNullOrEmpty(adminPassword))
-        adminPassword = app.Environment.IsDevelopment() ? "Blakd@l3k" : null;
+        throw new InvalidOperationException("ADMIN_PASSWORD environment variable is required. Set it before starting the application.");
 
     if (!string.IsNullOrEmpty(adminPassword))
     {
