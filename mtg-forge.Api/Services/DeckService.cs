@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using MtgForge.Api.Models;
 
@@ -173,7 +174,8 @@ public class DeckService
     }
 
     /// <summary>
-    /// Runs analytics aggregations directly in MongoDB instead of loading all decks into memory.
+    /// Builds admin analytics from a narrow Mongo projection so legacy or malformed deck
+    /// documents cannot break the whole analytics payload.
     /// </summary>
     public async Task<DeckAnalyticsResult> GetAnalyticsAsync(DateTime last7, DateTime last30)
     {
@@ -181,40 +183,41 @@ public class DeckService
         var decksLast7 = (int)await _decksCollection.CountDocumentsAsync(d => d.CreatedAt >= last7);
         var decksLast30 = (int)await _decksCollection.CountDocumentsAsync(d => d.CreatedAt >= last30);
 
-        var byFormatAgg = await _decksCollection.Aggregate()
-            .Group(d => d.Format, g => new { Key = g.Key, Count = g.Count() })
+        var analyticsDocs = await _decksCollection
+            .Find(FilterDefinition<DeckConfiguration>.Empty)
+            .Project<BsonDocument>(Builders<DeckConfiguration>.Projection
+                .Include(d => d.Format)
+                .Include(d => d.PowerLevel)
+                .Include(d => d.BudgetRange)
+                .Include(d => d.Colors)
+                .Include(d => d.UserId)
+                .Include(d => d.UserDisplayName))
             .ToListAsync();
-        var byFormat = byFormatAgg.ToDictionary(x => x.Key ?? "Unknown", x => x.Count);
 
-        var byPowerLevelAgg = await _decksCollection.Aggregate()
-            .Group(d => d.PowerLevel, g => new { Key = g.Key, Count = g.Count() })
-            .ToListAsync();
-        var byPowerLevel = byPowerLevelAgg.ToDictionary(x => x.Key ?? "Unknown", x => x.Count);
-
-        var byBudgetAgg = await _decksCollection.Aggregate()
-            .Group(d => d.BudgetRange, g => new { Key = g.Key, Count = g.Count() })
-            .ToListAsync();
-        var byBudget = byBudgetAgg.ToDictionary(x => x.Key ?? "Unknown", x => x.Count);
-
-        var byColor = new Dictionary<string, int>();
-        var colorAgg = await _decksCollection.Aggregate()
-            .Unwind(d => d.Colors)
-            .Group(d => d["Colors"], g => new { Key = g.Key.AsString, Count = g.Count() })
-            .ToListAsync();
-        foreach (var c in colorAgg)
-            byColor[c.Key] = c.Count;
-
-        var topUsersAgg = await _decksCollection.Aggregate()
-            .Match(d => d.UserId != null)
-            .Group(d => new { d.UserId, d.UserDisplayName }, g => new { g.Key, Count = g.Count() })
-            .SortByDescending(g => g.Count)
-            .Limit(10)
-            .ToListAsync();
-        var topUsers = topUsersAgg.Select(g => new UserDeckCount
-        {
-            DisplayName = g.Key.UserDisplayName ?? g.Key.UserId ?? "Unknown",
-            Count = g.Count
-        }).ToList();
+        var byFormat = CountByStringField(analyticsDocs, nameof(DeckConfiguration.Format));
+        var byPowerLevel = CountByStringField(analyticsDocs, nameof(DeckConfiguration.PowerLevel));
+        var byBudget = CountByStringField(analyticsDocs, nameof(DeckConfiguration.BudgetRange));
+        var byColor = CountByColors(analyticsDocs);
+        var topUsers = analyticsDocs
+            .Select(doc => new
+            {
+                UserId = GetStringField(doc, nameof(DeckConfiguration.UserId)),
+                DisplayName = GetStringField(doc, nameof(DeckConfiguration.UserDisplayName))
+            })
+            .Where(x => !string.IsNullOrWhiteSpace(x.UserId))
+            .GroupBy(x => new
+            {
+                UserId = x.UserId!,
+                DisplayName = string.IsNullOrWhiteSpace(x.DisplayName) ? x.UserId! : x.DisplayName!
+            })
+            .OrderByDescending(g => g.Count())
+            .Take(10)
+            .Select(g => new UserDeckCount
+            {
+                DisplayName = g.Key.DisplayName,
+                Count = g.Count()
+            })
+            .ToList();
 
         return new DeckAnalyticsResult
         {
@@ -226,6 +229,66 @@ public class DeckService
             ByPowerLevel = byPowerLevel,
             ByBudget = byBudget,
             TopUsers = topUsers
+        };
+    }
+
+    private static Dictionary<string, int> CountByStringField(IEnumerable<BsonDocument> documents, string fieldName)
+    {
+        var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var document in documents)
+        {
+            var value = GetStringField(document, fieldName) ?? "Unknown";
+            counts[value] = counts.GetValueOrDefault(value) + 1;
+        }
+
+        return counts;
+    }
+
+    private static Dictionary<string, int> CountByColors(IEnumerable<BsonDocument> documents)
+    {
+        var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var document in documents)
+        {
+            var colors = GetStringArrayField(document, nameof(DeckConfiguration.Colors));
+            if (colors.Count == 0)
+            {
+                counts["Colorless"] = counts.GetValueOrDefault("Colorless") + 1;
+                continue;
+            }
+
+            foreach (var color in colors)
+                counts[color] = counts.GetValueOrDefault(color) + 1;
+        }
+
+        return counts;
+    }
+
+    private static string? GetStringField(BsonDocument document, string fieldName)
+    {
+        if (!document.TryGetValue(fieldName, out var value) || value.IsBsonNull)
+            return null;
+
+        return value.BsonType switch
+        {
+            BsonType.String => value.AsString,
+            _ => value.ToString()
+        };
+    }
+
+    private static List<string> GetStringArrayField(BsonDocument document, string fieldName)
+    {
+        if (!document.TryGetValue(fieldName, out var value) || value.IsBsonNull)
+            return new List<string>();
+
+        return value.BsonType switch
+        {
+            BsonType.Array => value.AsBsonArray
+                .Where(item => item.BsonType == BsonType.String && !string.IsNullOrWhiteSpace(item.AsString))
+                .Select(item => item.AsString)
+                .Distinct(StringComparer.Ordinal)
+                .ToList(),
+            BsonType.String when !string.IsNullOrWhiteSpace(value.AsString) => new List<string> { value.AsString },
+            _ => new List<string>()
         };
     }
 }
