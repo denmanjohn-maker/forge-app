@@ -4385,23 +4385,33 @@
             const namesA = new Set((deckA.cards || []).map(c => c.name.toLowerCase()));
             const namesB = new Set((deckB.cards || []).map(c => c.name.toLowerCase()));
             const renderCol = (deck, otherNames) => {
-                const order = ['Commander','Creature','Instant','Sorcery','Enchantment','Artifact','Planeswalker','Land','Mainboard','Other'];
+                const knownOrder = ['Commander','Creature','Instant','Sorcery','Enchantment','Artifact','Planeswalker','Land','Mainboard','Other'];
                 const grouped = {};
                 (deck.cards || []).forEach(c => {
                     const cat = c.category || 'Other';
                     if (!grouped[cat]) grouped[cat] = [];
                     grouped[cat].push(c);
                 });
-                return `<div style="display:flex;flex-direction:column;overflow:hidden;min-height:0;">
-                    <div style="font-family:'Cinzel',serif;font-size:0.9rem;color:var(--gold);margin-bottom:0.5rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;">${deck.deckName || 'Untitled'}</div>
-                    <div style="overflow-y:auto;flex:1;min-height:0;display:flex;flex-direction:column;gap:0.25rem;">
-                        ${order.flatMap(cat => (grouped[cat] || []).map(c => {
-                            const unique = !otherNames.has(c.name.toLowerCase());
-                            return `<div style="display:flex;gap:0.4rem;padding:0.2rem 0.4rem;border-radius:4px;${unique ? 'background:rgba(212,175,55,0.12);border-left:2px solid var(--gold);' : ''}">
+                // Render known categories first, then any extra categories from the AI
+                const extraCats = Object.keys(grouped).filter(k => !knownOrder.includes(k));
+                const allCats = [...knownOrder, ...extraCats];
+                const renderCard = (c) => {
+                    const unique = !otherNames.has(c.name.toLowerCase());
+                    return `<div style="display:flex;gap:0.4rem;padding:0.2rem 0.4rem;border-radius:4px;${unique ? 'background:rgba(212,175,55,0.12);border-left:2px solid var(--gold);' : ''}">
                                 <span style="font-size:0.75rem;color:var(--text-muted);min-width:18px;">${c.quantity}x</span>
                                 <span style="font-size:0.78rem;color:${unique ? 'var(--gold)' : 'var(--text-secondary)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.name}</span>
                             </div>`;
-                        })).join('')}
+                };
+                const renderSection = (cat) => {
+                    const cards = grouped[cat];
+                    if (!cards?.length) return '';
+                    return `<div style="font-size:0.68rem;font-family:'Cinzel',serif;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase;padding:0.3rem 0.4rem 0.1rem;margin-top:0.25rem;">${cat} (${cards.length})</div>` +
+                        cards.map(renderCard).join('');
+                };
+                return `<div style="display:flex;flex-direction:column;overflow:hidden;min-height:0;">
+                    <div style="font-family:'Cinzel',serif;font-size:0.9rem;color:var(--gold);margin-bottom:0.5rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;">${deck.deckName || 'Untitled'}</div>
+                    <div style="overflow-y:auto;flex:1;min-height:0;display:flex;flex-direction:column;gap:0.1rem;">
+                        ${allCats.map(renderSection).join('')}
                     </div>
                 </div>`;
             };
