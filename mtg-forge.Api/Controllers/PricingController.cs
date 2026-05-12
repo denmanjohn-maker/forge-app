@@ -14,12 +14,14 @@ public class PricingController : ControllerBase
     private readonly MtgJsonPricingImportService _importService;
     private readonly AppDbContext _db;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ILogger<PricingController> _logger;
 
-    public PricingController(MtgJsonPricingImportService importService, AppDbContext db, IHttpClientFactory httpClientFactory)
+    public PricingController(MtgJsonPricingImportService importService, AppDbContext db, IHttpClientFactory httpClientFactory, ILogger<PricingController> logger)
     {
         _importService = importService;
         _db = db;
         _httpClientFactory = httpClientFactory;
+        _logger = logger;
     }
 
     [HttpGet("search")]
@@ -81,7 +83,8 @@ public class PricingController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { error = $"Search failed: {ex.Message}" });
+            _logger.LogError(ex, "Pricing search failed for query {Query}", q);
+            return StatusCode(500, new { error = "Search failed" });
         }
     }
 
@@ -210,6 +213,7 @@ public class PricingController : ControllerBase
         }
         catch (Exception ex)
         {
+            _logger.LogWarning(ex, "Scryfall lookup failed for card '{CardName}'", cardName);
             // Scryfall failed — still return local data if we have it
             if (sources.Count > 0)
             {
@@ -222,7 +226,7 @@ public class PricingController : ControllerBase
                     sources,
                     eurPrice = (decimal?)null,
                     tixPrice = (decimal?)null,
-                    warning = $"Scryfall lookup failed: {ex.Message}"
+                    warning = "Scryfall lookup failed. Showing local pricing data only."
                 });
             }
         }
