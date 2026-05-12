@@ -11,7 +11,7 @@ namespace MtgForge.Api.Models;
 public class GenerationJobDocument
 {
     [BsonId]
-    [BsonRepresentation(BsonType.ObjectId)]
+    [BsonRepresentation(BsonType.String)]
     public string? Id { get; set; }
 
     public string UserId { get; set; } = string.Empty;
