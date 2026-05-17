@@ -1449,6 +1449,14 @@
             text-align: center;
         }
 
+        .detail-commander-image {
+            width: 130px;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+            flex-shrink: 0;
+            align-self: flex-start;
+        }
+
         .stat-box {
             background: var(--bg-card);
             border: 1px solid var(--border);
@@ -1470,6 +1478,19 @@
             text-transform: uppercase;
             letter-spacing: 0.08em;
             margin-top: 0.25rem;
+        }
+
+        .detail-stats .stat-box {
+            padding: 0.6rem 0.8rem;
+            min-width: 70px;
+        }
+
+        .detail-stats .stat-value {
+            font-size: 1.1rem;
+        }
+
+        .detail-stats .stat-label {
+            font-size: 0.75rem;
         }
 
         /* Card list by category */
@@ -3937,6 +3958,7 @@
                         ${deck.commander ? `<div class="detail-commander">Commander: ${deck.commander}</div>` : ''}
                         <div class="detail-strategy">${deck.strategy || ''}</div>
                     </div>
+                    ${deck.commander ? `<img id="commanderCardImage" class="detail-commander-image" src="" alt="${deck.commander.replace(/"/g,'&quot;')}" style="display:none;">` : ''}
                     <div class="detail-stats">
                         <div class="stat-box">
                             <div class="stat-value">${totalCards}</div>
@@ -4002,6 +4024,25 @@
                 </div>
 
                 ${cachedAnalysisHtml}`;
+
+            // Fetch and display commander card image.
+            // Capture the element reference now so a later deck render can't be
+            // overwritten by this async response (stale-closure guard). Reveal
+            // the image only in onload so there's no blank-area flash on slow
+            // connections; leave it hidden on error.
+            if (deck.commander) {
+                const cmdImgEl = document.getElementById('commanderCardImage');
+                fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(deck.commander)}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        const imgUrl = data.image_uris?.normal || data.card_faces?.[0]?.image_uris?.normal;
+                        if (imgUrl && cmdImgEl) {
+                            cmdImgEl.onload = () => { cmdImgEl.style.display = ''; };
+                            cmdImgEl.src = imgUrl;
+                        }
+                    })
+                    .catch(() => {});
+            }
 
             // Attach card image hover listeners after rendering
             document.querySelectorAll('[data-cn]').forEach(el => {
