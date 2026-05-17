@@ -3950,6 +3950,7 @@
             document.getElementById('detailContent').innerHTML = `
                 <button class="detail-back" onclick="switchView('library')">&#8592; Back to Library</button>
                 <div class="detail-header">
+                    ${deck.commander ? `<img id="commanderCardImage" class="detail-commander-image" src="" alt="${deck.commander.replace(/"/g,'&quot;')}" style="display:none;">` : ''}
                     <div>
                         <div class="detail-colors">
                             ${(deck.colors || []).map(c => `<span class="mana-pip ${c}">${c}</span>`).join('')}
@@ -3958,7 +3959,6 @@
                         ${deck.commander ? `<div class="detail-commander">Commander: ${deck.commander}</div>` : ''}
                         <div class="detail-strategy">${deck.strategy || ''}</div>
                     </div>
-                    ${deck.commander ? `<img id="commanderCardImage" class="detail-commander-image" src="" alt="${deck.commander.replace(/"/g,'&quot;')}" style="display:none;">` : ''}
                     <div class="detail-stats">
                         <div class="stat-box">
                             <div class="stat-value">${totalCards}</div>
@@ -4035,7 +4035,7 @@
                 fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(deck.commander)}`)
                     .then(r => r.json())
                     .then(data => {
-                        const imgUrl = data.image_uris?.normal || data.card_faces?.[0]?.image_uris?.normal;
+                        const imgUrl = data.image_uris?.art_crop || data.card_faces?.[0]?.image_uris?.art_crop;
                         if (imgUrl && cmdImgEl) {
                             cmdImgEl.onload = () => { cmdImgEl.style.display = ''; };
                             cmdImgEl.src = imgUrl;
