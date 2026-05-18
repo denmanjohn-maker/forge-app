@@ -4,6 +4,166 @@ mtg-forge is a Magic: The Gathering deck management and AI generation platform b
 
 ---
 
+## Architecture Diagram
+
+```mermaid
+graph TD
+    Browser["Browser\n(wwwroot/index.html)"]
+    Scryfall["Scryfall API\n(card images)"]
+
+    subgraph "forge-app — ASP.NET 10"
+        DC["DecksController\n/api/decks/*"]
+        AC["AdminController\n/api/admin/*"]
+        PC["PricingController\n/api/pricing/*"]
+
+        subgraph "Services"
+            CS["ClaudeService\n(Anthropic HTTP)"]
+            RPS["RagPipelineService\n(RAG / DeepInfra)"]
+            DMC["DeckMetricsCalculator\n(category breakdown)"]
+            DS["DeckService\n(MongoDB CRUD)"]
+            GJS["GenerationJobStore\n(async job tracking)"]
+            PS["PricingService\n(price lookup)"]
+            MJPIS["MtgJsonPricingImportService\n(streaming parser)"]
+        end
+    end
+
+    subgraph "forge-ai-api — FastAPI"
+        CSS["CardSearchService\n(Qdrant)"]
+        DGS["DeckGenerationService\n(LLM)"]
+        CIS["CardIngestionService\n(Scryfall ingest)"]
+    end
+
+    subgraph "forge-observability"
+        Alloy["Grafana Alloy\n(collector)"]
+        Tempo["Tempo\n(traces)"]
+        Loki["Loki\n(logs)"]
+        Prom["Prometheus\n(metrics)"]
+        Grafana["Grafana\n(dashboards)"]
+    end
+
+    subgraph "External"
+        Anthropic["Anthropic API\nclaude-sonnet-4-*"]
+        DeepInfra["DeepInfra API\nLlama / bge-m3"]
+        MongoDB1[("MongoDB\nmtgdeckforge")]
+        PG[("PostgreSQL\nIdentity + Pricing")]
+        Qdrant[("Qdrant\nvectors")]
+        MTGJSON["MTGJSON\n(daily pricing)"]
+    end
+
+    Browser -->|"REST/JSON"| DC
+    Browser -->|"REST/JSON"| AC
+    Browser --> Scryfall
+
+    DC --> CS
+    DC --> RPS
+    DC --> DS
+    DC --> GJS
+    DC --> PS
+    AC --> DS
+    PC --> MJPIS
+
+    RPS -->|"POST /api/decks/generate"| DGS
+    RPS --> DMC
+    RPS -->|"direct LLM calls"| DeepInfra
+
+    CS --> Anthropic
+    DS --> MongoDB1
+    GJS --> MongoDB1
+    PS --> PG
+    MJPIS --> PG
+    MJPIS --> MTGJSON
+
+    DGS --> CSS
+    CSS --> Qdrant
+    DGS --> DeepInfra
+    CIS --> Scryfall
+    CIS --> Qdrant
+
+    DC -->|"OTLP gRPC"| Alloy
+    Alloy --> Tempo
+    Alloy --> Prom
+    Alloy --> Loki
+    Alloy --> Grafana
+```
+
+---
+
+## Functional Areas (forge-app)
+
+Knowledge graph stats: **85 files · 1,288 symbols · 39 execution flows**
+
+| Cluster | Symbols | Cohesion | Role |
+|---|---|---|---|
+| **Mtg-forge.Tests** | 78 | 93% | Unit / integration test suite |
+| **Services** | 66 | 87% | Business logic, AI, pricing, persistence |
+| **Controllers** | 55 | 86% | REST API surface |
+| **Observability** | 5 | 100% | Logging / telemetry helpers |
+
+---
+
+## Key Execution Flows (forge-app)
+
+### AI Deck Analysis (`Analyze → CategoryTokens`)
+Cross-community · 5 steps
+
+```
+DecksController.Analyze
+  └─ RagPipelineService.AnalyzeDeckAsync
+       └─ DeckMetricsCalculator.Calculate
+            └─ CountByExactCategory
+                 └─ CategoryTokens
+```
+
+The controller delegates to `RagPipelineService`, which builds a RAG context before calling the LLM. `DeckMetricsCalculator` computes card-category breakdowns (lands, ramp, removal, etc.) used to ground the prompt.
+
+### AI Deck Generation — async job (`Generate → GenerationJobDocument`)
+Cross-community · 3 steps
+
+```
+DecksController.Generate
+  └─ GenerationJobStore.Create
+       └─ GenerationJobDocument  (Models/)
+```
+
+Generation is async: the controller creates a job record immediately and returns a job ID. Clients poll `GET /api/decks/generation-status/{jobId}`.
+
+### CSV Import + Pricing (`ImportCsv → NormalizeCardName`)
+Cross-community · 3 steps
+
+```
+DecksController.ImportCsv
+  └─ PricingService.ApplyPricesAsync
+       └─ NormalizeCardName
+```
+
+After parsing the CSV, `PricingService` enriches each card entry with current market prices from the local PostgreSQL pricing cache.
+
+### Admin Analytics (`GetAnalytics → GetStringField`)
+Intra-community · 4 steps
+
+```
+AdminController.GetAnalytics
+  └─ DeckService.GetAnalyticsAsync
+       └─ CountByStringField
+            └─ GetStringField
+```
+
+Aggregates decks by string fields (format, commander, color identity) directly in MongoDB using the Driver's aggregation pipeline.
+
+### Pricing Data Refresh (`Refresh → PrintingsParserState`)
+Intra-community · 4 steps
+
+```
+PricingController.Refresh
+  └─ MtgJsonPricingImportService.ImportDailyAsync
+       └─ StreamParseUuidToNameAsync
+            └─ PrintingsParserState
+```
+
+Streaming-parses large MTGJSON payloads (printings then prices) using state-machine parsers to avoid loading the full dataset into memory.
+
+---
+
 ## This service: forge-app
 
 **Role:** Primary user-facing service. Serves a REST API, Razor Pages, and a vanilla JS SPA from a single ASP.NET Core process. Owns authentication, deck CRUD, pricing, CSV import/export, and user/group management.
