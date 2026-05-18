@@ -31,7 +31,10 @@
       "Bash(gh --version)",
       "Bash(git push:*)",
       "Bash(git fetch *)",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "Bash(git pull *)",
+      "mcp__gitnexus__query",
+      "mcp__gitnexus__context"
     ]
   }
 }
