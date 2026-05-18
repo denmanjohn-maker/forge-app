@@ -133,7 +133,12 @@ DecksController.Generate (mtg-forge.Api)
   ├─► DeckService.CreateAsync
   │     Persists the finished DeckConfiguration document to MongoDB
   │
-  └─► HTTP 201 Created — full deck JSON returned to client
+  └─► HTTP 202 Accepted — { jobId } returned immediately
+
+Client polls:
+GET /api/decks/generate/status/{jobId}
+  Status: Pending → Running → Completed (deck JSON) | Failed (error message)
+  Jobs are auto-purged from MongoDB 1 hour after completion or failure
 ```
 
 ---
@@ -363,19 +368,20 @@ Returns the `BUILD_VERSION` environment variable if set, otherwise derives a ver
 
 ### Decks
 
-| Method    | Endpoint                     | Auth      | Description                                      |
-|-----------|------------------------------|-----------|--------------------------------------------------|
-| `GET`     | `/api/decks`                 | User      | List decks (paginated, filterable by name/color/format/power) |
-| `GET`     | `/api/decks/{id}`            | User      | Get a specific deck                              |
-| `GET`     | `/api/decks/search`          | User      | Search by `?color=B&format=Commander`            |
-| `POST`    | `/api/decks/generate`        | User      | Generate a new deck via the RAG pipeline         |
-| `PATCH`   | `/api/decks/{id}`            | User      | Update deck metadata or card list                |
-| `DELETE`  | `/api/decks/{id}`            | User      | Delete a deck                                    |
-| `POST`    | `/api/decks/{id}/copy`       | User      | Duplicate a deck                                 |
-| `POST`    | `/api/decks/{id}/analyze`    | User      | AI analysis: synergy, weaknesses, upgrade suggestions |
-| `GET`     | `/api/decks/{id}/export/csv` | User      | Export as CSV (`?format=moxfield\|archidekt\|deckbox\|deckstats`) |
-| `POST`    | `/api/decks/import/csv`      | User      | Import a CSV deck list (auto-detects format)     |
-| `GET`     | `/api/decks/metrics`         | User      | Aggregate metrics for the current user's decks   |
+| Method    | Endpoint                              | Auth      | Description                                      |
+|-----------|---------------------------------------|-----------|--------------------------------------------------|
+| `GET`     | `/api/decks`                          | User      | List decks (paginated, filterable by name/color/format/power) |
+| `GET`     | `/api/decks/{id}`                     | User      | Get a specific deck                              |
+| `GET`     | `/api/decks/search`                   | User      | Search by `?color=B&format=Commander`            |
+| `POST`    | `/api/decks/generate`                 | User      | Start async deck generation — returns `202 + { jobId }` |
+| `GET`     | `/api/decks/generate/status/{jobId}`  | User      | Poll generation job status (`Pending/Running/Completed/Failed`) |
+| `PATCH`   | `/api/decks/{id}`                     | User      | Update deck metadata or card list                |
+| `DELETE`  | `/api/decks/{id}`                     | User      | Delete a deck                                    |
+| `POST`    | `/api/decks/{id}/copy`                | User      | Duplicate a deck                                 |
+| `POST`    | `/api/decks/{id}/analyze`             | User      | AI analysis: synergy, weaknesses, upgrade suggestions |
+| `GET`     | `/api/decks/{id}/export/csv`          | User      | Export as CSV (`?format=moxfield\|archidekt\|deckbox\|deckstats`) |
+| `POST`    | `/api/decks/import/csv`               | User      | Import a CSV deck list (auto-detects format)     |
+| `GET`     | `/api/decks/metrics`                  | User      | Aggregate metrics for the current user's decks   |
 
 ### Auth
 
@@ -393,6 +399,16 @@ Returns the `BUILD_VERSION` environment variable if set, otherwise derives a ver
 |---------|------------------------|-------|------------------------------------------|
 | `POST`  | `/api/pricing/refresh` | Admin | Manually trigger MTGJSON pricing refresh |
 | `GET`   | `/api/pricing/status`  | Admin | Last import run details                  |
+
+### Admin
+
+| Method   | Endpoint                    | Auth  | Description                                              |
+|----------|-----------------------------|-------|----------------------------------------------------------|
+| `GET`    | `/api/admin/analytics`      | Admin | Deck counts by format/color/power/budget; top users (7d/30d) |
+| `GET`    | `/api/admin/usage`          | Admin | AI token usage summary per user (`?days=30`)             |
+| `POST`   | `/api/admin/reanalyze`      | Admin | Trigger bulk re-analysis of all decks                    |
+| `GET`    | `/api/admin/ai-status`      | Admin | Proxy to forge-ai-api ingest status                      |
+| `POST`   | `/api/admin/ai-ingest`      | Admin | Proxy to trigger card re-ingestion on forge-ai-api       |
 
 ### Groups (Admin)
 
@@ -627,29 +643,44 @@ mtg-forge/
 ├── monitoring/
 │   ├── prometheus/prometheus.yml     # Scrape config for /metrics endpoint
 │   └── grafana/provisioning/         # Pre-configured Grafana datasource
+├── mtg-forge.Tests/                  # xUnit test project (6 test classes)
+│   ├── DecksControllerCsvHelpersTests.cs   # CSV format detection
+│   ├── ScryfallServiceTests.cs             # Card enrichment, HTTP error handling
+│   ├── ThemedSetDetectorTests.cs           # Themed set name detection
+│   ├── DeckMetricsCalculatorTests.cs       # Mana curve, category metrics
+│   ├── DeckGenerationValidationTests.cs    # Commander 100-card padding/trimming
+│   └── GenerationJobStoreTests.cs          # Async job lifecycle
 └── mtg-forge.Api/
     ├── Program.cs                    # DI registration, middleware pipeline, startup seeding
     ├── appsettings.json              # Default config (overridden by env vars on Railway)
     ├── Controllers/
-    │   ├── DecksController.cs        # Deck CRUD, generation, analysis, CSV import/export
+    │   ├── DecksController.cs        # Deck CRUD, async generation, analysis, CSV import/export
+    │   ├── AdminController.cs        # Admin: analytics, AI usage, bulk reanalyze, ai-ingest proxy
     │   ├── AuthController.cs         # Login, register, JWT issuance
-    │   ├── GroupsController.cs       # Admin: user group management
+    │   ├── GroupsController.cs       # Deck group management
     │   └── PricingController.cs      # Admin: manual pricing refresh trigger
     ├── Services/
     │   ├── IDeckGenerationService.cs # Abstraction: GenerateDeck, AnalyzeDeck, SuggestReplacements
     │   ├── RagPipelineService.cs     # Calls mtg-forge-ai (Qdrant+LLM) + DeepInfra directly
-    │   ├── DeckService.cs            # MongoDB CRUD for DeckConfiguration documents
+    │   ├── GenerationJobStore.cs     # MongoDB-backed async job tracker (Pending→Running→Completed|Failed)
+    │   ├── DeckService.cs            # MongoDB CRUD for DeckConfiguration; analytics aggregations
+    │   ├── AiUsageService.cs         # Records + queries AI token usage per user/operation
     │   ├── UserService.cs            # MongoDB CRUD for User documents
     │   ├── AuthService.cs            # Password hashing, JWT generation
     │   ├── ScryfallService.cs        # Card metadata enrichment (batched collection API)
     │   ├── PricingService.cs         # PostgreSQL price lookups + card name normalization
-    │   ├── MtgJsonPricingImportService.cs  # Streaming MTGJSON import → PostgreSQL
-    │   ├── PricingRefreshHostedService.cs  # Background service: daily pricing refresh
+    │   ├── MtgJsonPricingImportService.cs      # Streaming MTGJSON import → PostgreSQL
+    │   ├── PricingRefreshHostedService.cs      # Background service: daily pricing refresh
+    │   ├── DeckReanalysisHostedService.cs      # Background service: bulk deck re-analysis
     │   ├── DeckMetricsCalculator.cs  # Mana curve, color distribution, category breakdown
+    │   ├── ThemedSetDetector.cs      # Detects themed set decks (Universes Beyond, etc.)
     │   └── BudgetHelper.cs           # Budget tier → max price mapping
     ├── Models/
-    │   ├── DeckModels.cs             # DeckConfiguration, CardEntry, DeckAnalysis, etc.
-    │   ├── UserModels.cs             # User, Group
+    │   ├── DeckModels.cs             # DeckConfiguration, CardEntry, DeckAnalysis, PagedResult<T>, etc.
+    │   ├── GenerationJobDocument.cs  # MongoDB document for async generation jobs
+    │   ├── AdminModels.cs            # AiUsageRecord, AiUsageSummary, DeckAnalyticsResult, etc.
+    │   ├── UserModels.cs             # User, LoginResponse
+    │   ├── ApplicationUser.cs        # ASP.NET Identity user extension
     │   ├── CardPrice.cs              # PostgreSQL entity for price cache
     │   ├── RagPipelineSettings.cs    # Config POCO for RAG pipeline
     │   ├── MongoDbSettings.cs
