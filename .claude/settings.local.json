@@ -34,7 +34,8 @@
       "Bash(git stash *)",
       "Bash(git pull *)",
       "mcp__gitnexus__query",
-      "mcp__gitnexus__context"
+      "mcp__gitnexus__context",
+      "mcp__gitnexus__detect_changes"
     ]
   }
 }
