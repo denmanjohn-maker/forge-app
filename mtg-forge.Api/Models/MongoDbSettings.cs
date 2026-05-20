@@ -8,4 +8,6 @@ public class MongoDbSettings
     public string UsersCollectionName { get; set; } = null!;
     public string GroupsCollectionName { get; set; } = null!;
     public string JobsCollectionName { get; set; } = "generationJobs";
+    public string DeckHistoryCollectionName { get; set; } = "deckHistory";
+    public string CollectionCollectionName { get; set; } = "userCollections";
 }

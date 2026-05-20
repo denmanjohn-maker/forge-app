@@ -31,6 +31,9 @@ public class DeckConfiguration
 
     public List<string> Tags { get; set; } = new();
     public bool IsFavorite { get; set; } = false;
+
+    // Deck primer / strategy guide (Markdown)
+    public string? Primer { get; set; }
 }
 
 public class CardEntry
@@ -69,6 +72,7 @@ public class DeckUpdateRequest
     public List<CardEntry>? Cards { get; set; }
     public List<string>? Tags { get; set; }
     public bool? IsFavorite { get; set; }
+    public string? Primer { get; set; }
 }
 
 public class DeckAnalysis
@@ -94,4 +98,25 @@ public class PagedResult<T>
     public int Skip { get; set; }
     public int Limit { get; set; }
     public bool HasMore => Skip + Items.Count < Total;
+}
+
+public class DeckHistoryEntry
+{
+    [BsonId]
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string? Id { get; set; }
+    public string DeckId { get; set; } = null!;
+    public string UserId { get; set; } = null!;
+    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+    public string ChangeSummary { get; set; } = null!;
+    public List<string> CardsAdded { get; set; } = new();
+    public List<string> CardsRemoved { get; set; } = new();
+}
+
+public class CardRecommendation
+{
+    public string Name { get; set; } = null!;
+    public string Reason { get; set; } = null!;
+    public string Category { get; set; } = null!;
+    public string EstimatedBudgetTier { get; set; } = "mid";
 }

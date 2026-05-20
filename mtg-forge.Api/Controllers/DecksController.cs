@@ -20,8 +20,11 @@ public class DecksController : ControllerBase
     private readonly ILogger<DecksController> _logger;
     private readonly GenerationJobStore _jobStore;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly SaltScoreService _saltService;
+    private readonly CollectionService _collectionService;
+    private readonly IHttpClientFactory _httpFactory;
 
-    public DecksController(DeckService deckService, IDeckGenerationService llmService, ScryfallService scryfallService, PricingService pricingService, ILogger<DecksController> logger, GenerationJobStore jobStore, IServiceScopeFactory scopeFactory)
+    public DecksController(DeckService deckService, IDeckGenerationService llmService, ScryfallService scryfallService, PricingService pricingService, ILogger<DecksController> logger, GenerationJobStore jobStore, IServiceScopeFactory scopeFactory, SaltScoreService saltService, CollectionService collectionService, IHttpClientFactory httpFactory)
     {
         _deckService = deckService;
         _llmService = llmService;
@@ -30,6 +33,9 @@ public class DecksController : ControllerBase
         _logger = logger;
         _jobStore = jobStore;
         _scopeFactory = scopeFactory;
+        _saltService = saltService;
+        _collectionService = collectionService;
+        _httpFactory = httpFactory;
     }
 
     private string GetUserId() => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -199,7 +205,7 @@ public class DecksController : ControllerBase
         if (!IsAdmin() && deck.UserId != GetUserId())
             return Forbid();
 
-        await _deckService.UpdateAsync(id, request);
+        await _deckService.UpdateAsync(id, request, GetUserId());
         var updated = await _deckService.GetByIdAsync(id);
         return Ok(updated);
     }
@@ -307,7 +313,7 @@ public class DecksController : ControllerBase
         deck.UpdatedAt = DateTime.UtcNow;
 
         var updateRequest = new DeckUpdateRequest { Cards = deck.Cards };
-        await _deckService.UpdateAsync(id, updateRequest);
+        await _deckService.UpdateAsync(id, updateRequest, GetUserId());
 
         _logger.LogInformation("Applied upgrade on deck {Id}", id.Replace(Environment.NewLine, ""));
 
@@ -607,6 +613,143 @@ public class DecksController : ControllerBase
         }
         fields.Add(current.ToString());
         return fields;
+    }
+
+    // === Deck History ===
+
+    [HttpGet("{id}/history")]
+    public async Task<ActionResult<List<DeckHistoryEntry>>> GetHistory(string id)
+    {
+        var deck = await _deckService.GetByIdAsync(id);
+        if (deck is null) return NotFound();
+        if (!IsAdmin() && deck.UserId != GetUserId()) return Forbid();
+
+        var history = await _deckService.GetHistoryAsync(id);
+        return Ok(history);
+    }
+
+    // === AI Card Recommendations ===
+
+    [HttpGet("{id}/recommendations")]
+    public async Task<ActionResult<List<CardRecommendation>>> GetRecommendations(string id)
+    {
+        try
+        {
+            var deck = await _deckService.GetByIdAsync(id);
+            if (deck is null) return NotFound();
+            if (!IsAdmin() && deck.UserId != GetUserId()) return Forbid();
+
+            var recs = await _llmService.GetCardRecommendationsAsync(deck);
+            return Ok(recs);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get recommendations for deck {Id}", id);
+            return StatusCode(500, new { error = "Failed to generate recommendations" });
+        }
+    }
+
+    // === Salt Scores ===
+
+    [HttpGet("{id}/salt")]
+    public async Task<IActionResult> GetSaltScores(string id)
+    {
+        var deck = await _deckService.GetByIdAsync(id);
+        if (deck is null) return NotFound();
+        if (!IsAdmin() && deck.UserId != GetUserId()) return Forbid();
+
+        var allScores = await _saltService.GetSaltScoresAsync();
+        var cardScores = deck.Cards
+            .Select(c => new
+            {
+                name = c.Name,
+                saltScore = allScores.TryGetValue(c.Name, out var s) ? s : 0.0,
+                quantity = c.Quantity
+            })
+            .ToList();
+
+        var totalSalt = cardScores.Sum(c => c.saltScore * c.quantity);
+
+        return Ok(new { totalSalt, cards = cardScores });
+    }
+
+    // === Combo Detection ===
+
+    [HttpGet("{id}/combos")]
+    public async Task<IActionResult> GetCombos(string id)
+    {
+        var deck = await _deckService.GetByIdAsync(id);
+        if (deck is null) return NotFound();
+        if (!IsAdmin() && deck.UserId != GetUserId()) return Forbid();
+
+        try
+        {
+            var commanders = deck.Cards
+                .Where(c => c.Category.Equals("Commander", StringComparison.OrdinalIgnoreCase))
+                .Select(c => c.Name)
+                .ToList();
+            var mainCards = deck.Cards
+                .Where(c => !c.Category.Equals("Commander", StringComparison.OrdinalIgnoreCase))
+                .Select(c => c.Name)
+                .ToList();
+
+            var client = _httpFactory.CreateClient();
+            client.Timeout = TimeSpan.FromSeconds(20);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("mtg-forge/1.0");
+
+            var payload = System.Text.Json.JsonSerializer.Serialize(new { commanders, main = mainCards });
+            using var content = new StringContent(payload, System.Text.Encoding.UTF8, "application/json");
+            using var response = await client.PostAsync(
+                "https://backend.commanderspellbook.com/find-my-combos/", content);
+
+            if (!response.IsSuccessStatusCode)
+                return Ok(new { results = new { included = Array.Empty<object>(), almostIncluded = Array.Empty<object>() } });
+
+            var body = await response.Content.ReadAsStringAsync();
+            using var doc = System.Text.Json.JsonDocument.Parse(body);
+            return Content(body, "application/json");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Combo detection failed for deck {Id}", id);
+            return Ok(new { results = new { included = Array.Empty<object>(), almostIncluded = Array.Empty<object>() } });
+        }
+    }
+
+    // === Collection Ownership Overlay ===
+
+    [HttpGet("{id}/ownership")]
+    public async Task<ActionResult<OwnershipResult>> GetOwnership(string id)
+    {
+        var deck = await _deckService.GetByIdAsync(id);
+        if (deck is null) return NotFound();
+        if (!IsAdmin() && deck.UserId != GetUserId()) return Forbid();
+
+        var owned = await _collectionService.GetOwnedQuantitiesAsync(GetUserId());
+        var totalCards = deck.Cards.Sum(c => c.Quantity);
+        int ownedCount = 0;
+        var missing = new List<MissingCard>();
+
+        foreach (var card in deck.Cards)
+        {
+            owned.TryGetValue(card.Name, out var ownedQty);
+            var need = Math.Max(0, card.Quantity - ownedQty);
+            ownedCount += card.Quantity - need;
+            if (need > 0)
+                missing.Add(new MissingCard { Name = card.Name, Quantity = need, EstimatedPrice = card.EstimatedPrice });
+        }
+
+        var shoppingTotal = missing.Sum(m => m.Quantity * m.EstimatedPrice);
+        var pct = totalCards > 0 ? Math.Round((decimal)ownedCount / totalCards * 100, 1) : 0;
+
+        return Ok(new OwnershipResult
+        {
+            OwnedCount = ownedCount,
+            TotalCards = totalCards,
+            CompletionPct = pct,
+            MissingCards = missing.OrderByDescending(m => m.EstimatedPrice).ToList(),
+            ShoppingListTotal = shoppingTotal
+        });
     }
 
     [HttpDelete("{id}")]

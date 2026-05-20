@@ -20,6 +20,7 @@
         })();
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&family=MedievalSharp&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
     <style>
         :root {
             color-scheme: dark;
@@ -2334,6 +2335,63 @@
             .btn-outline:hover { background: none; }
         }
 
+        /* ── Salt Badges ── */
+        .salt-badge { display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:4px;vertical-align:middle;flex-shrink:0; }
+        .salt-0 { background:var(--text-muted);opacity:0.4; }
+        .salt-1 { background:#4caf50; }
+        .salt-2 { background:#ffc107; }
+        .salt-3 { background:#ff5722; }
+        .salt-4 { background:#9c27b0; }
+        .salt-total { display:inline-flex;align-items:center;gap:0.4rem;font-family:'Cinzel',serif;font-size:0.75rem;padding:0.25rem 0.65rem;border-radius:999px;border:1px solid var(--border);color:var(--text-secondary); }
+
+        /* ── Ownership Bar ── */
+        .ownership-bar { background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:0.75rem 1rem;margin:0.75rem 0;display:flex;align-items:center;gap:1rem;flex-wrap:wrap; }
+        .ownership-progress { flex:1;min-width:120px;height:8px;background:var(--bg-deep);border-radius:4px;overflow:hidden; }
+        .ownership-progress-fill { height:100%;background:linear-gradient(90deg,var(--gold-dark),var(--gold));border-radius:4px;transition:width 0.4s; }
+
+        /* ── Primer Section ── */
+        .primer-section { background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:1.25rem;margin:1.5rem 0; }
+        .primer-section h4 { font-family:'Cinzel',serif;font-size:0.85rem;letter-spacing:0.08em;color:var(--gold);margin:0 0 0.75rem;text-transform:uppercase; }
+        .primer-section .primer-body { font-family:'Crimson Text',serif;font-size:1.05rem;line-height:1.65;color:var(--text-primary); }
+        .primer-section .primer-body h1,.primer-section .primer-body h2,.primer-section .primer-body h3 { font-family:'Cinzel',serif;color:var(--gold-light);margin:1rem 0 0.5rem; }
+        .primer-section .primer-body a { color:var(--gold-light); }
+        .primer-section .primer-body ul,.primer-section .primer-body ol { padding-left:1.5rem; }
+        .primer-textarea { width:100%;min-height:220px;background:var(--bg-deep);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-family:'Crimson Text',serif;font-size:1rem;padding:0.75rem;resize:vertical;box-sizing:border-box; }
+
+        /* ── Collection View ── */
+        .collection-table { width:100%;border-collapse:collapse;font-family:'Crimson Text',serif;font-size:0.95rem; }
+        .collection-table th { font-family:'Cinzel',serif;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);padding:0.5rem 0.75rem;text-align:left;border-bottom:1px solid var(--border); }
+        .collection-table td { padding:0.45rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:middle; }
+        .collection-table tr:hover td { background:var(--bg-panel); }
+        .collection-search { width:100%;max-width:360px;padding:0.5rem 0.75rem;background:var(--bg-panel);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-family:'Crimson Text',serif;font-size:0.95rem;margin-bottom:1rem; }
+        .buildable-card { background:var(--bg-panel);border:1px solid var(--border);border-radius:10px;padding:1rem;transition:box-shadow 0.2s; }
+        .buildable-card:hover { box-shadow:0 4px 16px rgba(201,168,76,0.15); }
+        .buildable-pct { font-family:'Cinzel',serif;font-size:1.6rem;font-weight:700;color:var(--gold); }
+        .completion-bar { height:6px;background:var(--bg-deep);border-radius:3px;overflow:hidden;margin:0.4rem 0; }
+        .completion-bar-fill { height:100%;background:linear-gradient(90deg,var(--gold-dark),var(--gold));border-radius:3px; }
+        .col-tabs { display:flex;gap:0.5rem;margin-bottom:1.25rem; }
+        .col-tab { padding:0.4rem 1rem;border:1px solid var(--border);border-radius:6px;background:none;color:var(--text-secondary);font-family:'Cinzel',serif;font-size:0.75rem;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;transition:background 0.15s; }
+        .col-tab.active { background:var(--gold-dark);color:#1a1208;border-color:var(--gold-dark); }
+
+        /* ── History Timeline ── */
+        .history-entry { display:flex;gap:1rem;padding:0.85rem 0;border-bottom:1px solid var(--border); }
+        .history-dot { width:10px;height:10px;border-radius:50%;background:var(--gold);margin-top:5px;flex-shrink:0; }
+        .history-meta { font-family:'Cinzel',serif;font-size:0.7rem;color:var(--text-muted);margin-bottom:0.25rem; }
+        .history-summary { font-family:'Crimson Text',serif;font-size:0.95rem;color:var(--text-primary); }
+        .history-cards { display:flex;flex-wrap:wrap;gap:0.35rem;margin-top:0.35rem; }
+        .history-chip { font-size:0.75rem;padding:0.15rem 0.5rem;border-radius:4px;font-family:'Cinzel',serif; }
+        .history-chip.added { background:rgba(76,175,80,0.15);color:#81c784;border:1px solid rgba(76,175,80,0.3); }
+        .history-chip.removed { background:rgba(244,67,54,0.12);color:#ef9a9a;border:1px solid rgba(244,67,54,0.25); }
+
+        /* ── Recommendations Panel ── */
+        .rec-card { display:flex;align-items:flex-start;gap:0.75rem;padding:0.75rem;border-radius:8px;background:var(--bg-panel);border:1px solid var(--border);margin-bottom:0.5rem; }
+        .rec-card .rec-name { font-family:'Cinzel',serif;font-size:0.85rem;color:var(--gold-light); }
+        .rec-card .rec-reason { font-family:'Crimson Text',serif;font-size:0.9rem;color:var(--text-secondary);margin-top:0.2rem; }
+        .budget-chip { font-size:0.7rem;padding:0.1rem 0.4rem;border-radius:4px;font-family:'Cinzel',serif;letter-spacing:0.04em; }
+        .budget-chip.budget { background:rgba(76,175,80,0.18);color:#81c784; }
+        .budget-chip.mid { background:rgba(255,193,7,0.15);color:#ffd54f; }
+        .budget-chip.expensive { background:rgba(244,67,54,0.12);color:#ef9a9a; }
+
     </style>
 </head>
 <body>
@@ -2455,6 +2513,10 @@
             <button class="nav-tab" data-view="prices">
                 <svg class="nav-icon" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                 <span class="nav-label">Price Lookup</span>
+            </button>
+            <button class="nav-tab" data-view="collection">
+                <svg class="nav-icon" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                <span class="nav-label">Collection</span>
             </button>
             <button class="nav-tab" data-view="admin" id="adminTab" style="display:none;">
                 <svg class="nav-icon" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -2725,6 +2787,53 @@
             <div id="deckGrid" class="deck-grid"></div>
             <div class="load-more-wrap" id="loadMoreWrap" style="display:none;">
                 <button class="btn-outline" onclick="loadMoreDecks()">Load More</button>
+            </div>
+        </div>
+
+        <!-- COLLECTION VIEW -->
+        <div id="view-collection" class="view">
+            <div class="library-header">
+                <div>
+                    <div class="library-title">&#128218; My Collection</div>
+                    <div class="library-count" id="collectionCount">—</div>
+                </div>
+                <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+                    <button class="btn-outline" onclick="openAddCardToCollectionModal()">&#43; Add Card</button>
+                    <button class="btn-outline" onclick="document.getElementById('collectionImportInput').click()">&#8593; Import CSV</button>
+                    <a id="collectionExportLink" class="btn-outline" href="/api/collection/export/csv" style="text-decoration:none;display:inline-flex;align-items:center;padding:0.45rem 0.9rem;border-radius:6px;cursor:pointer;">&#8595; Export CSV</a>
+                </div>
+                <input type="file" id="collectionImportInput" accept=".csv" style="display:none;" onchange="importCollectionCsv(this)">
+            </div>
+
+            <div class="col-tabs" style="margin-top:1rem;">
+                <button class="col-tab active" id="colTabCards" onclick="showCollectionTab('cards')">&#127921; My Cards</button>
+                <button class="col-tab" id="colTabBuildable" onclick="showCollectionTab('buildable')">&#127928; Buildable Decks</button>
+            </div>
+
+            <div id="colPanelCards">
+                <input type="text" class="collection-search" id="collectionSearch" placeholder="Search card name..." oninput="debouncedCollectionSearch()">
+                <div id="collectionTableWrap" style="overflow-x:auto;">
+                    <table class="collection-table">
+                        <thead><tr>
+                            <th>Card Name</th>
+                            <th>Qty</th>
+                            <th>Set</th>
+                            <th>Foil</th>
+                            <th>Condition</th>
+                            <th></th>
+                        </tr></thead>
+                        <tbody id="collectionTableBody">
+                            <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;font-family:'Crimson Text',serif;">Loading collection…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="load-more-wrap" id="collectionLoadMoreWrap" style="display:none;">
+                    <button class="btn-outline" onclick="loadMoreCollection()">Load More</button>
+                </div>
+            </div>
+
+            <div id="colPanelBuildable" style="display:none;">
+                <div id="buildableGrid" class="deck-grid" style="margin-top:1rem;"></div>
             </div>
         </div>
 
@@ -3079,6 +3188,88 @@
             </div>
             <div id="compareBody" style="display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr;gap:1rem;flex:1;min-height:0;overflow:hidden;">
                 <div style="text-align:center;color:var(--text-muted);padding-top:3rem;font-family:'Crimson Text',serif;font-size:1rem;">Select a deck to compare</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Primer Modal -->
+    <div class="modal-overlay hidden" id="primerModal">
+        <div class="modal" style="max-width:720px;width:96%;max-height:90vh;display:flex;flex-direction:column;">
+            <h3 style="margin-bottom:0.75rem;">&#128221; Deck Primer</h3>
+            <p style="font-family:'Crimson Text',serif;font-size:0.9rem;color:var(--text-muted);margin-bottom:0.75rem;">Write a strategy guide using Markdown. Explain your win conditions, key synergies, and how to play the deck.</p>
+            <textarea id="primerTextarea" class="primer-textarea" placeholder="## Overview&#10;&#10;This deck wins by..."></textarea>
+            <div class="modal-actions" style="margin-top:1rem;">
+                <button class="btn-outline" onclick="closePrimerModal()">Cancel</button>
+                <button class="btn-login" style="width:auto;padding:0.6rem 1.5rem;margin:0;" onclick="savePrimer()">Save Primer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div class="modal-overlay hidden" id="historyModal">
+        <div class="modal" style="max-width:680px;width:96%;max-height:88vh;display:flex;flex-direction:column;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                <h3 style="margin:0;">&#128337; Version History</h3>
+                <button class="btn-outline" style="padding:0.3rem 0.7rem;" onclick="closeHistoryModal()">Close</button>
+            </div>
+            <div id="historyBody" style="overflow-y:auto;flex:1;"></div>
+        </div>
+    </div>
+
+    <!-- Combos Modal -->
+    <div class="modal-overlay hidden" id="combosModal">
+        <div class="modal" style="max-width:800px;width:96%;max-height:90vh;display:flex;flex-direction:column;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                <h3 style="margin:0;">&#9889; Combo Detection</h3>
+                <button class="btn-outline" style="padding:0.3rem 0.7rem;" onclick="closeCombosModal()">Close</button>
+            </div>
+            <p style="font-family:'Crimson Text',serif;font-size:0.88rem;color:var(--text-muted);margin-bottom:0.75rem;">Known infinite / synergistic combos in this deck, powered by Commander Spellbook.</p>
+            <div id="combosBody" style="overflow-y:auto;flex:1;"></div>
+        </div>
+    </div>
+
+    <!-- Recommendations Modal -->
+    <div class="modal-overlay hidden" id="recommendationsModal">
+        <div class="modal" style="max-width:720px;width:96%;max-height:90vh;display:flex;flex-direction:column;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                <h3 style="margin:0;">&#10024; AI Recommendations</h3>
+                <button class="btn-outline" style="padding:0.3rem 0.7rem;" onclick="closeRecommendationsModal()">Close</button>
+            </div>
+            <p style="font-family:'Crimson Text',serif;font-size:0.88rem;color:var(--text-muted);margin-bottom:0.75rem;">Cards that synergize with your commander and strategy, suggested by the AI.</p>
+            <div id="recommendationsBody" style="overflow-y:auto;flex:1;"></div>
+        </div>
+    </div>
+
+    <!-- Add Card to Collection Modal -->
+    <div class="modal-overlay hidden" id="addCardToCollectionModal">
+        <div class="modal" style="max-width:480px;width:96%;">
+            <h3 style="margin-bottom:0.75rem;">&#43; Add Card to Collection</h3>
+            <div style="display:flex;flex-direction:column;gap:0.75rem;">
+                <div>
+                    <label class="form-label">Card Name</label>
+                    <input type="text" id="colCardName" class="login-field" style="margin:0;padding:0.5rem 0.75rem;" placeholder="e.g. Sol Ring" oninput="debouncedColCardSearch()">
+                    <div id="colCardSuggestions" style="display:none;background:var(--bg-panel);border:1px solid var(--border);border-radius:6px;margin-top:2px;max-height:160px;overflow-y:auto;"></div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+                    <div>
+                        <label class="form-label">Quantity</label>
+                        <input type="number" id="colQty" class="login-field" style="margin:0;padding:0.5rem 0.75rem;" value="1" min="1">
+                    </div>
+                    <div>
+                        <label class="form-label">Condition</label>
+                        <select id="colCondition" class="filter-select" style="width:100%;">
+                            <option>NM</option><option>LP</option><option>MP</option><option>HP</option><option>DMG</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                    <input type="checkbox" id="colFoil">
+                    <label for="colFoil" style="font-family:'Cinzel',serif;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.06em;cursor:pointer;">Foil</label>
+                </div>
+            </div>
+            <div class="modal-actions" style="margin-top:1rem;">
+                <button class="btn-outline" onclick="closeAddCardToCollectionModal()">Cancel</button>
+                <button class="btn-login" style="width:auto;padding:0.6rem 1.5rem;margin:0;" onclick="submitAddCollectionCard()">Add to Collection</button>
             </div>
         </div>
     </div>
@@ -3535,6 +3726,7 @@
 
             if (view === 'library') loadLibrary();
             if (view === 'admin') loadAdminPanel();
+            if (view === 'collection') loadCollection();
         }
 
         // === Deck Generation ===
@@ -4034,10 +4226,16 @@
                     <button class="btn-outline" onclick="openCompareModal()">&#8644; Compare</button>
                     <button class="btn-outline" onclick="copyDeck('${deck.id}')">&#10064; Copy</button>
                     <button class="btn-outline" onclick="reAnalyzeDeck('${deck.id}')">&#9879; ${deck.lastAnalysis ? 'Re-Analyze' : 'Analyze with AI'}</button>
+                    <button class="btn-outline" onclick="openRecommendationsModal('${deck.id}')">&#10024; AI Recommendations</button>
+                    <button class="btn-outline" onclick="openCombosModal('${deck.id}')">&#9889; Combos</button>
+                    <button class="btn-outline" onclick="openHistoryModal('${deck.id}')">&#128337; History</button>
+                    <button class="btn-outline" onclick="openPrimerModal('${deck.id}', ${JSON.stringify(deck.primer || '')})">&#128221; Primer</button>
                     <button class="btn-danger" onclick="openDeleteModal('${deck.id}')">&#128293; Banish Deck</button>
                 </div>
 
-                ${cachedAnalysisHtml}`;
+                ${cachedAnalysisHtml}
+                <div id="primerDisplay"></div>
+                <div id="ownershipDisplay"></div>`;
 
             // Fetch and display commander card image.
             // Capture the element reference now so a later deck render can't be
@@ -4084,6 +4282,11 @@
                     });
                 }
             });
+
+            // Post-render: load salt badges, ownership overlay, and primer
+            loadSaltBadges(deck.id);
+            loadOwnershipOverlay(deck.id);
+            renderPrimerDisplay(deck.primer);
         }
 
         // === Delete ===
@@ -5331,6 +5534,490 @@
                 btn.innerHTML = '&#x21bb; Trigger Re-ingestion';
             }
         }
+
+        // ═══════════════════════════════════════════════════════════
+        // FEATURE A: Deck Primer
+        // ═══════════════════════════════════════════════════════════
+
+        let _primerDeckId = null;
+
+        function openPrimerModal(deckId, existingPrimer) {
+            _primerDeckId = deckId;
+            document.getElementById('primerTextarea').value = existingPrimer || '';
+            document.getElementById('primerModal').classList.remove('hidden');
+        }
+
+        function closePrimerModal() {
+            document.getElementById('primerModal').classList.add('hidden');
+            _primerDeckId = null;
+        }
+
+        async function savePrimer() {
+            if (!_primerDeckId) return;
+            const primer = document.getElementById('primerTextarea').value;
+            try {
+                const res = await authFetch(`${API_BASE}/${_primerDeckId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ primer })
+                });
+                if (!res.ok) throw new Error('Save failed');
+                if (currentDetailDeck) currentDetailDeck.primer = primer;
+                closePrimerModal();
+                renderPrimerDisplay(primer);
+                showToast('Primer saved');
+            } catch (err) {
+                showToast(err.message, true);
+            }
+        }
+
+        function renderPrimerDisplay(primer) {
+            const el = document.getElementById('primerDisplay');
+            if (!el) return;
+            if (!primer || !primer.trim()) {
+                el.innerHTML = '';
+                return;
+            }
+            const html = typeof marked !== 'undefined' ? marked.parse(primer) : primer.replace(/\n/g, '<br>');
+            el.innerHTML = `
+                <div class="primer-section">
+                    <h4>&#128221; Strategy Primer</h4>
+                    <div class="primer-body">${html}</div>
+                </div>`;
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // FEATURE B: Combo Detection
+        // ═══════════════════════════════════════════════════════════
+
+        async function openCombosModal(deckId) {
+            document.getElementById('combosModal').classList.remove('hidden');
+            const body = document.getElementById('combosBody');
+            body.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);font-family:\'Crimson Text\',serif;">Scanning for combos…</div>';
+            try {
+                const res = await authFetch(`${API_BASE}/${deckId}/combos`);
+                if (!res.ok) throw new Error('Combo lookup failed');
+                const data = await res.json();
+                const included = data?.results?.included || [];
+                const almost = data?.results?.almostIncluded || [];
+                body.innerHTML = renderCombosHtml(included, almost);
+            } catch (err) {
+                body.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);font-family:'Crimson Text',serif;">${err.message}</div>`;
+            }
+        }
+
+        function closeCombosModal() {
+            document.getElementById('combosModal').classList.add('hidden');
+        }
+
+        function renderCombosHtml(included, almost) {
+            const escH = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            if (included.length === 0 && almost.length === 0)
+                return '<div style="text-align:center;padding:2rem;color:var(--text-muted);font-family:\'Crimson Text\',serif;font-size:1rem;">No known combos found in this deck. Try adding combo pieces!</div>';
+
+            let html = '';
+            if (included.length > 0) {
+                html += `<h4 style="font-family:'Cinzel',serif;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);margin:0 0 0.75rem;">&#9989; ${included.length} Complete Combo${included.length !== 1 ? 's' : ''}</h4>`;
+                html += included.map(c => renderComboCard(c, false)).join('');
+            }
+            if (almost.length > 0) {
+                html += `<h4 style="font-family:'Cinzel',serif;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin:${included.length ? '1.5rem' : '0'} 0 0.75rem;">&#128270; ${almost.length} Almost There (1-2 cards away)</h4>`;
+                html += almost.slice(0, 10).map(c => renderComboCard(c, true)).join('');
+            }
+            return html;
+        }
+
+        function renderComboCard(combo, isAlmost) {
+            const escH = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            const uses = (combo.uses || combo.cards || []).map(u => u.card?.name || u.name || u).filter(Boolean);
+            const result = combo.produces?.map(p => p.feature?.name || p).join(', ') || combo.result || '';
+            const prereqs = combo.prerequisites || combo.requires || [];
+            return `
+                <div style="background:var(--bg-panel);border:1px solid ${isAlmost ? 'var(--border)' : 'rgba(201,168,76,0.3)'};border-radius:8px;padding:0.85rem;margin-bottom:0.65rem;">
+                    <div style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-bottom:0.5rem;">
+                        ${uses.map(n => `<span style="font-family:'Cinzel',serif;font-size:0.72rem;padding:0.15rem 0.5rem;border-radius:4px;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-secondary);">${escH(n)}</span>`).join('')}
+                    </div>
+                    ${result ? `<div style="font-family:'Crimson Text',serif;font-size:0.92rem;color:var(--text-primary);margin-bottom:0.3rem;"><strong>Result:</strong> ${escH(result)}</div>` : ''}
+                    ${prereqs.length ? `<div style="font-family:'Crimson Text',serif;font-size:0.85rem;color:var(--text-muted);">Requires: ${prereqs.map(p => escH(p.template || p)).join('; ')}</div>` : ''}
+                </div>`;
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // FEATURE C: Salt Score Badges
+        // ═══════════════════════════════════════════════════════════
+
+        async function loadSaltBadges(deckId) {
+            try {
+                const res = await authFetch(`${API_BASE}/${deckId}/salt`);
+                if (!res.ok) return;
+                const data = await res.json();
+                const cardMap = {};
+                (data.cards || []).forEach(c => { cardMap[c.name] = c.saltScore; });
+
+                // Inject salt badge into each card name element
+                document.querySelectorAll('[data-cn]').forEach(el => {
+                    const name = el.dataset.cn;
+                    const score = cardMap[name];
+                    if (score == null) return;
+                    const tier = score < 0.5 ? 0 : score < 1.5 ? 1 : score < 2.5 ? 2 : score < 3.5 ? 3 : 4;
+                    if (tier === 0) return;
+                    const badge = document.createElement('span');
+                    badge.className = `salt-badge salt-${tier}`;
+                    badge.title = `Salt: ${score.toFixed(2)}`;
+                    el.parentNode.insertBefore(badge, el.nextSibling);
+                });
+
+                // Show total salt in ownership/stats area
+                const total = data.totalSalt || 0;
+                if (total > 0.5) {
+                    const statsEl = document.querySelector('.detail-stats');
+                    if (statsEl) {
+                        const saltEl = document.createElement('div');
+                        saltEl.className = 'stat-box';
+                        saltEl.innerHTML = `<div class="stat-value" style="font-size:1.3rem;">${total.toFixed(1)}</div><div class="stat-label">&#128165; Salt</div>`;
+                        statsEl.appendChild(saltEl);
+                    }
+                }
+            } catch { /* non-critical */ }
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // FEATURE D: AI Card Recommendations
+        // ═══════════════════════════════════════════════════════════
+
+        async function openRecommendationsModal(deckId) {
+            document.getElementById('recommendationsModal').classList.remove('hidden');
+            const body = document.getElementById('recommendationsBody');
+            body.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);font-family:\'Crimson Text\',serif;">Consulting the AI oracle…</div>';
+            try {
+                const res = await authFetch(`${API_BASE}/${deckId}/recommendations`);
+                if (!res.ok) throw new Error('Recommendation request failed');
+                const recs = await res.json();
+                body.innerHTML = renderRecommendationsHtml(recs, deckId);
+            } catch (err) {
+                body.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);font-family:'Crimson Text',serif;">${err.message}</div>`;
+            }
+        }
+
+        function closeRecommendationsModal() {
+            document.getElementById('recommendationsModal').classList.add('hidden');
+        }
+
+        function renderRecommendationsHtml(recs, deckId) {
+            const escH = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            if (!recs || recs.length === 0)
+                return '<div style="text-align:center;padding:2rem;color:var(--text-muted);font-family:\'Crimson Text\',serif;">No recommendations generated. Try analyzing the deck first.</div>';
+
+            return recs.map(r => `
+                <div class="rec-card" onmouseenter="showCardImage(event,'${r.name.replace(/'/g,"\\'")}');" onmouseleave="hideCardImage();">
+                    <div style="flex:1;min-width:0;">
+                        <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.2rem;">
+                            <span class="rec-name">${escH(r.name)}</span>
+                            <span class="budget-chip ${r.estimatedBudgetTier || 'mid'}">${r.estimatedBudgetTier || 'mid'}</span>
+                            <span style="font-size:0.72rem;padding:0.1rem 0.4rem;border-radius:4px;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-muted);font-family:'Cinzel',serif;">${escH(r.category || '')}</span>
+                        </div>
+                        <div class="rec-reason">${escH(r.reason)}</div>
+                    </div>
+                </div>`).join('');
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // FEATURE E: Deck Version History
+        // ═══════════════════════════════════════════════════════════
+
+        async function openHistoryModal(deckId) {
+            document.getElementById('historyModal').classList.remove('hidden');
+            const body = document.getElementById('historyBody');
+            body.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);font-family:\'Crimson Text\',serif;">Loading history…</div>';
+            try {
+                const res = await authFetch(`${API_BASE}/${deckId}/history`);
+                if (!res.ok) throw new Error('Failed to load history');
+                const entries = await res.json();
+                body.innerHTML = renderHistoryHtml(entries);
+            } catch (err) {
+                body.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);font-family:'Crimson Text',serif;">${err.message}</div>`;
+            }
+        }
+
+        function closeHistoryModal() {
+            document.getElementById('historyModal').classList.add('hidden');
+        }
+
+        function renderHistoryHtml(entries) {
+            const escH = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            if (!entries || entries.length === 0)
+                return '<div style="text-align:center;padding:2rem;color:var(--text-muted);font-family:\'Crimson Text\',serif;">No history yet. Edit this deck to start tracking changes.</div>';
+
+            return entries.map(e => {
+                const d = new Date(e.timestamp);
+                const dateStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+                const timeStr = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+                const addedChips = (e.cardsAdded || []).map(n => `<span class="history-chip added">${escH(n)}</span>`).join('');
+                const removedChips = (e.cardsRemoved || []).map(n => `<span class="history-chip removed">${escH(n)}</span>`).join('');
+                return `
+                    <div class="history-entry">
+                        <div class="history-dot"></div>
+                        <div style="flex:1;">
+                            <div class="history-meta">${escH(dateStr)} at ${escH(timeStr)}</div>
+                            <div class="history-summary">${escH(e.changeSummary)}</div>
+                            ${addedChips || removedChips ? `<div class="history-cards">${addedChips}${removedChips}</div>` : ''}
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // FEATURE F: Personal Card Collection
+        // ═══════════════════════════════════════════════════════════
+
+        const COL_API = '/api/collection';
+        let _colSkip = 0;
+        const COL_PAGE = 50;
+        let _colTotal = 0;
+        let _colSearchTimer = null;
+
+        function debouncedCollectionSearch() {
+            clearTimeout(_colSearchTimer);
+            _colSearchTimer = setTimeout(() => { _colSkip = 0; loadCollection(); }, 350);
+        }
+
+        async function loadCollection(append = false) {
+            if (!append) _colSkip = 0;
+            const search = document.getElementById('collectionSearch')?.value || '';
+            try {
+                const res = await authFetch(`${COL_API}?search=${encodeURIComponent(search)}&skip=${_colSkip}&limit=${COL_PAGE}`);
+                if (!res.ok) throw new Error('Failed to load collection');
+                const data = await res.json();
+                _colTotal = data.total;
+                const tbody = document.getElementById('collectionTableBody');
+                if (!tbody) return;
+                if (!append) tbody.innerHTML = '';
+                if (data.items.length === 0 && !append) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;font-family:\'Crimson Text\',serif;">No cards in collection yet. Add some!</td></tr>';
+                } else {
+                    tbody.insertAdjacentHTML('beforeend', data.items.map(renderCollectionRow).join(''));
+                }
+                _colSkip += data.items.length;
+                const lmw = document.getElementById('collectionLoadMoreWrap');
+                if (lmw) lmw.style.display = _colSkip < _colTotal ? '' : 'none';
+                const countEl = document.getElementById('collectionCount');
+                if (countEl) countEl.textContent = `${_colTotal.toLocaleString()} card${_colTotal !== 1 ? 's' : ''}`;
+            } catch (err) {
+                showToast(err.message, true);
+            }
+        }
+
+        function loadMoreCollection() { loadCollection(true); }
+
+        function renderCollectionRow(e) {
+            const escH = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            return `
+                <tr>
+                    <td><span class="card-name-text" data-cn="${e.cardName.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" style="cursor:default;">${escH(e.cardName)}</span></td>
+                    <td>${e.quantity}</td>
+                    <td style="color:var(--text-muted);">${escH(e.setCode || '—')}</td>
+                    <td>${e.foil ? '<span style="color:var(--gold);font-family:\'Cinzel\',serif;font-size:0.75rem;">Foil</span>' : '—'}</td>
+                    <td style="color:var(--text-muted);">${escH(e.condition || 'NM')}</td>
+                    <td><button class="btn-danger" style="padding:0.2rem 0.5rem;font-size:0.78rem;" onclick="deleteCollectionCard('${e.id}')">&#128465;</button></td>
+                </tr>`;
+        }
+
+        async function deleteCollectionCard(id) {
+            try {
+                const res = await authFetch(`${COL_API}/${id}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error('Delete failed');
+                _colSkip = 0;
+                loadCollection();
+                showToast('Card removed from collection');
+            } catch (err) {
+                showToast(err.message, true);
+            }
+        }
+
+        function showCollectionTab(tab) {
+            document.getElementById('colPanelCards').style.display  = tab === 'cards' ? '' : 'none';
+            document.getElementById('colPanelBuildable').style.display = tab === 'buildable' ? '' : 'none';
+            document.getElementById('colTabCards').classList.toggle('active', tab === 'cards');
+            document.getElementById('colTabBuildable').classList.toggle('active', tab === 'buildable');
+            if (tab === 'buildable') loadBuildableDecks();
+        }
+
+        async function loadBuildableDecks() {
+            const grid = document.getElementById('buildableGrid');
+            if (!grid) return;
+            grid.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);font-family:\'Crimson Text\',serif;">Analysing your collection…</div>';
+            try {
+                const res = await authFetch(`${COL_API}/buildable-decks`);
+                if (!res.ok) throw new Error('Failed to load buildable decks');
+                const decks = await res.json();
+                if (decks.length === 0) {
+                    grid.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);font-family:\'Crimson Text\',serif;">No decks to analyse yet. Add cards to your library and collection.</div>';
+                    return;
+                }
+                grid.innerHTML = decks.map(renderBuildableCard).join('');
+            } catch (err) {
+                grid.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);font-family:'Crimson Text',serif;">${err.message}</div>`;
+            }
+        }
+
+        function renderBuildableCard(d) {
+            const escH = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            const pct = Math.round(d.completionPct || 0);
+            const colors = (d.colors || []).map(c => `<span class="mana-pip ${c}">${c}</span>`).join('');
+            return `
+                <div class="deck-card buildable-card" style="cursor:pointer;" onclick="viewDeckDetail('${d.deckId}')">
+                    <div class="deck-card-colors">${colors}</div>
+                    <div class="deck-card-name">${escH(d.deckName)}</div>
+                    <div style="color:var(--text-muted);font-size:0.85rem;margin-bottom:0.5rem;">${escH(d.commander)}</div>
+                    <div class="buildable-pct">${pct}%</div>
+                    <div style="font-family:'Crimson Text',serif;font-size:0.82rem;color:var(--text-muted);margin-bottom:0.4rem;">
+                        ${d.ownedCount} / ${d.totalCards} cards owned
+                    </div>
+                    <div class="completion-bar"><div class="completion-bar-fill" style="width:${pct}%;"></div></div>
+                    ${d.missingCount > 0 ? `<div style="font-family:'Crimson Text',serif;font-size:0.8rem;color:var(--text-muted);margin-top:0.4rem;">Buy ${d.missingCount} missing · ~$${(d.acquisitionCost||0).toFixed(0)}</div>` : '<div style="color:#81c784;font-family:\'Cinzel\',serif;font-size:0.75rem;margin-top:0.4rem;">&#10003; Complete!</div>'}
+                </div>`;
+        }
+
+        function openAddCardToCollectionModal() {
+            document.getElementById('addCardToCollectionModal').classList.remove('hidden');
+            document.getElementById('colCardName').value = '';
+            document.getElementById('colQty').value = '1';
+            document.getElementById('colFoil').checked = false;
+            document.getElementById('colCardSuggestions').style.display = 'none';
+        }
+
+        function closeAddCardToCollectionModal() {
+            document.getElementById('addCardToCollectionModal').classList.add('hidden');
+        }
+
+        let _colCardSearchTimer = null;
+        function debouncedColCardSearch() {
+            clearTimeout(_colCardSearchTimer);
+            _colCardSearchTimer = setTimeout(searchColCards, 350);
+        }
+
+        async function searchColCards() {
+            const query = document.getElementById('colCardName').value.trim();
+            const sugEl = document.getElementById('colCardSuggestions');
+            if (query.length < 2) { sugEl.style.display = 'none'; return; }
+            try {
+                const res = await fetch(`https://api.scryfall.com/cards/autocomplete?q=${encodeURIComponent(query)}`);
+                const data = await res.json();
+                const names = (data.data || []).slice(0, 8);
+                if (names.length === 0) { sugEl.style.display = 'none'; return; }
+                sugEl.style.display = '';
+                sugEl.innerHTML = names.map(n =>
+                    `<div style="padding:0.4rem 0.75rem;cursor:pointer;font-family:'Crimson Text',serif;font-size:0.95rem;"
+                         onmousedown="document.getElementById('colCardName').value='${n.replace(/'/g,'\\\'').replace(/"/g,'&quot;')}';document.getElementById('colCardSuggestions').style.display='none';">${n}</div>`
+                ).join('');
+            } catch { sugEl.style.display = 'none'; }
+        }
+
+        async function submitAddCollectionCard() {
+            const cardName = document.getElementById('colCardName').value.trim();
+            if (!cardName) { showToast('Enter a card name', true); return; }
+            const qty  = parseInt(document.getElementById('colQty').value) || 1;
+            const cond = document.getElementById('colCondition').value;
+            const foil = document.getElementById('colFoil').checked;
+            try {
+                const res = await authFetch(COL_API, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cardName, quantity: qty, condition: cond, foil })
+                });
+                if (!res.ok) throw new Error('Failed to add card');
+                closeAddCardToCollectionModal();
+                _colSkip = 0;
+                loadCollection();
+                showToast(`${cardName} added to collection`);
+            } catch (err) {
+                showToast(err.message, true);
+            }
+        }
+
+        async function importCollectionCsv(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const res = await authFetch(`${COL_API}/import/csv`, { method: 'POST', body: formData });
+                if (!res.ok) throw new Error('Import failed');
+                const data = await res.json();
+                _colSkip = 0;
+                loadCollection();
+                showToast(`Imported ${data.imported} cards`);
+            } catch (err) {
+                showToast(err.message, true);
+            } finally {
+                input.value = '';
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // FEATURE G: Collection Ownership Overlay
+        // ═══════════════════════════════════════════════════════════
+
+        async function loadOwnershipOverlay(deckId) {
+            try {
+                const res = await authFetch(`${API_BASE}/${deckId}/ownership`);
+                if (!res.ok) return;
+                const data = await res.json();
+                renderOwnershipOverlay(data);
+            } catch { /* non-critical */ }
+        }
+
+        function renderOwnershipOverlay(data) {
+            const el = document.getElementById('ownershipDisplay');
+            if (!el) return;
+            if (data.totalCards === 0) return;
+            const pct = Math.round(data.completionPct || 0);
+            const escH = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+            let missingHtml = '';
+            if (data.missingCards && data.missingCards.length > 0) {
+                missingHtml = `
+                    <details style="margin-top:0.75rem;">
+                        <summary style="cursor:pointer;font-family:'Cinzel',serif;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold-light);">
+                            ${data.missingCards.length} Missing Card${data.missingCards.length !== 1 ? 's' : ''} · ~$${(data.shoppingListTotal||0).toFixed(2)} to complete
+                            <button onclick="copyShoppingList(event)" style="margin-left:0.75rem;padding:0.1rem 0.5rem;font-size:0.7rem;vertical-align:middle;">&#128203; Copy List</button>
+                        </summary>
+                        <div style="margin-top:0.5rem;display:flex;flex-direction:column;gap:0.2rem;">
+                            ${data.missingCards.map(m => `
+                                <div style="display:flex;justify-content:space-between;font-family:'Crimson Text',serif;font-size:0.9rem;padding:0.2rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+                                    <span>${escH(m.name)} ×${m.quantity}</span>
+                                    <span style="color:var(--text-muted);">$${(m.estimatedPrice||0).toFixed(2)} ea</span>
+                                </div>`).join('')}
+                        </div>
+                    </details>`;
+            }
+
+            el.innerHTML = `
+                <div class="ownership-bar">
+                    <div>
+                        <div style="font-family:'Cinzel',serif;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:0.25rem;">Collection Ownership</div>
+                        <div style="font-family:'Cinzel',serif;font-size:1.2rem;color:var(--gold);">${data.ownedCount} / ${data.totalCards} cards <span style="color:var(--text-muted);font-size:0.9rem;">(${pct}%)</span></div>
+                    </div>
+                    <div class="ownership-progress" style="min-width:140px;">
+                        <div class="ownership-progress-fill" style="width:${pct}%;"></div>
+                    </div>
+                </div>
+                ${missingHtml}`;
+
+            // Store missing list for copy function
+            el._missingCards = data.missingCards;
+        }
+
+        function copyShoppingList(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            const el = document.getElementById('ownershipDisplay');
+            const missing = el?._missingCards || [];
+            if (missing.length === 0) return;
+            const text = missing.map(m => `${m.quantity}x ${m.name}`).join('\n');
+            navigator.clipboard.writeText(text).then(() => showToast('Shopping list copied!')).catch(() => showToast('Copy failed', true));
+        }
+
     </script>
     <footer style="text-align:center; padding:2.5rem 1rem; color:#f5c518; font-size:1.5rem; font-family:'Cinzel',serif; font-weight:700; border-top:1px solid rgba(212,179,109,0.15); margin-top:2rem;">
         <span id="appVersion"></span>
