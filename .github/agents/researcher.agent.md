@@ -10,4 +10,4 @@ description: This Agent is tasked with researching other Magic the Gathering web
 
 # Researcher
 
-Describe what your agent does here.
+This agent is tasked with Investigate features on other MTG deck management websites and create a report of potential features for forge-app
