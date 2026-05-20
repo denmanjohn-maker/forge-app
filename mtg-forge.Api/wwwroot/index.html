@@ -21,6 +21,7 @@
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&family=MedievalSharp&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
     <style>
         :root {
             color-scheme: dark;
@@ -2800,7 +2801,7 @@
                 <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
                     <button class="btn-outline" onclick="openAddCardToCollectionModal()">&#43; Add Card</button>
                     <button class="btn-outline" onclick="document.getElementById('collectionImportInput').click()">&#8593; Import CSV</button>
-                    <a id="collectionExportLink" class="btn-outline" href="/api/collection/export/csv" style="text-decoration:none;display:inline-flex;align-items:center;padding:0.45rem 0.9rem;border-radius:6px;cursor:pointer;">&#8595; Export CSV</a>
+                    <button class="btn-outline" onclick="exportCollectionCsv()">&#8595; Export CSV</button>
                 </div>
                 <input type="file" id="collectionImportInput" accept=".csv" style="display:none;" onchange="importCollectionCsv(this)">
             </div>
@@ -5578,7 +5579,8 @@
                 el.innerHTML = '';
                 return;
             }
-            const html = typeof marked !== 'undefined' ? marked.parse(primer) : primer.replace(/\n/g, '<br>');
+            const rawHtml = typeof marked !== 'undefined' ? marked.parse(primer) : primer.replace(/\n/g, '<br>');
+            const html = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(rawHtml) : rawHtml;
             el.innerHTML = `
                 <div class="primer-section">
                     <h4>&#128221; Strategy Primer</h4>
@@ -5930,6 +5932,24 @@
                 _colSkip = 0;
                 loadCollection();
                 showToast(`${cardName} added to collection`);
+            } catch (err) {
+                showToast(err.message, true);
+            }
+        }
+
+        async function exportCollectionCsv() {
+            try {
+                const res = await authFetch(`${COL_API}/export/csv`);
+                if (!res.ok) throw new Error('Export failed');
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'my-collection.csv';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
             } catch (err) {
                 showToast(err.message, true);
             }

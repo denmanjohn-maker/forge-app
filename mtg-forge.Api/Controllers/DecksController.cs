@@ -706,7 +706,6 @@ public class DecksController : ControllerBase
                 return Ok(new { results = new { included = Array.Empty<object>(), almostIncluded = Array.Empty<object>() } });
 
             var body = await response.Content.ReadAsStringAsync();
-            using var doc = System.Text.Json.JsonDocument.Parse(body);
             return Content(body, "application/json");
         }
         catch (Exception ex)

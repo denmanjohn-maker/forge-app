@@ -35,7 +35,7 @@ public class CollectionService
         var filter = builder.Eq(e => e.UserId, userId);
 
         if (!string.IsNullOrWhiteSpace(search))
-            filter &= builder.Regex(e => e.CardName, new MongoDB.Bson.BsonRegularExpression(search, "i"));
+            filter &= builder.Regex(e => e.CardName, new MongoDB.Bson.BsonRegularExpression(System.Text.RegularExpressions.Regex.Escape(search), "i"));
 
         var total = (int)await _collection.CountDocumentsAsync(filter);
         var items = await _collection.Find(filter)
@@ -74,10 +74,11 @@ public class CollectionService
 
     public async Task<CollectionEntry> AddAsync(string userId, CollectionAddRequest req)
     {
-        // Merge into existing entry for same card+foil+condition if present
+        var normalizedName = req.CardName.Trim();
+        // Merge into existing entry for same card+foil+condition if present (case-insensitive name match)
         var existing = await _collection.Find(
             e => e.UserId == userId &&
-                 e.CardName == req.CardName &&
+                 e.CardName.ToLower() == normalizedName.ToLower() &&
                  e.Foil == req.Foil &&
                  e.Condition == req.Condition)
             .FirstOrDefaultAsync();
@@ -94,7 +95,7 @@ public class CollectionService
         var entry = new CollectionEntry
         {
             UserId = userId,
-            CardName = req.CardName,
+            CardName = normalizedName,
             SetCode = req.SetCode,
             Quantity = req.Quantity,
             Foil = req.Foil,
@@ -110,7 +111,7 @@ public class CollectionService
         var updates = new List<UpdateDefinition<CollectionEntry>>();
         var builder = Builders<CollectionEntry>.Update;
 
-        if (req.Quantity.HasValue) updates.Add(builder.Set(e => e.Quantity, req.Quantity.Value));
+        if (req.Quantity.HasValue) updates.Add(builder.Set(e => e.Quantity, Math.Max(1, req.Quantity.Value)));
         if (req.Condition != null) updates.Add(builder.Set(e => e.Condition, req.Condition));
         if (req.Foil.HasValue)     updates.Add(builder.Set(e => e.Foil, req.Foil.Value));
         if (req.SetCode != null)   updates.Add(builder.Set(e => e.SetCode, req.SetCode));

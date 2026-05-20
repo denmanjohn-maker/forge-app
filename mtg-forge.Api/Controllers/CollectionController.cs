@@ -43,7 +43,7 @@ public class CollectionController : ControllerBase
 
         req.Quantity = Math.Max(1, req.Quantity);
         var entry = await _collectionService.AddAsync(GetUserId(), req);
-        return CreatedAtAction(nameof(GetCollection), entry);
+        return Ok(entry);
     }
 
     [HttpPatch("{id}")]

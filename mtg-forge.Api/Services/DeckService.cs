@@ -135,15 +135,20 @@ public class DeckService
             var existing = await GetByIdAsync(id);
             if (existing != null && userId != null)
             {
-                var oldNames = existing.Cards.Select(c => c.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-                var newNames = req.Cards.Select(c => c.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-                var added = newNames.Except(oldNames).ToList();
-                var removed = oldNames.Except(newNames).ToList();
-                if (added.Count > 0 || removed.Count > 0)
+                var oldMap = existing.Cards.ToDictionary(c => c.Name, c => c.Quantity, StringComparer.OrdinalIgnoreCase);
+                var newMap = req.Cards.ToDictionary(c => c.Name, c => c.Quantity, StringComparer.OrdinalIgnoreCase);
+                var added = newMap.Keys.Except(oldMap.Keys, StringComparer.OrdinalIgnoreCase).ToList();
+                var removed = oldMap.Keys.Except(newMap.Keys, StringComparer.OrdinalIgnoreCase).ToList();
+                var qtyChanged = newMap.Keys
+                    .Where(n => oldMap.ContainsKey(n) && oldMap[n] != newMap[n])
+                    .Select(n => $"{n} ({oldMap[n]}→{newMap[n]})")
+                    .ToList();
+                if (added.Count > 0 || removed.Count > 0 || qtyChanged.Count > 0)
                 {
                     var parts = new List<string>();
                     if (added.Count > 0) parts.Add($"Added {string.Join(", ", added.Take(5))}{(added.Count > 5 ? $" +{added.Count - 5} more" : "")}");
                     if (removed.Count > 0) parts.Add($"Removed {string.Join(", ", removed.Take(5))}{(removed.Count > 5 ? $" +{removed.Count - 5} more" : "")}");
+                    if (qtyChanged.Count > 0) parts.Add($"Qty changed: {string.Join(", ", qtyChanged.Take(5))}{(qtyChanged.Count > 5 ? $" +{qtyChanged.Count - 5} more" : "")}");
 
                     await _historyCollection.InsertOneAsync(new DeckHistoryEntry
                     {

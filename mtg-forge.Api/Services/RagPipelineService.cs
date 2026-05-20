@@ -506,9 +506,16 @@ public class RagPipelineService : IDeckGenerationService
             var recommendations = JsonSerializer.Deserialize<List<CardRecommendation>>(jsonContent, JsonOpts)
                 ?? new List<CardRecommendation>();
 
-            activity?.SetTag("mtg.recommendations.count", recommendations.Count);
+            var filtered = recommendations
+                .Where(r => !string.IsNullOrWhiteSpace(r.Name) && !existingNames.Contains(r.Name))
+                .GroupBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(g => g.First())
+                .Take(12)
+                .ToList();
+
+            activity?.SetTag("mtg.recommendations.count", filtered.Count);
             activity?.SetStatus(ActivityStatusCode.Ok);
-            return recommendations;
+            return filtered;
         }
         catch (Exception ex)
         {
