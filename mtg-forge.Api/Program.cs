@@ -366,7 +366,15 @@ using (var scope = app.Services.CreateScope())
 
     var userService = scope.ServiceProvider.GetRequiredService<UserService>();
     var authService = scope.ServiceProvider.GetRequiredService<AuthService>();
-    await userService.EnsureIndexesAsync();
+    try
+    {
+        await userService.EnsureIndexesAsync();
+    }
+    catch (Exception ex)
+    {
+        var startupLogger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        startupLogger.LogWarning(ex, "Failed to create MongoDB indexes at startup. Indexes may already exist or MongoDB may be temporarily unavailable.");
+    }
 
     var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD");
     var adminUsername = builder.Configuration["AdminUsername"] ?? "admin";
