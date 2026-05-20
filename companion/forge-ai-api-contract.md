@@ -2,7 +2,7 @@
 
 Quick reference for agents and developers working in forge-app. For the full source, see `companion/forge-ai-api/`.
 
-> **AI Provider:** forge-ai-api uses **DeepInfra** (`meta-llama/Llama-3.3-70B-Instruct`) for LLM chat and `BAAI/bge-m3` (1024-dim) for embeddings in production. Local development uses Ollama.
+> **AI Provider:** forge-ai-api uses **DeepInfra** (`meta-llama/Llama-3.3-70B-Instruct`) for LLM chat and `BAAI/bge-m3` (1024-dim) for embeddings. All environments (development and production) run on Railway with DeepInfra — Ollama is not used.
 
 ---
 
@@ -10,8 +10,7 @@ Quick reference for agents and developers working in forge-app. For the full sou
 
 | Environment | Base URL |
 |-------------|----------|
-| Railway (production) | `http://mtg-forge-ai.railway.internal:8080` |
-| Local Docker | `http://localhost:5001` |
+| Railway (all environments) | `http://mtg-forge-ai.railway.internal:8080` |
 
 forge-app configures this via `RagPipeline__BaseUrl`.
 
@@ -179,7 +178,7 @@ When `POST /api/decks/generate` is called:
 
 | Variable | Production value | Notes |
 |----------|-----------------|-------|
-| `LLM__Provider` | `openai` | `"openai"` = DeepInfra; `"ollama"` = local |
+| `LLM__Provider` | `openai` | Always `"openai"` (DeepInfra). `"ollama"` mode exists in the service but is not used. |
 | `LLM__ApiKey` | DeepInfra API key | |
 | `LLM__BaseUrl` | `https://api.deepinfra.com/v1/openai` | Any OpenAI-compatible endpoint |
 | `LLM__Model` | `meta-llama/Llama-3.3-70B-Instruct` | |

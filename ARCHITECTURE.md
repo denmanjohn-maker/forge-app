@@ -183,8 +183,8 @@ See above.
 The RAG pipeline service. Responsible for card ingestion from Scryfall into Qdrant (vector store), semantic card search, and LLM-based deck generation. forge-app always calls this for deck generation via `RagPipelineService`. The source is included as a git submodule at `companion/forge-ai-api/`; a concise API contract is at `companion/forge-ai-api-contract.md`.
 
 - **Port:** 8080 (Railway) / mapped to 5001 locally
-- **Databases:** MongoDB (cards, saved decks in `mtgforge` db) + Qdrant (1024-dimensional vectors using DeepInfra `BAAI/bge-m3` in production; 384-dim `all-minilm` for local Ollama)
-- **LLM backends:** Ollama (local) or any OpenAI-compatible API — DeepInfra (`meta-llama/Llama-3.3-70B-Instruct`) in production
+- **Databases:** MongoDB (cards, saved decks in `mtgforge` db) + Qdrant (1024-dimensional vectors using DeepInfra `BAAI/bge-m3`, 1024-dim)
+- **LLM backends:** DeepInfra (`meta-llama/Llama-3.3-70B-Instruct`) via OpenAI-compatible API. Ollama (`LLM__Provider=ollama`) is supported by the service but not used — all environments run on Railway with DeepInfra.
 
 ### forge-observability (`../forge-observability`)
 The shared observability stack. Collects telemetry from both application services.
@@ -206,7 +206,7 @@ The shared observability stack. Collects telemetry from both application service
 
 `RagPipelineService` in this repo makes a single `POST /api/decks/generate` to forge-ai-api and receives a complete `DeckConfiguration` JSON response. After that call returns, this service overlays local prices (`PricingService.ApplyPricesAsync`) and persists the deck to its own MongoDB.
 
-> **Note:** When `LlmProvider = Rag`, this service also calls DeepInfra **directly** (not through forge-ai-api) for deck analysis, budget replacement suggestions, and CSV import descriptions. Those calls use `RagPipeline:LlmBaseUrl` (`https://api.deepinfra.com/v1/openai`) and `RagPipeline:LlmApiKey`.
+> **Note:** This service also calls DeepInfra **directly** (not through forge-ai-api) for deck analysis, budget replacement suggestions, and CSV import descriptions. Those calls use `RagPipeline:LlmBaseUrl` (`https://api.deepinfra.com/v1/openai`) and `RagPipeline:LlmApiKey`.
 
 ### forge-app → forge-observability
 
@@ -230,7 +230,7 @@ Client
     → RagPipelineService
       → POST /api/decks/generate    (forge-ai-api :8080)
           → CardSearchService → Qdrant (200-card semantic pool)
-          → DeckGenerationService → ILlmService → Ollama (local) or DeepInfra (production)
+          → DeckGenerationService → ILlmService → DeepInfra (OpenAI-compatible)
           → MongoService (save in forge-ai-api MongoDB)
         ← DeckConfiguration JSON
       → PricingService.ApplyPricesAsync (PostgreSQL pricing cache)
