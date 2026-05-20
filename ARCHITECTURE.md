@@ -170,7 +170,7 @@ Streaming-parses large MTGJSON payloads (printings then prices) using state-mach
 
 - **Port:** 5000
 - **Databases:** MongoDB (decks, users, groups collections in `mtgdeckforge` db) + PostgreSQL (ASP.NET Identity tables + MTGJSON pricing cache in `AppDbContext`)
-- **LLM mode:** Controlled by `LlmProvider` config key. `Claude` calls the Anthropic API directly via `ClaudeService`. `Rag` proxies deck generation to **forge-ai-api** via `RagPipelineService`.
+- **LLM mode:** `RagPipelineService` is the only registered `IDeckGenerationService`. It proxies deck generation to **forge-ai-api** and calls DeepInfra directly for analysis. `ClaudeService` (Anthropic) exists in the codebase but is not registered. There is no runtime `LlmProvider` switch.
 
 ---
 
@@ -179,12 +179,12 @@ Streaming-parses large MTGJSON payloads (printings then prices) using state-mach
 ### forge-app (`this repo` / `../forge-app`)
 See above.
 
-### forge-ai-api (`../forge-ai-api`)
-The RAG pipeline service. Responsible for card ingestion from Scryfall into Qdrant (vector store), semantic card search, and LLM-based deck generation. forge-app calls this when `LlmProvider = Rag`.
+### forge-ai-api (`companion/forge-ai-api/` submodule · also at `../forge-ai-api`)
+The RAG pipeline service. Responsible for card ingestion from Scryfall into Qdrant (vector store), semantic card search, and LLM-based deck generation. forge-app always calls this for deck generation via `RagPipelineService`. The source is included as a git submodule at `companion/forge-ai-api/`; a concise API contract is at `companion/forge-ai-api-contract.md`.
 
 - **Port:** 8080 (Railway) / mapped to 5001 locally
 - **Databases:** MongoDB (cards, saved decks in `mtgforge` db) + Qdrant (1024-dimensional vectors using DeepInfra `BAAI/bge-m3` in production; 384-dim `all-minilm` for local Ollama)
-- **LLM backends:** Ollama (local) or any OpenAI-compatible API — DeepInfra in production
+- **LLM backends:** Ollama (local) or any OpenAI-compatible API — DeepInfra (`meta-llama/Llama-3.3-70B-Instruct`) in production
 
 ### forge-observability (`../forge-observability`)
 The shared observability stack. Collects telemetry from both application services.
