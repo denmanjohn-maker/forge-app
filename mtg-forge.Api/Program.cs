@@ -393,19 +393,27 @@ using (var scope = app.Services.CreateScope())
 
     if (!string.IsNullOrEmpty(adminPassword))
     {
-        await userService.SeedAdminUserAsync(authService.HashPassword(adminPassword), adminUsername, adminDisplayName);
-
-        var identityAdmin = await userManager.FindByNameAsync(adminUsername);
-        if (identityAdmin is null)
+        var seedLogger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        try
         {
-            identityAdmin = new ApplicationUser
+            await userService.SeedAdminUserAsync(authService.HashPassword(adminPassword), adminUsername, adminDisplayName);
+
+            var identityAdmin = await userManager.FindByNameAsync(adminUsername);
+            if (identityAdmin is null)
             {
-                UserName = adminUsername,
-                DisplayName = adminDisplayName
-            };
-            var createResult = await userManager.CreateAsync(identityAdmin, adminPassword);
-            if (createResult.Succeeded)
-                await userManager.AddToRoleAsync(identityAdmin, "Admin");
+                identityAdmin = new ApplicationUser
+                {
+                    UserName = adminUsername,
+                    DisplayName = adminDisplayName
+                };
+                var createResult = await userManager.CreateAsync(identityAdmin, adminPassword);
+                if (createResult.Succeeded)
+                    await userManager.AddToRoleAsync(identityAdmin, "Admin");
+            }
+        }
+        catch (Exception ex)
+        {
+            seedLogger.LogWarning(ex, "Failed to seed admin user at startup. MongoDB may be temporarily unavailable.");
         }
     }
 }
