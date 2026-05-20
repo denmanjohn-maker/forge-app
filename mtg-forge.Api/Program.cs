@@ -82,11 +82,15 @@ builder.WebHost.ConfigureKestrel(options =>
     options.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(2);
 });
 
+// In-memory cache (salt scores, etc.)
+builder.Services.AddMemoryCache();
+
 // MongoDB
 builder.Services.Configure<MongoDbSettings>(
     builder.Configuration.GetSection("MongoDb"));
 builder.Services.AddSingleton<DeckService>();
 builder.Services.AddSingleton<GenerationJobStore>();
+builder.Services.AddSingleton<CollectionService>();
 
 // RAG pipeline (mtg-forge-ai + Together.ai)
 builder.Services.Configure<RagPipelineSettings>(
@@ -94,6 +98,9 @@ builder.Services.Configure<RagPipelineSettings>(
 builder.Services.AddHttpClient<RagPipelineService>();
 builder.Services.AddTransient<IDeckGenerationService, RagPipelineService>();
 Log.Information("LLM provider: Rag (mtg-forge-ai + Together.ai)");
+
+// Salt score service (caches EDHREC data)
+builder.Services.AddSingleton<SaltScoreService>();
 
 // Scryfall
 builder.Services.AddHttpClient<ScryfallService>();

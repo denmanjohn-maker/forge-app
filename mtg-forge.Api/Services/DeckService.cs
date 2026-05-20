@@ -8,12 +8,14 @@ namespace MtgForge.Api.Services;
 public class DeckService
 {
     private readonly IMongoCollection<DeckConfiguration> _decksCollection;
+    private readonly IMongoCollection<DeckHistoryEntry> _historyCollection;
 
     public DeckService(IOptions<MongoDbSettings> settings)
     {
         var mongoClient = new MongoClient(settings.Value.ConnectionString);
         var mongoDatabase = mongoClient.GetDatabase(settings.Value.DatabaseName);
         _decksCollection = mongoDatabase.GetCollection<DeckConfiguration>(settings.Value.DecksCollectionName);
+        _historyCollection = mongoDatabase.GetCollection<DeckHistoryEntry>(settings.Value.DeckHistoryCollectionName);
         EnsureIndexes();
     }
 
@@ -27,6 +29,14 @@ public class DeckService
             new(Builders<DeckConfiguration>.IndexKeys.Descending(d => d.CreatedAt)),
         };
         _decksCollection.Indexes.CreateMany(indexes);
+
+        _historyCollection.Indexes.CreateMany(new[]
+        {
+            new CreateIndexModel<DeckHistoryEntry>(
+                Builders<DeckHistoryEntry>.IndexKeys
+                    .Ascending(h => h.DeckId)
+                    .Descending(h => h.Timestamp))
+        });
     }
 
     public async Task<List<DeckConfiguration>> GetAllAsync() =>
@@ -103,7 +113,7 @@ public class DeckService
         return deck;
     }
 
-    public async Task<bool> UpdateAsync(string id, DeckUpdateRequest req)
+    public async Task<bool> UpdateAsync(string id, DeckUpdateRequest req, string? userId = null)
     {
         var updates = new List<UpdateDefinition<DeckConfiguration>>();
         var builder = Builders<DeckConfiguration>.Update;
@@ -118,8 +128,35 @@ public class DeckService
         if (req.Colors != null)          updates.Add(builder.Set(d => d.Colors, req.Colors));
         if (req.Tags != null)            updates.Add(builder.Set(d => d.Tags, req.Tags));
         if (req.IsFavorite.HasValue)     updates.Add(builder.Set(d => d.IsFavorite, req.IsFavorite.Value));
+        if (req.Primer != null)          updates.Add(builder.Set(d => d.Primer, req.Primer));
         if (req.Cards != null)
         {
+            // Record history entry for card changes
+            var existing = await GetByIdAsync(id);
+            if (existing != null && userId != null)
+            {
+                var oldNames = existing.Cards.Select(c => c.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                var newNames = req.Cards.Select(c => c.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                var added = newNames.Except(oldNames).ToList();
+                var removed = oldNames.Except(newNames).ToList();
+                if (added.Count > 0 || removed.Count > 0)
+                {
+                    var parts = new List<string>();
+                    if (added.Count > 0) parts.Add($"Added {string.Join(", ", added.Take(5))}{(added.Count > 5 ? $" +{added.Count - 5} more" : "")}");
+                    if (removed.Count > 0) parts.Add($"Removed {string.Join(", ", removed.Take(5))}{(removed.Count > 5 ? $" +{removed.Count - 5} more" : "")}");
+
+                    await _historyCollection.InsertOneAsync(new DeckHistoryEntry
+                    {
+                        DeckId = id,
+                        UserId = userId,
+                        Timestamp = DateTime.UtcNow,
+                        ChangeSummary = string.Join(". ", parts),
+                        CardsAdded = added,
+                        CardsRemoved = removed
+                    });
+                }
+            }
+
             updates.Add(builder.Set(d => d.Cards, req.Cards));
             updates.Add(builder.Set(d => d.TotalCards, req.Cards.Sum(c => c.Quantity)));
             updates.Add(builder.Set(d => d.EstimatedTotalPrice, req.Cards.Sum(c => c.EstimatedPrice * c.Quantity)));
@@ -133,6 +170,15 @@ public class DeckService
             d => d.Id == id,
             builder.Combine(updates));
         return result.ModifiedCount > 0;
+    }
+
+    public async Task<List<DeckHistoryEntry>> GetHistoryAsync(string deckId, int limit = 25)
+    {
+        return await _historyCollection
+            .Find(h => h.DeckId == deckId)
+            .SortByDescending(h => h.Timestamp)
+            .Limit(limit)
+            .ToListAsync();
     }
 
     public async Task<bool> UpdateAnalysisAsync(string id, DeckAnalysis analysis)

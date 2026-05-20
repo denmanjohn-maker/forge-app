@@ -440,6 +440,85 @@ public class RagPipelineService : IDeckGenerationService
         }
     }
 
+    // ─── Card Recommendations ─────────────────────────────────────────────────
+
+    public async Task<List<CardRecommendation>> GetCardRecommendationsAsync(DeckConfiguration deck)
+    {
+        using var activity = MtgForgeActivitySource.Instance.StartActivity(
+            "gen_ai.card_recommendations",
+            ActivityKind.Client);
+
+        activity?.SetTag(MtgForgeActivitySource.GenAiSystem, MtgForgeActivitySource.SystemDeepInfra);
+        activity?.SetTag(MtgForgeActivitySource.GenAiOperationName, "card_recommendations");
+        activity?.SetTag(MtgForgeActivitySource.GenAiRequestModel, _settings.Model);
+        activity?.SetTag(MtgForgeActivitySource.MtgDeckId, deck.Id);
+        SetServerAttributes(activity, _settings.LlmBaseUrl);
+
+        var existingNames = deck.Cards.Select(c => c.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var cardsByCategory = deck.Cards
+            .GroupBy(c => c.Category)
+            .Select(g => $"  {g.Key}: {string.Join(", ", g.Take(8).Select(c => c.Name))}");
+
+        var systemPrompt = """
+            You are an expert Magic: The Gathering deckbuilder. Suggest synergistic cards to add to a deck.
+            Always respond with a valid JSON array only — no markdown, no explanation outside JSON.
+            """;
+
+        var schema = """
+            [
+              {
+                "name": "exact card name",
+                "reason": "1-2 sentence explanation of synergy",
+                "category": "one of: Creature, Instant, Sorcery, Enchantment, Artifact, Land, Planeswalker, Ramp, Removal, Card Draw",
+                "estimatedBudgetTier": "budget or mid or expensive"
+              }
+            ]
+            """;
+
+        var userPrompt = $"""
+            Suggest 12 cards to add to this {deck.Format} deck. Do NOT suggest any card already in the deck.
+
+            Deck: {deck.DeckName}
+            Commander: {(string.IsNullOrEmpty(deck.Commander) ? "N/A" : deck.Commander)}
+            Colors: {string.Join(", ", deck.Colors)}
+            Strategy: {deck.Strategy}
+            Power Level: {deck.PowerLevel}
+            Budget: {deck.BudgetRange}
+
+            Current cards by category:
+            {string.Join("\n", cardsByCategory)}
+
+            Cards already in deck (DO NOT suggest these):
+            {string.Join(", ", existingNames.Take(60))}
+
+            Respond with ONLY a JSON array matching this schema (12 items):
+            {schema}
+
+            Focus on cards that synergize with the commander and strategy. Mix budget tiers appropriately.
+            """;
+
+        try
+        {
+            var rawResponse = await CallLlmAsync(systemPrompt, userPrompt, jsonMode: true, temperature: 0.5,
+                operation: "recommendations", deckId: deck.Id, format: deck.Format);
+
+            var jsonContent = ExtractJson(rawResponse);
+            var recommendations = JsonSerializer.Deserialize<List<CardRecommendation>>(jsonContent, JsonOpts)
+                ?? new List<CardRecommendation>();
+
+            activity?.SetTag("mtg.recommendations.count", recommendations.Count);
+            activity?.SetStatus(ActivityStatusCode.Ok);
+            return recommendations;
+        }
+        catch (Exception ex)
+        {
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+            activity?.AddException(ex);
+            _logger.LogWarning(ex, "Failed to generate card recommendations for deck {Id}", deck.Id);
+            return new List<CardRecommendation>();
+        }
+    }
+
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
     private static string? SanitizeNotes(string? notes)

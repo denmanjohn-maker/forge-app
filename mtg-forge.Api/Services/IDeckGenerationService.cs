@@ -13,4 +13,5 @@ public interface IDeckGenerationService
         decimal budgetMax,
         List<(string CardName, decimal Price)> cheapCardPool);
     Task<string> GenerateImportDescriptionAsync(string deckName, List<CardEntry> cards);
+    Task<List<CardRecommendation>> GetCardRecommendationsAsync(DeckConfiguration deck);
 }
