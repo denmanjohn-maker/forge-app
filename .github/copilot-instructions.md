@@ -32,11 +32,15 @@ There is no dedicated lint command or lint configuration checked into this repos
 
 The repository's main automated verification lives in `.github/workflows/post-merge-review.yml`, which restores, builds in Release, runs `dotnet test`, and checks vulnerable NuGet packages with `dotnet list ... --vulnerable`.
 
+## AI provider
+
+> **AI generation uses DeepInfra (`meta-llama/Llama-3.3-70B-Instruct`) via the forge-ai-api RAG pipeline — not Anthropic/Claude.** `ClaudeService` exists in the codebase but is not registered and not used in production.
+
 ## High-level architecture
 
 - `mtg-forge.Api` is a single ASP.NET Core web app that serves three surfaces from one process: REST controllers, Razor Pages under `Pages/`, and the static SPA in `wwwroot/index.html`.
 - The app uses **two databases**. MongoDB stores deck documents plus the app's own `User` and `Group` records. PostgreSQL stores ASP.NET Identity tables and the MTGJSON pricing cache in `AppDbContext`.
-- Deck generation is handled exclusively by `RagPipelineService` (the sole `IDeckGenerationService` registration). It proxies deck generation to **forge-ai-api** (`RagPipeline:BaseUrl`), which runs Qdrant vector search + a hosted LLM. Post-generation, `RagPipelineService` calls Together.ai (OpenAI-compatible `/v1/chat/completions`) directly for deck analysis, budget replacement suggestions, and CSV import descriptions — configured via `RagPipeline:LlmBaseUrl` / `RagPipeline:LlmApiKey`.
+- Deck generation is handled exclusively by `RagPipelineService` (the sole `IDeckGenerationService` registration). It proxies deck generation to **forge-ai-api** (`RagPipeline:BaseUrl`), which runs Qdrant vector search + DeepInfra LLM. Post-generation, `RagPipelineService` calls DeepInfra directly (OpenAI-compatible `/v1/chat/completions`) for deck analysis, budget replacement suggestions, and CSV import descriptions — configured via `RagPipeline:LlmBaseUrl` / `RagPipeline:LlmApiKey`. The default config in `appsettings.json` points to Together.ai but production uses DeepInfra via Railway env vars.
 - `DecksController.Generate` is **fire-and-forget**: it immediately creates a `GenerationJob` via `GenerationJobStore`, starts the work in a background `Task.Run`, and returns the job ID (202). The SPA polls `GET /api/decks/jobs/{jobId}` until the status is `Completed` or `Failed`. The job store is singleton, backed by a `ConcurrentDictionary`, and auto-purges jobs older than 1 hour.
 - After `RagPipelineService` returns a deck, the generate pipeline applies a **budget enforcement loop** (up to 3 retries): it identifies cards over the per-card price ceiling and replaces them with cheap cards fetched from `PricingService.GetCheapCardsAsync`.
 - CSV import is a multi-step pipeline in `DecksController.ImportCsv`: parse CSV with private static helpers, enrich cards through `ScryfallService`, overlay local prices from `PricingService`, derive deck colors, generate an import description with `IDeckGenerationService`, then save to MongoDB.
@@ -66,5 +70,5 @@ The repository's main automated verification lives in `.github/workflows/post-me
 
 ## Companion repositories
 
-- **forge-ai-api** (`../forge-ai-api`) — the local RAG pipeline this app calls when `LlmProvider = Rag`. It runs MongoDB + Qdrant + Ollama and exposes `/api/decks/generate`. The `RagPipelineService` in this repo proxies to it.
+- **forge-ai-api** — the RAG pipeline service this app always delegates deck generation to. `RagPipelineService` is the only registered `IDeckGenerationService`; there is no `LlmProvider` switch in production. The source is included as a **git submodule at `companion/forge-ai-api/`** so agents can read it directly. A concise API contract (request/response shapes, env vars) is at `companion/forge-ai-api-contract.md`.
 - **forge-observability** (`../forge-observability`) — a standalone Grafana / Prometheus / Loki / Tempo / Alloy stack. The `docker-compose-local.yml` here includes Prometheus and Grafana for convenience; the observability repo is used for full-stack or Railway deployments.

@@ -1,0 +1,3 @@
+[submodule "companion/forge-ai-api"]
+	path = companion/forge-ai-api
+	url = https://github.com/denmanjohn-maker/forge-ai-api

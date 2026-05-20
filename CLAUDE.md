@@ -2,9 +2,24 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+> **AI provider:** Deck generation uses **DeepInfra** (`meta-llama/Llama-3.3-70B-Instruct`) via the **forge-ai-api** RAG pipeline — not Anthropic/Claude. `ClaudeService` exists in the codebase but is not the active provider.
+
 ## Project Overview
 
-mtg-forge is a Magic: The Gathering deck generator powered by Claude AI. It uses ASP.NET 10 with MongoDB for persistence and a vanilla JavaScript SPA frontend served from `wwwroot/index.html`.
+mtg-forge is a Magic: The Gathering deck management and AI generation platform. It uses ASP.NET 10 with MongoDB and PostgreSQL for persistence, and a vanilla JavaScript SPA frontend served from `wwwroot/index.html`. AI deck generation is delegated to the companion **forge-ai-api** service (RAG pipeline using Qdrant + DeepInfra).
+
+## Companion repository
+
+The RAG pipeline service is in a separate repository, included here as a git submodule:
+
+- **`companion/forge-ai-api/`** — source of the forge-ai-api service (FastAPI → ASP.NET Core, Qdrant, DeepInfra). Agents can read files here to understand the generation pipeline.
+- **`companion/forge-ai-api-contract.md`** — quick-reference API contract (request/response shapes, env vars) without needing to read the full source.
+
+To update the submodule to the latest forge-ai-api commit:
+```bash
+cd companion/forge-ai-api && git pull origin main
+cd ../.. && git add companion/forge-ai-api && git commit -m "chore: bump forge-ai-api submodule"
+```
 
 ## Build & Run Commands
 
@@ -12,45 +27,45 @@ mtg-forge is a Magic: The Gathering deck generator powered by Claude AI. It uses
 # Build
 dotnet build mtg-forge.sln
 
-# Run locally (requires MongoDB and ANTHROPIC_API_KEY env var)
+# Run locally (requires MongoDB, PostgreSQL, and forge-ai-api running)
 cd mtg-forge.Api && dotnet run
 
-# Local dev with Docker (includes MongoDB)
-docker compose -f docker-compose-local.yml up -d --build
-
-# Deploy to AWS ECS
-export AWS_REGION=us-east-1 AWS_ACCOUNT_ID=<account-id>
-./deploy/push-to-ecr.sh
+# Local dev with Docker (starts MongoDB, PostgreSQL, Prometheus, Grafana)
+docker compose -f docker-compose-local.yml up -d
 ```
 
-Local dev: API on `http://localhost:5001`, MongoDB on port 27018. Swagger at `/swagger`.
+Local dev: API on `http://localhost:5000`, MongoDB on port 27018. Swagger at `/swagger`.
 
 ## Architecture
 
 ```
-Frontend (wwwroot/index.html) → DecksController → ClaudeService → Anthropic Messages API
-                                       ↓
-                                  DeckService → MongoDB
+Frontend (wwwroot/index.html) → DecksController → RagPipelineService → forge-ai-api (DeepInfra LLM)
+                                       ↓                    ↓
+                                  DeckService → MongoDB    PricingService → PostgreSQL
 ```
 
 - **Single-page frontend** (`wwwroot/index.html`): ~2000-line vanilla JS/HTML/CSS file with MTG-themed UI. Uses Scryfall API for card images. No build tooling or framework.
 - **DecksController**: REST API for deck CRUD, AI generation, AI analysis, CSV import/export (supports moxfield, archidekt, deckbox, deckstats formats).
-- **ClaudeService**: Calls Anthropic Messages API directly via HttpClient (not the SDK). Uses `claude-sonnet-4-20250514` with 8192 max tokens. Generates 100-card Commander decks as JSON.
+- **RagPipelineService** (sole `IDeckGenerationService`): Proxies deck generation to forge-ai-api (`POST /api/decks/generate`). Also calls DeepInfra directly (OpenAI-compatible API) for deck analysis and import descriptions.
+- **ClaudeService**: Legacy service; calls Anthropic Messages API. Not registered or used in the current production configuration.
 - **DeckService**: MongoDB CRUD with `MongoDB.Driver`. Collection: `decks` in `mtgdeckforge` database.
 - **Models** (`Models/`): `DeckConfiguration` (main document), `CardEntry`, `DeckGenerationRequest`, `DeckAnalysis`, settings POCOs.
 
 ## Configuration
 
-Environment variables (via `.env` or system env):
-- `ANTHROPIC_API_KEY` — required for AI features
-- `MongoDb__ConnectionString`, `MongoDb__DatabaseName`, `MongoDb__DecksCollectionName`
-- `ClaudeApi__Model`, `ClaudeApi__MaxTokens`
-
-Production uses AWS Secrets Manager for `ClaudeApi__ApiKey` and `MongoDb__ConnectionString`.
+Key environment variables:
+- `RagPipeline__BaseUrl` — URL of forge-ai-api (e.g. `http://mtg-forge-ai.railway.internal:8080`)
+- `RagPipeline__LlmBaseUrl` — OpenAI-compatible LLM base URL for analysis calls (DeepInfra in production: `https://api.deepinfra.com/v1/openai`)
+- `RagPipeline__LlmApiKey` — API key for the LLM provider
+- `RagPipeline__Model` — model name (e.g. `meta-llama/Llama-3.3-70B-Instruct`)
+- `MongoDb__ConnectionString`, `MongoDb__DatabaseName`
+- `DATABASE_URL` or `SqlStorage__ConnectionString` — PostgreSQL connection string
+- `JWT_SECRET`, `ADMIN_PASSWORD`
+- `ANTHROPIC_API_KEY` — only needed if manually switching to `ClaudeService` (not used in production)
 
 ## Key Endpoints
 
-- `POST /api/decks/generate` — AI deck generation
+- `POST /api/decks/generate` — AI deck generation (async, returns job ID; poll `/api/decks/jobs/{jobId}`)
 - `POST /api/decks/{id}/analyze` — AI deck analysis
 - `GET /api/decks/{id}/export/csv?format=moxfield` — export (moxfield/archidekt/deckbox/deckstats)
 - `POST /api/decks/import/csv` — import with auto-format detection
@@ -58,7 +73,7 @@ Production uses AWS Secrets Manager for `ClaudeApi__ApiKey` and `MongoDb__Connec
 
 ## Notes
 
-- No test project exists yet.
+- Tests live in `mtg-forge.Tests` (xUnit). Run with `dotnet test mtg-forge.sln`.
 - CORS is wide open (AllowAny) — development configuration.
 - The frontend uses three Google Fonts: Cinzel, Crimson Text, MedievalSharp.
 - Docker multi-stage build: `sdk:10.0` → build, `aspnet:10.0` → runtime, exposed on port 5000.
