@@ -72,7 +72,7 @@ public class AdminController : ControllerBase
         try
         {
             var client = CreateMtgForgeAiClient(TimeSpan.FromSeconds(10));
-            var response = await client.GetAsync("/api/ingest/status", cancellationToken);
+            var response = await client.GetAsync("/api/admin/ingest-status", cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -111,7 +111,7 @@ public class AdminController : ControllerBase
 
             _logger.LogInformation("AdminController: triggering manual AI re-ingestion via mtg-forge-ai");
 
-            var response = await client.PostAsync("/api/ingest", null, cancellationToken);
+            var response = await client.PostAsync("/api/admin/ingest", null, cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
