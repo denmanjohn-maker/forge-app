@@ -684,13 +684,23 @@ public class DecksController : ControllerBase
         deck.UpdatedAt = DateTime.UtcNow;
 
         var updateRequest = new DeckUpdateRequest { Cards = deck.Cards };
-        await _deckService.UpdateAsync(id, updateRequest, GetUserId());
+        var updated = await _deckService.UpdateAsync(id, updateRequest, GetUserId());
+        if (!updated)
+        {
+            _logger.LogWarning(
+                "AddCard: update did not apply for deck {Id} after adding '{Card}'",
+                id.Replace(Environment.NewLine, ""),
+                request.CardName.Replace(Environment.NewLine, ""));
+            return Conflict(new { error = "The deck could not be updated. Please refresh and try again." });
+        }
+
+        var persistedDeck = await _deckService.GetByIdAsync(id);
 
         _logger.LogInformation(
             "AddCard: added '{Card}' to deck {Id}",
             request.CardName.Replace(Environment.NewLine, ""), id.Replace(Environment.NewLine, ""));
 
-        return Ok(deck);
+        return Ok(persistedDeck ?? deck);
     }
 
     // === Salt Scores ===
