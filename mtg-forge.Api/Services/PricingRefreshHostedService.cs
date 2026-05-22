@@ -1,5 +1,14 @@
 namespace MtgForge.Api.Services;
 
+/// <summary>
+/// Background service that refreshes the local card-price cache from MTGJSON once per
+/// day. A 1-minute startup delay ensures the database migrations have completed before
+/// the first import attempt.
+/// <para>
+/// Pricing data is stored in PostgreSQL via <see cref="MtgJsonPricingImportService"/>
+/// and consumed by <see cref="PricingService"/> to look up card prices.
+/// </para>
+/// </summary>
 public class PricingRefreshHostedService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;

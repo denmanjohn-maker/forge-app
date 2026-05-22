@@ -8,6 +8,20 @@ using MtgForge.Api.Services;
 
 namespace MtgForge.Api.Controllers;
 
+/// <summary>
+/// Core REST controller for deck CRUD, AI generation, AI analysis, CSV import/export,
+/// card management, combo detection, and collection ownership overlays.
+/// <para>
+/// All endpoints require authentication (<c>[Authorize]</c>). Ownership is enforced
+/// per-deck: regular users can only access their own decks; the <c>Admin</c> role
+/// bypasses ownership checks.
+/// </para>
+/// <para>
+/// Deck generation is fire-and-forget:
+/// <c>POST /api/decks/generate</c> returns HTTP 202 with a job ID immediately, and
+/// the SPA polls <c>GET /api/decks/generate/status/{jobId}</c> until completion.
+/// </para>
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
@@ -42,6 +56,11 @@ public class DecksController : ControllerBase
     private string GetDisplayName() => User.FindFirst("displayName")?.Value ?? User.Identity?.Name ?? "Unknown";
     private bool IsAdmin() => User.IsInRole("Admin");
 
+    /// <summary>
+    /// Returns a paginated, filtered list of decks. Non-admin users only see their
+    /// own decks. Supports filtering by name (partial match), color, format, and
+    /// power level.
+    /// </summary>
     [HttpGet]
     public async Task<ActionResult<PagedResult<DeckConfiguration>>> GetAll(
         [FromQuery] string? name,
@@ -57,6 +76,7 @@ public class DecksController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>Returns a single deck by ID. Returns 403 if the deck belongs to another user.</summary>
     [HttpGet("{id}")]
     public async Task<ActionResult<DeckConfiguration>> GetById(string id)
     {
@@ -68,6 +88,7 @@ public class DecksController : ControllerBase
         return Ok(deck);
     }
 
+    /// <summary>Searches decks by color and/or format, scoped to the current user unless they are an admin.</summary>
     [HttpGet("search")]
     public async Task<ActionResult<List<DeckConfiguration>>> Search([FromQuery] string? color, [FromQuery] string? format)
     {
@@ -76,6 +97,12 @@ public class DecksController : ControllerBase
         return Ok(decks);
     }
 
+    /// <summary>
+    /// Starts an async deck-generation job and returns HTTP 202 with the job ID.
+    /// The background task calls the RAG pipeline, applies budget enforcement (up to
+    /// 3 retries), and persists the deck to MongoDB on success.
+    /// Poll <c>GET /api/decks/generate/status/{jobId}</c> for the result.
+    /// </summary>
     [HttpPost("generate")]
     [EnableRateLimiting("deck-generation")]
     public IActionResult Generate([FromBody] DeckGenerationRequest request)
@@ -179,6 +206,7 @@ public class DecksController : ControllerBase
         return Accepted(new { jobId = job.Id });
     }
 
+    /// <summary>Polls the status of an async deck-generation job. Returns 404 when the job has expired (>1 hour).</summary>
     [HttpGet("generate/status/{jobId}")]
     public IActionResult GetGenerationStatus(string jobId)
     {
@@ -196,6 +224,7 @@ public class DecksController : ControllerBase
         });
     }
 
+    /// <summary>Partially updates a deck. Only fields present in the request body are modified.</summary>
     [HttpPatch("{id}")]
     public async Task<ActionResult<DeckConfiguration>> Update(string id, [FromBody] DeckUpdateRequest request)
     {
@@ -210,6 +239,7 @@ public class DecksController : ControllerBase
         return Ok(updated);
     }
 
+    /// <summary>Creates a shallow copy of the deck, owned by the current user.</summary>
     [HttpPost("{id}/copy")]
     public async Task<ActionResult<DeckConfiguration>> Copy(string id)
     {
@@ -250,6 +280,10 @@ public class DecksController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = saved.Id }, saved);
     }
 
+    /// <summary>
+    /// Runs the AI deck-analysis pipeline and persists the result to the deck document.
+    /// Analysis covers synergy, mana curve, category coverage, and card-upgrade suggestions.
+    /// </summary>
     [HttpPost("{id}/analyze")]
     public async Task<ActionResult<DeckAnalysis>> Analyze(string id)
     {
@@ -276,6 +310,10 @@ public class DecksController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Applies a single AI-suggested card swap: removes <c>RemoveCard</c>, enriches
+    /// <c>AddCard</c> via Scryfall, applies local pricing, and saves the updated card list.
+    /// </summary>
     [HttpPost("{id}/apply-upgrade")]
     public async Task<ActionResult<DeckConfiguration>> ApplyUpgrade(string id, [FromBody] CardUpgrade upgrade)
     {
@@ -322,6 +360,11 @@ public class DecksController : ControllerBase
 
     // === CSV Export (multiple formats) ===
 
+    /// <summary>
+    /// Exports the deck as a CSV file. The <paramref name="format"/> query parameter
+    /// selects the target platform: <c>moxfield</c>, <c>archidekt</c>, <c>deckbox</c>,
+    /// <c>deckstats</c>, or the default forge format.
+    /// </summary>
     [HttpGet("{id}/export/csv")]
     public async Task<IActionResult> ExportCsv(string id, [FromQuery] string format = "default")
     {
@@ -379,6 +422,12 @@ public class DecksController : ControllerBase
 
     // === CSV Import (auto-detects format, enriches via Scryfall, generates description) ===
 
+    /// <summary>
+    /// Imports a deck from a CSV file. The format (moxfield, archidekt, deckbox,
+    /// deckstats, or default) is auto-detected from the header row. Cards are enriched
+    /// via Scryfall, priced from the local cache, and a description is generated by the
+    /// LLM before the deck is saved to MongoDB.
+    /// </summary>
     [HttpPost("import/csv")]
     public async Task<ActionResult<DeckConfiguration>> ImportCsv(IFormFile file, [FromForm] string? deckName)
     {

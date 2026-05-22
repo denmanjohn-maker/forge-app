@@ -4,6 +4,12 @@ using MtgForge.Api.Models;
 
 namespace MtgForge.Api.Services;
 
+/// <summary>
+/// Manages a user's physical card collection stored in MongoDB.
+/// Each <see cref="CollectionEntry"/> tracks a specific card+foil+condition combination
+/// with a quantity. The collection is used for ownership overlays on deck views
+/// (showing which cards the user already owns).
+/// </summary>
 public class CollectionService
 {
     private readonly IMongoCollection<CollectionEntry> _collection;
@@ -29,6 +35,10 @@ public class CollectionService
         });
     }
 
+    /// <summary>
+    /// Returns a page of collection entries for <paramref name="userId"/>, optionally
+    /// filtered by a case-insensitive card-name substring search.
+    /// </summary>
     public async Task<PagedResult<CollectionEntry>> GetPagedAsync(string userId, string? search, int skip, int limit)
     {
         var builder = Builders<CollectionEntry>.Filter;
@@ -53,6 +63,7 @@ public class CollectionService
         };
     }
 
+    /// <summary>Returns a set of card names (case-insensitive) owned by <paramref name="userId"/>.</summary>
     public async Task<HashSet<string>> GetOwnedNamesAsync(string userId)
     {
         var entries = await _collection
@@ -62,6 +73,10 @@ public class CollectionService
         return new HashSet<string>(entries, StringComparer.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// Returns a map of card name → total quantity owned by <paramref name="userId"/>,
+    /// summing across all foil/condition variants.
+    /// </summary>
     public async Task<Dictionary<string, int>> GetOwnedQuantitiesAsync(string userId)
     {
         var entries = await _collection
@@ -72,6 +87,10 @@ public class CollectionService
             .ToDictionary(g => g.Key, g => g.Sum(e => e.Quantity), StringComparer.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// Adds cards to the user's collection. If an identical card+foil+condition entry
+    /// already exists, the quantity is incremented rather than creating a duplicate row.
+    /// </summary>
     public async Task<CollectionEntry> AddAsync(string userId, CollectionAddRequest req)
     {
         var normalizedName = req.CardName.Trim();
@@ -106,6 +125,7 @@ public class CollectionService
         return entry;
     }
 
+    /// <summary>Updates a collection entry's quantity, condition, foil flag, or set code.</summary>
     public async Task<bool> UpdateAsync(string userId, string id, CollectionUpdateRequest req)
     {
         var updates = new List<UpdateDefinition<CollectionEntry>>();
@@ -124,12 +144,18 @@ public class CollectionService
         return result.ModifiedCount > 0;
     }
 
+    /// <summary>Permanently deletes a collection entry owned by <paramref name="userId"/>.</summary>
     public async Task<bool> DeleteAsync(string userId, string id)
     {
         var result = await _collection.DeleteOneAsync(e => e.Id == id && e.UserId == userId);
         return result.DeletedCount > 0;
     }
 
+    /// <summary>
+    /// Parses a CSV file and bulk-inserts its cards into the user's collection,
+    /// merging duplicates. Supports Name, Quantity/Count, Set/Edition, Foil, and
+    /// Condition columns. Returns the number of rows successfully imported.
+    /// </summary>
     public async Task<int> BulkImportFromCsvAsync(string userId, string csvContent)
     {
         var lines = csvContent.Split('\n', StringSplitOptions.RemoveEmptyEntries);
@@ -176,6 +202,10 @@ public class CollectionService
         return imported;
     }
 
+    /// <summary>
+    /// Exports the user's entire collection as a CSV string with columns:
+    /// Name, Quantity, Set, Foil, Condition.
+    /// </summary>
     public async Task<string> ExportToCsvAsync(string userId)
     {
         var entries = await _collection.Find(e => e.UserId == userId)

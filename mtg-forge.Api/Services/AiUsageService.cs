@@ -4,6 +4,15 @@ using MtgForge.Api.Models;
 
 namespace MtgForge.Api.Services;
 
+/// <summary>
+/// Records LLM API calls (user, operation, token counts) to the MongoDB <c>aiUsage</c>
+/// collection and provides summary queries for the admin dashboard.
+/// <para>
+/// Every AI operation (generate, analyze, import description, etc.) logs an
+/// <see cref="AiUsageRecord"/> so administrators can track costs and usage patterns
+/// per user via <c>GET /api/admin/ai-usage</c>.
+/// </para>
+/// </summary>
 public class AiUsageService
 {
     private readonly IMongoCollection<AiUsageRecord> _collection;
@@ -18,9 +27,14 @@ public class AiUsageService
                 Builders<AiUsageRecord>.IndexKeys.Descending(r => r.CreatedAt)));
     }
 
+    /// <summary>Appends a single AI usage record to the collection (fire-and-forget friendly).</summary>
     public Task LogAsync(AiUsageRecord record) =>
         _collection.InsertOneAsync(record);
 
+    /// <summary>
+    /// Returns aggregated token usage from <paramref name="from"/> to now, broken down
+    /// by user with per-operation counts.
+    /// </summary>
     public async Task<AiUsageSummary> GetSummaryAsync(DateTime from)
     {
         var records = await _collection
