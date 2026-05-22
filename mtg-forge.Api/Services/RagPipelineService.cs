@@ -523,7 +523,7 @@ public class RagPipelineService : IDeckGenerationService
                     Respond with ONLY a JSON array matching this schema (up to 12 items):
                     {schema}
 
-                    Prioritise cards with high synergy to the commander and strategy.
+                    Prioritize cards with high synergy to the commander and strategy.
                     """;
 
                 rawResponse = await CallLlmAsync(systemPrompt, userPrompt, jsonMode: true, temperature: 0.4,
