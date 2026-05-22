@@ -120,3 +120,9 @@ public class CardRecommendation
     public string Category { get; set; } = null!;
     public string EstimatedBudgetTier { get; set; } = "mid";
 }
+
+public class AddCardRequest
+{
+    public string CardName { get; set; } = null!;
+    public string? Category { get; set; }
+}

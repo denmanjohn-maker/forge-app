@@ -153,7 +153,8 @@ Poll `GET /api/admin/ingest-status` for progress.
 
 ### `POST /api/cards/search`
 
-Semantic card search via Qdrant. Not called by forge-app directly but useful for debugging card pool issues.
+Semantic card search via Qdrant. Called by forge-app's `RagPipelineService.SearchCandidateCardsAsync`
+during the recommendation pipeline to fetch Qdrant-grounded card candidates before LLM ranking.
 
 **Request body** (`CardSearchRequest`):
 ```json
@@ -165,6 +166,41 @@ Semantic card search via Qdrant. Not called by forge-app directly but useful for
   "format": "commander"
 }
 ```
+
+| Field | Type | Required | Notes |
+|-------|------|----------|-------|
+| `query` | string | yes | Natural-language semantic search query embedded with `BAAI/bge-m3` |
+| `colors` | string[] | no | Filter by color identity. Omit for colorless / no filter. |
+| `maxPrice` | number | no | Filter by max card price in USD. Omit for no price ceiling. |
+| `limit` | int | no | Max results to return (default 20, max 100). |
+| `format` | string | no | Format legality filter (e.g. `commander`). Omit for no format filter. |
+
+**Response body** (array of `CardSearchResult`):
+```json
+[
+  {
+    "name": "Sol Ring",
+    "typeLine": "Artifact",
+    "manaCost": "{1}",
+    "cmc": 1.0,
+    "priceUsd": 2.50,
+    "oracleText": "{T}: Add {C}{C}."
+  }
+]
+```
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `name` | string | Exact card name |
+| `typeLine` | string? | Full type line (e.g. `Legendary Creature — Vampire`) |
+| `manaCost` | string? | Mana cost in MTG symbol notation |
+| `cmc` | number | Converted mana cost |
+| `priceUsd` | number | Current USD price (0 if unavailable) |
+| `oracleText` | string? | Oracle rules text |
+
+forge-app's `RagPipelineService` calls this endpoint with `limit: 40` and passes the resulting
+candidate pool to the LLM for ranking and synergy explanation. The LLM may only recommend
+cards from this list, eliminating hallucination.
 
 ---
 

@@ -649,6 +649,60 @@ public class DecksController : ControllerBase
         }
     }
 
+    [HttpPost("{id}/add-card")]
+    public async Task<ActionResult<DeckConfiguration>> AddCard(string id, [FromBody] AddCardRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.CardName))
+            return BadRequest(new { error = "CardName must be specified." });
+
+        var deck = await _deckService.GetByIdAsync(id);
+        if (deck is null)
+            return NotFound();
+        if (!IsAdmin() && deck.UserId != GetUserId())
+            return Forbid();
+
+        // Reject if the card is already in the deck (case-insensitive)
+        if (deck.Cards.Any(c => string.Equals(c.Name, request.CardName, StringComparison.OrdinalIgnoreCase)))
+            return Conflict(new { error = $"'{request.CardName}' is already in this deck." });
+
+        var newCard = new CardEntry
+        {
+            Name = request.CardName,
+            Quantity = 1,
+            Category = !string.IsNullOrWhiteSpace(request.Category) ? request.Category : "Mainboard",
+            RoleInDeck = ""
+        };
+
+        var enriched = await _scryfallService.EnrichCardsAsync(new List<CardEntry> { newCard });
+        if (enriched.Count > 0)
+            newCard = enriched[0];
+        await _pricingService.ApplyPricesAsync(new List<CardEntry> { newCard });
+
+        deck.Cards.Add(newCard);
+        deck.TotalCards = deck.Cards.Sum(c => c.Quantity);
+        deck.EstimatedTotalPrice = deck.Cards.Sum(c => c.EstimatedPrice * c.Quantity);
+        deck.UpdatedAt = DateTime.UtcNow;
+
+        var updateRequest = new DeckUpdateRequest { Cards = deck.Cards };
+        var updated = await _deckService.UpdateAsync(id, updateRequest, GetUserId());
+        if (!updated)
+        {
+            _logger.LogWarning(
+                "AddCard: update did not apply for deck {Id} after adding '{Card}'",
+                id.Replace(Environment.NewLine, ""),
+                request.CardName.Replace(Environment.NewLine, ""));
+            return Conflict(new { error = "The deck could not be updated. Please refresh and try again." });
+        }
+
+        var persistedDeck = await _deckService.GetByIdAsync(id);
+
+        _logger.LogInformation(
+            "AddCard: added '{Card}' to deck {Id}",
+            request.CardName.Replace(Environment.NewLine, ""), id.Replace(Environment.NewLine, ""));
+
+        return Ok(persistedDeck ?? deck);
+    }
+
     // === Salt Scores ===
 
     [HttpGet("{id}/salt")]

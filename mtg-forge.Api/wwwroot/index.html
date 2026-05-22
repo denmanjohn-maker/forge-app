@@ -2388,6 +2388,11 @@
         .rec-card { display:flex;align-items:flex-start;gap:0.75rem;padding:0.75rem;border-radius:8px;background:var(--bg-panel);border:1px solid var(--border);margin-bottom:0.5rem; }
         .rec-card .rec-name { font-family:'Cinzel',serif;font-size:0.85rem;color:var(--gold-light); }
         .rec-card .rec-reason { font-family:'Crimson Text',serif;font-size:0.9rem;color:var(--text-secondary);margin-top:0.2rem; }
+        .rec-thumb { width:44px;min-width:44px;height:62px;border-radius:4px;object-fit:cover;background:var(--bg-deep);border:1px solid var(--border);display:block; }
+        .rec-add-btn { font-size:0.72rem;padding:0.2rem 0.55rem;border-radius:4px;font-family:'Cinzel',serif;letter-spacing:0.04em;border:1px solid var(--border-gold);background:transparent;color:var(--gold);cursor:pointer;white-space:nowrap;transition:background 0.15s; }
+        .rec-add-btn:hover:not(:disabled) { background:rgba(201,168,76,0.15); }
+        .rec-add-btn:disabled { opacity:0.5;cursor:default; }
+        .rec-add-btn.added { border-color:rgba(76,175,80,0.4);color:#81c784; }
         .budget-chip { font-size:0.7rem;padding:0.1rem 0.4rem;border-radius:4px;font-family:'Cinzel',serif;letter-spacing:0.04em; }
         .budget-chip.budget { background:rgba(76,175,80,0.18);color:#81c784; }
         .budget-chip.mid { background:rgba(255,193,7,0.15);color:#ffd54f; }
@@ -3232,11 +3237,14 @@
     <!-- Recommendations Modal -->
     <div class="modal-overlay hidden" id="recommendationsModal">
         <div class="modal" style="max-width:720px;width:96%;max-height:90vh;display:flex;flex-direction:column;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem;">
                 <h3 style="margin:0;">&#10024; AI Recommendations</h3>
-                <button class="btn-outline" style="padding:0.3rem 0.7rem;" onclick="closeRecommendationsModal()">Close</button>
+                <div style="display:flex;gap:0.5rem;align-items:center;">
+                    <button class="btn-outline" id="recsRefreshBtn" style="padding:0.3rem 0.7rem;" onclick="refreshRecommendations()">&#8635; Refresh</button>
+                    <button class="btn-outline" style="padding:0.3rem 0.7rem;" onclick="closeRecommendationsModal()">Close</button>
+                </div>
             </div>
-            <p style="font-family:'Crimson Text',serif;font-size:0.88rem;color:var(--text-muted);margin-bottom:0.75rem;">Cards that synergize with your commander and strategy, suggested by the AI.</p>
+            <p id="recsBudgetNote" style="font-family:'Crimson Text',serif;font-size:0.88rem;color:var(--text-muted);margin-bottom:0.75rem;">Cards that synergize with your commander and strategy, suggested by the AI.</p>
             <div id="recommendationsBody" style="overflow-y:auto;flex:1;"></div>
         </div>
     </div>
@@ -5687,8 +5695,30 @@
         // FEATURE D: AI Card Recommendations
         // ═══════════════════════════════════════════════════════════
 
+        let _recsDeckId = null;
+
         async function openRecommendationsModal(deckId) {
+            _recsDeckId = deckId;
             document.getElementById('recommendationsModal').classList.remove('hidden');
+            // Show budget note from the currently viewed deck if available
+            const budgetNote = document.getElementById('recsBudgetNote');
+            if (currentDetailDeck && currentDetailDeck.id === deckId && currentDetailDeck.budgetRange) {
+                budgetNote.textContent = `Showing synergy suggestions for your ${currentDetailDeck.budgetRange} deck — click \u201c+ Add\u201d to add a card directly.`;
+            } else {
+                budgetNote.textContent = 'Cards that synergize with your commander and strategy, suggested by the AI.';
+            }
+            await _fetchRecommendations(deckId);
+        }
+
+        async function refreshRecommendations() {
+            if (!_recsDeckId) return;
+            const btn = document.getElementById('recsRefreshBtn');
+            if (btn) { btn.disabled = true; btn.textContent = '⏳ Loading…'; }
+            await _fetchRecommendations(_recsDeckId);
+            if (btn) { btn.disabled = false; btn.textContent = '↺ Refresh'; }
+        }
+
+        async function _fetchRecommendations(deckId) {
             const body = document.getElementById('recommendationsBody');
             body.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);font-family:\'Crimson Text\',serif;">Consulting the AI oracle…</div>';
             try {
@@ -5696,6 +5726,7 @@
                 if (!res.ok) throw new Error('Recommendation request failed');
                 const recs = await res.json();
                 body.innerHTML = renderRecommendationsHtml(recs, deckId);
+                _loadRecThumbnails(body);
             } catch (err) {
                 body.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);font-family:'Crimson Text',serif;">${err.message}</div>`;
             }
@@ -5707,20 +5738,77 @@
 
         function renderRecommendationsHtml(recs, deckId) {
             const escH = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            const escAttr = s => String(s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
             if (!recs || recs.length === 0)
-                return '<div style="text-align:center;padding:2rem;color:var(--text-muted);font-family:\'Crimson Text\',serif;">No recommendations generated. Try analyzing the deck first.</div>';
+                return '<div style="text-align:center;padding:2rem;color:var(--text-muted);font-family:\'Crimson Text\',serif;">No recommendations generated. Try clicking Refresh.</div>';
 
             return recs.map(r => `
                 <div class="rec-card" onmouseenter="showCardImage(event,'${r.name.replace(/'/g,"\\'")}');" onmouseleave="hideCardImage();">
+                    <img class="rec-thumb" data-rec-thumb="${escAttr(r.name)}" src="" alt="${escAttr(r.name)}" onerror="this.style.display='none'">
                     <div style="flex:1;min-width:0;">
                         <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.2rem;">
                             <span class="rec-name">${escH(r.name)}</span>
                             <span class="budget-chip ${r.estimatedBudgetTier || 'mid'}">${r.estimatedBudgetTier || 'mid'}</span>
                             <span style="font-size:0.72rem;padding:0.1rem 0.4rem;border-radius:4px;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-muted);font-family:'Cinzel',serif;">${escH(r.category || '')}</span>
+                            <button class="rec-add-btn" id="rec-add-${escAttr(r.name)}"
+                                onclick="addRecommendedCard('${escAttr(deckId)}','${escAttr(r.name)}','${escAttr(r.category || '')}',this)">
+                                + Add
+                            </button>
                         </div>
                         <div class="rec-reason">${escH(r.reason)}</div>
                     </div>
                 </div>`).join('');
+        }
+
+        async function addRecommendedCard(deckId, cardName, category, btnEl) {
+            btnEl.disabled = true;
+            btnEl.textContent = '…';
+            try {
+                const res = await authFetch(`${API_BASE}/${deckId}/add-card`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cardName, category })
+                });
+                if (res.status === 409) {
+                    btnEl.textContent = 'Already in deck';
+                    btnEl.classList.add('added');
+                    return;
+                }
+                if (!res.ok) throw new Error('Failed to add card');
+                btnEl.textContent = '✓ Added';
+                btnEl.classList.add('added');
+                showToast(`"${cardName}" added to deck`);
+                // Refresh the deck in the background so stats stay current
+                if (currentDetailDeck && currentDetailDeck.id === deckId) {
+                    try {
+                        const dr = await authFetch(`${API_BASE}/${deckId}`);
+                        if (dr.ok) currentDetailDeck = await dr.json();
+                    } catch { /* non-critical */ }
+                }
+            } catch (err) {
+                btnEl.disabled = false;
+                btnEl.textContent = '+ Add';
+                showToast(err.message, true);
+            }
+        }
+
+        function _loadRecThumbnails(container) {
+            container.querySelectorAll('[data-rec-thumb]').forEach(async img => {
+                const name = img.dataset.recThumb;
+                try {
+                    let url = _cardImageCache.get(name);
+                    if (!url) {
+                        const r = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(name)}`);
+                        if (r.ok) {
+                            const d = await r.json();
+                            url = d.image_uris?.small ?? d.card_faces?.[0]?.image_uris?.small ?? null;
+                            if (url) _cardImageCache.set(name, url);
+                        }
+                    }
+                    if (url) { img.src = url; img.style.display = ''; }
+                    else img.style.display = 'none';
+                } catch { img.style.display = 'none'; }
+            });
         }
 
         // ═══════════════════════════════════════════════════════════
