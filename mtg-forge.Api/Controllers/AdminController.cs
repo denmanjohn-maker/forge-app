@@ -145,6 +145,8 @@ public class AdminController : ControllerBase
         var client = _httpClientFactory.CreateClient();
         client.BaseAddress = new Uri(_ragSettings.BaseUrl);
         client.Timeout = timeout;
+        if (!string.IsNullOrWhiteSpace(_ragSettings.AdminApiKey))
+            client.DefaultRequestHeaders.Add("X-Admin-Key", _ragSettings.AdminApiKey);
         return client;
     }
 }

@@ -17,6 +17,9 @@ public class RagPipelineSettings
     /// <summary>Bearer API key for the LLM provider.</summary>
     public string LlmApiKey { get; set; } = "";
 
+    /// <summary>X-Admin-Key for forge-ai-api admin endpoints (ingest, ingest-status).</summary>
+    public string AdminApiKey { get; set; } = "";
+
     /// <summary>Model name for chat completions.</summary>
     public string Model { get; set; } = "meta-llama/Llama-3.3-70B-Instruct-Turbo";
 }

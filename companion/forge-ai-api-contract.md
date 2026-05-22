@@ -121,6 +121,14 @@ Used for readiness checks.
 
 ---
 
+### Admin endpoint authentication
+
+All `/api/admin/*` endpoints require an `X-Admin-Key` header matching the `Admin:ApiKey` value configured in forge-ai-api. If `Admin:ApiKey` is not set, access is unauthenticated.
+
+forge-app passes this key via `RagPipeline__AdminApiKey` (mapped to `RagPipelineSettings.AdminApiKey`).
+
+---
+
 ### `POST /api/admin/ingest`
 
 Triggers card ingestion from Scryfall into MongoDB + Qdrant. Long-running; returns `202 Accepted` immediately.
@@ -186,6 +194,7 @@ When `POST /api/decks/generate` is called:
 | `MongoDB__ConnectionString` | MongoDB URL | `mtgforge` db |
 | `Qdrant__Host` | Qdrant hostname | |
 | `Qdrant__Port` | `6334` | gRPC |
+| `Admin__ApiKey` | Secret key | Required for all `/api/admin/*` endpoints. Set `RagPipeline__AdminApiKey` to the same value in forge-app. |
 
 ---
 
