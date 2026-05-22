@@ -455,52 +455,132 @@ public class RagPipelineService : IDeckGenerationService
         SetServerAttributes(activity, _settings.LlmBaseUrl);
 
         var existingNames = deck.Cards.Select(c => c.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var cardsByCategory = deck.Cards
-            .GroupBy(c => c.Category)
-            .Select(g => $"  {g.Key}: {string.Join(", ", g.Take(8).Select(c => c.Name))}");
-
-        var systemPrompt = """
-            You are an expert Magic: The Gathering deckbuilder. Suggest synergistic cards to add to a deck.
-            Always respond with a valid JSON array only — no markdown, no explanation outside JSON.
-            """;
-
-        var schema = """
-            [
-              {
-                "name": "exact card name",
-                "reason": "1-2 sentence explanation of synergy",
-                "category": "one of: Creature, Instant, Sorcery, Enchantment, Artifact, Land, Planeswalker, Ramp, Removal, Card Draw",
-                "estimatedBudgetTier": "budget or mid or expensive"
-              }
-            ]
-            """;
-
-        var userPrompt = $"""
-            Suggest 12 cards to add to this {deck.Format} deck. Do NOT suggest any card already in the deck.
-
-            Deck: {deck.DeckName}
-            Commander: {(string.IsNullOrEmpty(deck.Commander) ? "N/A" : deck.Commander)}
-            Colors: {string.Join(", ", deck.Colors)}
-            Strategy: {deck.Strategy}
-            Power Level: {deck.PowerLevel}
-            Budget: {deck.BudgetRange}
-
-            Current cards by category:
-            {string.Join("\n", cardsByCategory)}
-
-            Cards already in deck (DO NOT suggest these):
-            {string.Join(", ", existingNames.Take(60))}
-
-            Respond with ONLY a JSON array matching this schema (12 items):
-            {schema}
-
-            Focus on cards that synergize with the commander and strategy. Mix budget tiers appropriately.
-            """;
 
         try
         {
-            var rawResponse = await CallLlmAsync(systemPrompt, userPrompt, jsonMode: true, temperature: 0.5,
-                operation: "recommendations", deckId: deck.Id, format: deck.Format);
+            // Step 1: Retrieve Qdrant-grounded candidates from forge-ai-api.
+            // If the card search endpoint is unavailable we fall through to the
+            // pure-LLM path so recommendations still work without forge-ai-api.
+            var candidates = await SearchCandidateCardsAsync(deck);
+            activity?.SetTag("mtg.recommendations.candidates", candidates.Count);
+
+            string rawResponse;
+
+            if (candidates.Count > 0)
+            {
+                // Step 2a: Ask the LLM to pick & explain the best cards from the
+                // Qdrant-retrieved candidate pool (eliminates hallucination).
+                var candidateList = string.Join("\n", candidates
+                    .Where(c => !existingNames.Contains(c.Name))
+                    .Select(c =>
+                    {
+                        var price = c.PriceUsd > 0 ? $"${c.PriceUsd:F2}" : "price unknown";
+                        return $"- {c.Name} ({c.TypeLine ?? "Unknown"}, CMC {c.Cmc:F0}, {price}): {c.OracleText ?? ""}";
+                    }));
+
+                var cardsByCategory = deck.Cards
+                    .GroupBy(c => c.Category)
+                    .Select(g => $"  {g.Key}: {string.Join(", ", g.Take(8).Select(c => c.Name))}");
+
+                var systemPrompt = """
+                    You are an expert Magic: The Gathering deckbuilder. Select synergistic cards from the
+                    provided candidate list to recommend for the given deck.
+                    Always respond with a valid JSON array only — no markdown, no explanation outside JSON.
+                    """;
+
+                var schema = """
+                    [
+                      {
+                        "name": "exact card name from the candidate list",
+                        "reason": "1-2 sentence explanation of synergy with this specific deck",
+                        "category": "one of: Creature, Instant, Sorcery, Enchantment, Artifact, Land, Planeswalker, Ramp, Removal, Card Draw",
+                        "estimatedBudgetTier": "budget or mid or expensive"
+                      }
+                    ]
+                    """;
+
+                var userPrompt = $"""
+                    Select 12 cards from the candidate list below to recommend for this {deck.Format} deck.
+                    Only choose cards from the candidate list — do NOT suggest any card not on it.
+                    Do NOT suggest any card already in the deck.
+
+                    Deck: {deck.DeckName}
+                    Commander: {(string.IsNullOrEmpty(deck.Commander) ? "N/A" : deck.Commander)}
+                    Colors: {string.Join(", ", deck.Colors)}
+                    Strategy: {deck.Strategy}
+                    Power Level: {deck.PowerLevel}
+                    Budget: {deck.BudgetRange}
+
+                    Current cards by category:
+                    {string.Join("\n", cardsByCategory)}
+
+                    Cards already in deck (DO NOT suggest these):
+                    {string.Join(", ", existingNames.Take(60))}
+
+                    Candidate cards (choose ONLY from this list):
+                    {candidateList}
+
+                    Respond with ONLY a JSON array matching this schema (up to 12 items):
+                    {schema}
+
+                    Prioritise cards with high synergy to the commander and strategy.
+                    """;
+
+                rawResponse = await CallLlmAsync(systemPrompt, userPrompt, jsonMode: true, temperature: 0.4,
+                    operation: "recommendations", deckId: deck.Id, format: deck.Format);
+            }
+            else
+            {
+                // Step 2b: Fallback — no Qdrant candidates; let the LLM suggest freely.
+                _logger.LogInformation(
+                    "RagPipelineService: no Qdrant candidates returned for deck {Id}; using pure-LLM recommendations",
+                    deck.Id);
+
+                var cardsByCategory = deck.Cards
+                    .GroupBy(c => c.Category)
+                    .Select(g => $"  {g.Key}: {string.Join(", ", g.Take(8).Select(c => c.Name))}");
+
+                var systemPrompt = """
+                    You are an expert Magic: The Gathering deckbuilder. Suggest synergistic cards to add to a deck.
+                    Always respond with a valid JSON array only — no markdown, no explanation outside JSON.
+                    """;
+
+                var schema = """
+                    [
+                      {
+                        "name": "exact card name",
+                        "reason": "1-2 sentence explanation of synergy",
+                        "category": "one of: Creature, Instant, Sorcery, Enchantment, Artifact, Land, Planeswalker, Ramp, Removal, Card Draw",
+                        "estimatedBudgetTier": "budget or mid or expensive"
+                      }
+                    ]
+                    """;
+
+                var userPrompt = $"""
+                    Suggest 12 cards to add to this {deck.Format} deck. Do NOT suggest any card already in the deck.
+
+                    Deck: {deck.DeckName}
+                    Commander: {(string.IsNullOrEmpty(deck.Commander) ? "N/A" : deck.Commander)}
+                    Colors: {string.Join(", ", deck.Colors)}
+                    Strategy: {deck.Strategy}
+                    Power Level: {deck.PowerLevel}
+                    Budget: {deck.BudgetRange}
+
+                    Current cards by category:
+                    {string.Join("\n", cardsByCategory)}
+
+                    Cards already in deck (DO NOT suggest these):
+                    {string.Join(", ", existingNames.Take(60))}
+
+                    Respond with ONLY a JSON array matching this schema (12 items):
+                    {schema}
+
+                    Focus on cards that synergize with the commander and strategy. Mix budget tiers appropriately.
+                    """;
+
+                rawResponse = await CallLlmAsync(systemPrompt, userPrompt, jsonMode: true, temperature: 0.5,
+                    operation: "recommendations", deckId: deck.Id, format: deck.Format);
+            }
 
             var jsonContent = ExtractJson(rawResponse);
             var recommendations = JsonSerializer.Deserialize<List<CardRecommendation>>(jsonContent, JsonOpts)
@@ -523,6 +603,85 @@ public class RagPipelineService : IDeckGenerationService
             activity?.AddException(ex);
             _logger.LogWarning(ex, "Failed to generate card recommendations for deck {Id}", deck.Id);
             return new List<CardRecommendation>();
+        }
+    }
+
+    /// <summary>
+    /// Builds a natural-language query for Qdrant semantic card search from the deck's
+    /// commander, strategy, and representative non-land cards.
+    /// </summary>
+    public static string BuildRecommendationQuery(DeckConfiguration deck)
+    {
+        var parts = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(deck.Commander))
+            parts.Add(deck.Commander);
+
+        if (!string.IsNullOrWhiteSpace(deck.Strategy))
+            parts.Add(deck.Strategy);
+
+        var topCards = deck.Cards
+            .Where(c => (c.CardType == null || !c.CardType.Contains("Land", StringComparison.OrdinalIgnoreCase))
+                     && !string.Equals(c.Category, "Commander", StringComparison.OrdinalIgnoreCase))
+            .Take(10)
+            .Select(c => c.Name);
+
+        parts.AddRange(topCards);
+
+        return string.Join(" ", parts);
+    }
+
+    /// <summary>
+    /// Calls forge-ai-api <c>POST /api/cards/search</c> to retrieve Qdrant-grounded
+    /// card candidates for the given deck.  Returns an empty list on any failure so
+    /// the caller can fall back to pure-LLM recommendations gracefully.
+    /// </summary>
+    private async Task<List<CardSearchResult>> SearchCandidateCardsAsync(DeckConfiguration deck)
+    {
+        try
+        {
+            var query = BuildRecommendationQuery(deck);
+            var maxPrice = BudgetHelper.GetBudgetMax(deck.BudgetRange);
+
+            var searchRequest = new
+            {
+                query,
+                colors = deck.Colors.Count > 0 ? deck.Colors : null,
+                format = deck.Format.ToLowerInvariant(),
+                maxPrice = maxPrice.HasValue ? (double?)maxPrice : null,
+                limit = 40
+            };
+
+            var json = JsonSerializer.Serialize(searchRequest, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            });
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var client = CreateMtgForgeClient();
+
+            _logger.LogDebug(
+                "RagPipelineService: querying forge-ai-api card search — query='{Query}', format={Format}, maxPrice={MaxPrice}",
+                query, deck.Format, maxPrice);
+
+            using var response = await client.PostAsync("/api/cards/search", content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning(
+                    "RagPipelineService: card search returned {Status}; falling back to pure-LLM recommendations",
+                    response.StatusCode);
+                return [];
+            }
+
+            var body = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<List<CardSearchResult>>(body, JsonOpts) ?? [];
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex,
+                "RagPipelineService: card search request failed; falling back to pure-LLM recommendations");
+            return [];
         }
     }
 
@@ -868,6 +1027,18 @@ public class RagPipelineService : IDeckGenerationService
             lands.Add("Wastes");
 
         return lands;
+    }
+
+    // ─── forge-ai-api Card Search Response DTO ────────────────────────────────
+
+    private class CardSearchResult
+    {
+        public string Name { get; set; } = "";
+        public string? TypeLine { get; set; }
+        public string? ManaCost { get; set; }
+        public double Cmc { get; set; }
+        public double PriceUsd { get; set; }
+        public string? OracleText { get; set; }
     }
 
     // ─── mtg-forge-ai Response DTOs ───────────────────────────────────────
