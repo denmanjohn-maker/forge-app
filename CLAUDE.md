@@ -58,6 +58,7 @@ Key environment variables:
 - `RagPipeline__LlmBaseUrl` — OpenAI-compatible LLM base URL for analysis calls (DeepInfra in production: `https://api.deepinfra.com/v1/openai`)
 - `RagPipeline__LlmApiKey` — API key for the LLM provider
 - `RagPipeline__Model` — model name (e.g. `meta-llama/Llama-3.3-70B-Instruct`)
+- `RagPipeline__AdminApiKey` — `X-Admin-Key` secret for forge-ai-api admin endpoints (ingest, ingest-status); must match `Admin__ApiKey` in forge-ai-api
 - `MongoDb__ConnectionString`, `MongoDb__DatabaseName`
 - `DATABASE_URL` or `SqlStorage__ConnectionString` — PostgreSQL connection string
 - `JWT_SECRET`, `ADMIN_PASSWORD`
