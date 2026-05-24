@@ -119,6 +119,7 @@ public class CardRecommendation
     public string Reason { get; set; } = null!;
     public string Category { get; set; } = null!;
     public string EstimatedBudgetTier { get; set; } = "mid";
+    public bool IsOwned { get; set; }
 }
 
 public class AddCardRequest

@@ -640,6 +640,9 @@ public class DecksController : ControllerBase
             if (!IsAdmin() && deck.UserId != GetUserId()) return Forbid();
 
             var recs = await _llmService.GetCardRecommendationsAsync(deck);
+            var ownedNames = await _collectionService.GetOwnedNamesAsync(GetUserId());
+            foreach (var rec in recs)
+                rec.IsOwned = ownedNames.Contains(rec.Name);
             return Ok(recs);
         }
         catch (Exception ex)

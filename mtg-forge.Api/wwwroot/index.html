@@ -2397,6 +2397,9 @@
         .budget-chip.budget { background:rgba(76,175,80,0.18);color:#81c784; }
         .budget-chip.mid { background:rgba(255,193,7,0.15);color:#ffd54f; }
         .budget-chip.expensive { background:rgba(244,67,54,0.12);color:#ef9a9a; }
+        .owned-chip { font-size:0.7rem;padding:0.1rem 0.4rem;border-radius:4px;font-family:'Cinzel',serif;letter-spacing:0.04em; }
+        .owned-chip.owned   { background:rgba(76,175,80,0.18);color:#81c784; }
+        .owned-chip.unowned { background:rgba(244,67,54,0.12);color:#ef9a9a; }
 
     </style>
 </head>
@@ -5742,7 +5745,14 @@
             if (!recs || recs.length === 0)
                 return '<div style="text-align:center;padding:2rem;color:var(--text-muted);font-family:\'Crimson Text\',serif;">No recommendations generated. Try clicking Refresh.</div>';
 
-            return recs.map(r => `
+            return recs.map(r => {
+                const ownedChip = r.isOwned
+                    ? `<span class="owned-chip owned">&#10003; Owned</span>`
+                    : `<span class="owned-chip unowned">&#10007; Not Owned</span>`;
+                const collectionLink = !r.isOwned
+                    ? `<a href="#" style="font-size:0.75rem;color:var(--gold-light);text-decoration:underline;margin-left:auto;" onclick="event.preventDefault();closeRecommendationsModal();switchView('collection');">Go to Collection &#8594;</a>`
+                    : '';
+                return `
                 <div class="rec-card" onmouseenter="showCardImage(event,'${r.name.replace(/'/g,"\\'")}');" onmouseleave="hideCardImage();">
                     <img class="rec-thumb" data-rec-thumb="${escAttr(r.name)}" src="" alt="${escAttr(r.name)}" onerror="this.style.display='none'">
                     <div style="flex:1;min-width:0;">
@@ -5750,14 +5760,19 @@
                             <span class="rec-name">${escH(r.name)}</span>
                             <span class="budget-chip ${r.estimatedBudgetTier || 'mid'}">${r.estimatedBudgetTier || 'mid'}</span>
                             <span style="font-size:0.72rem;padding:0.1rem 0.4rem;border-radius:4px;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-muted);font-family:'Cinzel',serif;">${escH(r.category || '')}</span>
+                            ${ownedChip}
                             <button class="rec-add-btn" id="rec-add-${escAttr(r.name)}"
                                 onclick="addRecommendedCard('${escAttr(deckId)}','${escAttr(r.name)}','${escAttr(r.category || '')}',this)">
                                 + Add
                             </button>
                         </div>
-                        <div class="rec-reason">${escH(r.reason)}</div>
+                        <div style="display:flex;align-items:baseline;gap:0.5rem;flex-wrap:wrap;">
+                            <div class="rec-reason" style="flex:1;">${escH(r.reason)}</div>
+                            ${collectionLink}
+                        </div>
                     </div>
-                </div>`).join('');
+                </div>`;
+            }).join('');
         }
 
         async function addRecommendedCard(deckId, cardName, category, btnEl) {
