@@ -3,6 +3,12 @@ using MtgForge.Api.Models;
 
 namespace MtgForge.Api.Services;
 
+/// <summary>
+/// Immutable snapshot of deck statistics used to build the LLM analysis prompt.
+/// Category counts (<see cref="RampCount"/>, <see cref="RemovalCount"/>,
+/// <see cref="CardDrawCount"/>) are <c>null</c> for imported decks that use structural
+/// categories (Mainboard/Sideboard) instead of AI-assigned semantic categories.
+/// </summary>
 public record DeckMetrics(
     Dictionary<int, int>    ManaCurve,            // CMC bucket → card count (non-land; 7+ grouped)
     double                  AverageCmc,
@@ -15,6 +21,10 @@ public record DeckMetrics(
     decimal                 TotalCost
 );
 
+/// <summary>
+/// Calculates deck statistics from a card list. Designed to be called once before
+/// building the LLM analysis prompt so the prompt contains accurate quantitative data.
+/// </summary>
 public static class DeckMetricsCalculator
 {
     // Matches any {…} mana symbol so we can extract color letters from hybrid/phyrexian too
@@ -28,6 +38,12 @@ public static class DeckMetricsCalculator
          "Win Conditions", "Synergy Pieces", "Utility"],
         StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Computes a <see cref="DeckMetrics"/> snapshot from <paramref name="cards"/>.
+    /// Non-land spells are bucketed by CMC (7+ grouped together) for the mana curve.
+    /// Category counts are only populated when at least one card uses an AI-assigned
+    /// semantic category; imported decks return <c>null</c> for those fields.
+    /// </summary>
     public static DeckMetrics Calculate(IEnumerable<CardEntry> cards)
     {
         var cardList = cards.ToList();
@@ -121,6 +137,11 @@ public static class DeckMetricsCalculator
                 yield return token;
     }
 
+    /// <summary>
+    /// Formats a mana-curve dictionary as a compact single-line string suitable for
+    /// inclusion in an LLM prompt, e.g. <c>"CMC 1: 8  CMC 2: 12  CMC 7+: 3"</c>.
+    /// Buckets with zero cards are omitted.
+    /// </summary>
     public static string FormatManaCurve(Dictionary<int, int> curve)
     {
         var sb = new System.Text.StringBuilder();
@@ -135,6 +156,10 @@ public static class DeckMetricsCalculator
         return sb.ToString().Trim();
     }
 
+    /// <summary>
+    /// Formats a color-pip distribution dictionary as a compact string sorted by pip
+    /// count descending, e.g. <c>"G:42  U:30  W:10"</c>. Colors with zero pips are omitted.
+    /// </summary>
     public static string FormatPips(Dictionary<string, int> pips)
     {
         var parts = pips

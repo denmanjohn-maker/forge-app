@@ -6,6 +6,14 @@ using MtgForge.Api.Services;
 
 namespace MtgForge.Api.Controllers;
 
+/// <summary>
+/// Handles user authentication and user management for the API JWT flow.
+/// <para>
+/// <c>POST /api/auth/login</c> is open. All other endpoints require the
+/// <c>Admin</c> role except <c>GET /api/auth/me</c>, which requires any
+/// authenticated user.
+/// </para>
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
@@ -19,6 +27,7 @@ public class AuthController : ControllerBase
         _userService = userService;
     }
 
+    /// <summary>Authenticates a user and returns a signed JWT bearer token.</summary>
     [HttpPost("login")]
     public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest request)
     {
@@ -29,6 +38,7 @@ public class AuthController : ControllerBase
         return Ok(response);
     }
 
+    /// <summary>Creates a new user. Admin only.</summary>
     [Authorize(Roles = "Admin")]
     [HttpPost("register")]
     public async Task<ActionResult<UserResponse>> Register([FromBody] RegisterRequest request)
@@ -51,6 +61,7 @@ public class AuthController : ControllerBase
         return CreatedAtAction(nameof(GetMe), ToUserResponse(created));
     }
 
+    /// <summary>Returns the profile of the currently authenticated user.</summary>
     [Authorize]
     [HttpGet("me")]
     public async Task<ActionResult<UserResponse>> GetMe()
@@ -63,6 +74,7 @@ public class AuthController : ControllerBase
         return Ok(ToUserResponse(user));
     }
 
+    /// <summary>Returns all registered users. Admin only.</summary>
     [Authorize(Roles = "Admin")]
     [HttpGet("users")]
     public async Task<ActionResult<List<UserResponse>>> GetAllUsers()
@@ -71,6 +83,7 @@ public class AuthController : ControllerBase
         return Ok(users.Select(ToUserResponse).ToList());
     }
 
+    /// <summary>Resets a user's password. Admin only.</summary>
     [Authorize(Roles = "Admin")]
     [HttpPost("users/{id}/reset-password")]
     public async Task<IActionResult> ResetPassword(string id, [FromBody] ResetPasswordRequest request)
@@ -88,6 +101,7 @@ public class AuthController : ControllerBase
         return Ok(new { message = "Password reset successfully" });
     }
 
+    /// <summary>Permanently deletes a user. Admins cannot delete their own account. Admin only.</summary>
     [Authorize(Roles = "Admin")]
     [HttpDelete("users/{id}")]
     public async Task<IActionResult> DeleteUser(string id)

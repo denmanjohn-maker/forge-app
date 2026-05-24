@@ -1,5 +1,14 @@
 namespace MtgForge.Api.Services;
 
+/// <summary>
+/// Background service that re-analyzes decks whose AI analysis is stale (older than
+/// <c>StaleAfterDays</c> days, or missing entirely). Runs once per day with a 5-minute
+/// startup delay to allow the application to fully initialize first.
+/// <para>
+/// At most <c>MaxDecksPerRun</c> decks are processed per run to limit LLM costs.
+/// Analysis failures for individual decks are logged as warnings and do not abort the run.
+/// </para>
+/// </summary>
 public class DeckReanalysisHostedService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
@@ -34,6 +43,11 @@ public class DeckReanalysisHostedService : BackgroundService
         }
     }
 
+    /// <summary>
+    /// Fetches stale decks, re-analyzes each one via the AI service, and persists the
+    /// updated analysis. Returns the number of decks successfully re-analyzed.
+    /// Exposed as <c>public</c> so integration tests can trigger a run directly.
+    /// </summary>
     public async Task<int> RunReanalysisAsync(CancellationToken cancellationToken = default)
     {
         using var scope = _serviceProvider.CreateScope();
