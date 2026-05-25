@@ -7,6 +7,21 @@ using MtgForge.Api.Models;
 
 namespace MtgForge.Api.Services;
 
+/// <summary>
+/// Downloads and imports daily card-price data from MTGJSON into PostgreSQL using
+/// streaming <see cref="Utf8JsonReader"/> parsing to avoid loading multi-hundred-MB
+/// payloads fully into memory.
+/// <para>
+/// The import is a two-pass operation:
+/// <list type="number">
+///   <item>Stream-parse <c>AllPrintings.json</c> to build a UUID → card-name map.</item>
+///   <item>Stream-parse <c>AllPrices.json</c> to build a UUID → USD-price map.</item>
+/// </list>
+/// The two maps are joined and then upserted into the <c>CardPrices</c> table in
+/// batches of 1,000 rows to minimize memory pressure and transaction size.
+/// Import runs are recorded in the <c>PricingImportRuns</c> table for observability.
+/// </para>
+/// </summary>
 public class MtgJsonPricingImportService
 {
     private readonly HttpClient _httpClient;
@@ -22,6 +37,12 @@ public class MtgJsonPricingImportService
         _settings = settings.Value;
     }
 
+    /// <summary>
+    /// Runs the full daily pricing import: downloads MTGJSON printings and prices,
+    /// joins them, and upserts all card prices into PostgreSQL.
+    /// Returns a tuple indicating success/failure, the number of rows inserted or
+    /// updated, and a human-readable status message.
+    /// </summary>
     public async Task<(bool Success, int ImportedCount, string Message)> ImportDailyAsync(CancellationToken cancellationToken = default)
     {
         var run = new PricingImportRun { StartedAtUtc = DateTime.UtcNow };

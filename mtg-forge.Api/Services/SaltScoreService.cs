@@ -3,6 +3,15 @@ using Microsoft.Extensions.Caching.Memory;
 
 namespace MtgForge.Api.Services;
 
+/// <summary>
+/// Fetches and caches card "salt scores" from the EDHREC public API.
+/// Salt scores represent how much other players dislike playing against a given card
+/// in Commander, based on community survey data.
+/// <para>
+/// Results are cached in memory for 24 hours to avoid hammering the EDHREC endpoint.
+/// Returns an empty dictionary on fetch or parse failure rather than propagating errors.
+/// </para>
+/// </summary>
 public class SaltScoreService
 {
     private readonly IHttpClientFactory _factory;
@@ -19,6 +28,11 @@ public class SaltScoreService
         _logger = logger;
     }
 
+    /// <summary>
+    /// Returns a dictionary mapping card name → salt score, sourced from EDHREC.
+    /// Results are served from an in-memory cache (24-hour TTL) after the first fetch.
+    /// Returns an empty dictionary when the endpoint is unreachable or returns an error.
+    /// </summary>
     public async Task<Dictionary<string, double>> GetSaltScoresAsync()
     {
         if (_cache.TryGetValue(CacheKey, out Dictionary<string, double>? cached) && cached != null)

@@ -5,6 +5,16 @@ using MtgForge.Api.Models;
 
 namespace MtgForge.Api.Services;
 
+/// <summary>
+/// Enriches card data by querying the Scryfall card collection API.
+/// Used during CSV import and individual card-add operations to fill in mana cost,
+/// CMC, type line, and price for cards that lack that data.
+/// <para>
+/// Requests are batched in groups of 75 (the Scryfall API limit) with a 110 ms delay
+/// between batches to stay within the 10 req/sec rate limit. Enrichment is
+/// non-destructive — only empty/zero fields are filled in.
+/// </para>
+/// </summary>
 public class ScryfallService
 {
     private readonly HttpClient _httpClient;

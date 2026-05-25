@@ -5,6 +5,11 @@ using MtgForge.Api.Models;
 
 namespace MtgForge.Api.Services;
 
+/// <summary>
+/// Provides CRUD, search, and analytics operations for <see cref="DeckConfiguration"/>
+/// documents stored in MongoDB, and maintains a companion history collection that records
+/// card changes made to each deck.
+/// </summary>
 public class DeckService
 {
     private readonly IMongoCollection<DeckConfiguration> _decksCollection;
@@ -39,11 +44,16 @@ public class DeckService
         });
     }
 
+    /// <summary>Returns all decks across all users, sorted newest-first. Prefer <see cref="GetPagedAsync"/> for user-facing calls.</summary>
     public async Task<List<DeckConfiguration>> GetAllAsync() =>
         await _decksCollection.Find(_ => true)
             .SortByDescending(d => d.CreatedAt)
             .ToListAsync();
 
+    /// <summary>
+    /// Returns a page of decks filtered by user, name, color, format, and power level.
+    /// When <paramref name="isAdmin"/> is <c>true</c>, decks from all users are included.
+    /// </summary>
     public async Task<PagedResult<DeckConfiguration>> GetPagedAsync(
         string? userId, bool isAdmin,
         string? name, string? color, string? format, string? powerLevel,
@@ -83,9 +93,14 @@ public class DeckService
         };
     }
 
+    /// <summary>Finds a single deck by its MongoDB ObjectId string. Returns <c>null</c> if not found.</summary>
     public async Task<DeckConfiguration?> GetByIdAsync(string id) =>
         await _decksCollection.Find(x => x.Id == id).FirstOrDefaultAsync();
 
+    /// <summary>
+    /// Returns decks matching optional color, format, and/or user-ID filters, sorted
+    /// newest-first. All filters are ANDed together.
+    /// </summary>
     public async Task<List<DeckConfiguration>> SearchAsync(string? color = null, string? format = null, string? userId = null)
     {
         var builder = Builders<DeckConfiguration>.Filter;
@@ -105,6 +120,10 @@ public class DeckService
             .ToListAsync();
     }
 
+    /// <summary>
+    /// Inserts a new deck, setting <c>CreatedAt</c> and <c>UpdatedAt</c> to the current
+    /// UTC time. The MongoDB-assigned <c>Id</c> is written back to the passed object.
+    /// </summary>
     public async Task<DeckConfiguration> CreateAsync(DeckConfiguration deck)
     {
         deck.CreatedAt = DateTime.UtcNow;
@@ -113,6 +132,13 @@ public class DeckService
         return deck;
     }
 
+    /// <summary>
+    /// Applies a partial update from <paramref name="req"/>, updating only the fields
+    /// that are non-null. When <paramref name="req"/> includes a card list change and
+    /// <paramref name="userId"/> is provided, a <see cref="DeckHistoryEntry"/> is written
+    /// if the card list differs from the existing deck.
+    /// Returns <c>false</c> if no document was modified.
+    /// </summary>
     public async Task<bool> UpdateAsync(string id, DeckUpdateRequest req, string? userId = null)
     {
         var updates = new List<UpdateDefinition<DeckConfiguration>>();
@@ -177,6 +203,10 @@ public class DeckService
         return result.ModifiedCount > 0;
     }
 
+    /// <summary>
+    /// Returns the most recent history entries for a deck, sorted newest-first.
+    /// Defaults to 25 entries.
+    /// </summary>
     public async Task<List<DeckHistoryEntry>> GetHistoryAsync(string deckId, int limit = 25)
     {
         return await _historyCollection
@@ -186,6 +216,10 @@ public class DeckService
             .ToListAsync();
     }
 
+    /// <summary>
+    /// Persists a completed <see cref="DeckAnalysis"/> to the deck document and stamps
+    /// <c>LastAnalyzedAt</c> to the current UTC time.
+    /// </summary>
     public async Task<bool> UpdateAnalysisAsync(string id, DeckAnalysis analysis)
     {
         var update = Builders<DeckConfiguration>.Update
@@ -197,11 +231,13 @@ public class DeckService
         return result.ModifiedCount > 0;
     }
 
+    /// <summary>Returns all decks owned by <paramref name="userId"/>, sorted newest-first.</summary>
     public async Task<List<DeckConfiguration>> GetByUserIdAsync(string userId) =>
         await _decksCollection.Find(d => d.UserId == userId)
             .SortByDescending(d => d.CreatedAt)
             .ToListAsync();
 
+    /// <summary>Permanently deletes the deck document. Returns <c>false</c> if not found.</summary>
     public async Task<bool> DeleteAsync(string id)
     {
         var result = await _decksCollection.DeleteOneAsync(x => x.Id == id);

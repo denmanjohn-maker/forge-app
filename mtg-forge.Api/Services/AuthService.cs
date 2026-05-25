@@ -7,6 +7,11 @@ using MtgForge.Api.Models;
 
 namespace MtgForge.Api.Services;
 
+/// <summary>
+/// Handles password hashing, JWT token generation, and credential verification
+/// for the API's custom auth flow (separate from ASP.NET Identity, which is only
+/// used for the Razor Pages cookie flow).
+/// </summary>
 public class AuthService
 {
     private readonly JwtSettings _jwtSettings;
@@ -18,12 +23,18 @@ public class AuthService
         _userService = userService;
     }
 
+    /// <summary>Returns a BCrypt hash of <paramref name="password"/>.</summary>
     public string HashPassword(string password) =>
         BCrypt.Net.BCrypt.HashPassword(password);
 
+    /// <summary>Verifies a plain-text <paramref name="password"/> against a stored BCrypt <paramref name="hash"/>.</summary>
     public bool VerifyPassword(string password, string hash) =>
         BCrypt.Net.BCrypt.Verify(password, hash);
 
+    /// <summary>
+    /// Creates a signed JWT bearer token for <paramref name="user"/>, embedding
+    /// the user ID, username, role, and display name as claims.
+    /// </summary>
     public string GenerateToken(User user)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Secret));
@@ -47,6 +58,11 @@ public class AuthService
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
+    /// <summary>
+    /// Looks up the user by <paramref name="username"/>, verifies their password, updates
+    /// the last-login timestamp, and returns a <see cref="LoginResponse"/> containing a
+    /// fresh JWT. Returns <c>null</c> if the credentials are invalid.
+    /// </summary>
     public async Task<LoginResponse?> AuthenticateAsync(string username, string password)
     {
         var user = await _userService.GetByUsernameAsync(username);
