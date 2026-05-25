@@ -2360,7 +2360,7 @@
         .primer-textarea { width:100%;min-height:220px;background:var(--bg-deep);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-family:'Crimson Text',serif;font-size:1rem;padding:0.75rem;resize:vertical;box-sizing:border-box; }
 
         /* ── Collection View ── */
-        .collection-table { width:100%;border-collapse:collapse;font-family:'Crimson Text',serif;font-size:0.95rem; }
+        .collection-table { width:100%;border-collapse:collapse;font-family:'Crimson Text',serif;font-size:1.1rem; }
         .collection-table th { font-family:'Cinzel',serif;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);padding:0.5rem 0.75rem;text-align:left;border-bottom:1px solid var(--border); }
         .collection-table td { padding:0.45rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:middle; }
         .collection-table tr:hover td { background:var(--bg-panel); }
@@ -3262,10 +3262,14 @@
                     <input type="text" id="colCardName" class="login-field" style="margin:0;padding:0.5rem 0.75rem;" placeholder="e.g. Sol Ring" oninput="debouncedColCardSearch()">
                     <div id="colCardSuggestions" style="display:none;background:var(--bg-panel);border:1px solid var(--border);border-radius:6px;margin-top:2px;max-height:160px;overflow-y:auto;"></div>
                 </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;">
                     <div>
                         <label class="form-label">Quantity</label>
                         <input type="number" id="colQty" class="login-field" style="margin:0;padding:0.5rem 0.75rem;" value="1" min="1">
+                    </div>
+                    <div>
+                        <label class="form-label">Set Code <span style="font-size:0.72rem;color:var(--text-muted);font-family:'Crimson Text',serif;text-transform:none;letter-spacing:0;">(auto)</span></label>
+                        <input type="text" id="colSetCode" class="login-field" style="margin:0;padding:0.5rem 0.75rem;text-transform:uppercase;" placeholder="e.g. MKM" maxlength="6">
                     </div>
                     <div>
                         <label class="form-label">Condition</label>
@@ -5901,6 +5905,7 @@
                     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;font-family:\'Crimson Text\',serif;">No cards in collection yet. Add some!</td></tr>';
                 } else {
                     tbody.insertAdjacentHTML('beforeend', data.items.map(renderCollectionRow).join(''));
+                    setupCollectionCardHover();
                 }
                 _colSkip += data.items.length;
                 const lmw = document.getElementById('collectionLoadMoreWrap');
@@ -5914,11 +5919,39 @@
 
         function loadMoreCollection() { loadCollection(true); }
 
+        function setupCollectionCardHover() {
+            const tbody = document.getElementById('collectionTableBody');
+            if (!tbody || tbody._hoverAttached) return;
+            tbody._hoverAttached = true;
+            tbody.addEventListener('mouseover', e => {
+                const el = e.target.closest('[data-cn]');
+                if (el) showCardImage(e, el.dataset.cn);
+                else hideCardImage();
+            });
+            tbody.addEventListener('mouseleave', hideCardImage);
+            tbody.addEventListener('mousemove', e => {
+                const el = e.target.closest('[data-cn]');
+                if (el && document.getElementById('cardImgTooltip').classList.contains('visible'))
+                    positionTooltip(e);
+            });
+            if (_isTouchDevice) {
+                let _ts = 0, _tm = false;
+                tbody.addEventListener('touchstart', e => { _ts = e.touches[0].clientY; _tm = false; }, { passive: true });
+                tbody.addEventListener('touchmove', e => { if (Math.abs(e.touches[0].clientY - _ts) > 8) _tm = true; }, { passive: true });
+                tbody.addEventListener('touchend', e => {
+                    if (!_tm) {
+                        const el = e.target.closest('[data-cn]');
+                        if (el) { e.preventDefault(); showCardLightbox(el.dataset.cn); }
+                    }
+                });
+            }
+        }
+
         function renderCollectionRow(e) {
             const escH = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
             return `
                 <tr>
-                    <td><span class="card-name-text" data-cn="${e.cardName.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" style="cursor:default;">${escH(e.cardName)}</span></td>
+                    <td><span class="card-name-text" data-cn="${e.cardName.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}">${escH(e.cardName)}</span></td>
                     <td>${e.quantity}</td>
                     <td style="color:var(--text-muted);">${escH(e.setCode || '—')}</td>
                     <td>${e.foil ? '<span style="color:var(--gold);font-family:\'Cinzel\',serif;font-size:0.75rem;">Foil</span>' : '—'}</td>
@@ -5987,6 +6020,7 @@
             document.getElementById('addCardToCollectionModal').classList.remove('hidden');
             document.getElementById('colCardName').value = '';
             document.getElementById('colQty').value = '1';
+            document.getElementById('colSetCode').value = '';
             document.getElementById('colFoil').checked = false;
             document.getElementById('colCardSuggestions').style.display = 'none';
         }
@@ -6013,22 +6047,36 @@
                 sugEl.style.display = '';
                 sugEl.innerHTML = names.map(n =>
                     `<div style="padding:0.4rem 0.75rem;cursor:pointer;font-family:'Crimson Text',serif;font-size:0.95rem;"
-                         onmousedown="document.getElementById('colCardName').value='${n.replace(/'/g,'\\\'').replace(/"/g,'&quot;')}';document.getElementById('colCardSuggestions').style.display='none';">${n}</div>`
+                         onmousedown="selectCollectionCard('${n.replace(/\\/g,'\\\\').replace(/'/g,'\\\'').replace(/"/g,'&quot;')}')">${n}</div>`
                 ).join('');
             } catch { sugEl.style.display = 'none'; }
+        }
+
+        async function selectCollectionCard(name) {
+            document.getElementById('colCardName').value = name;
+            document.getElementById('colCardSuggestions').style.display = 'none';
+            try {
+                const resp = await fetch(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}`);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    const setEl = document.getElementById('colSetCode');
+                    if (setEl && data.set) setEl.value = data.set.toUpperCase();
+                }
+            } catch { /* ignore */ }
         }
 
         async function submitAddCollectionCard() {
             const cardName = document.getElementById('colCardName').value.trim();
             if (!cardName) { showToast('Enter a card name', true); return; }
-            const qty  = parseInt(document.getElementById('colQty').value) || 1;
-            const cond = document.getElementById('colCondition').value;
-            const foil = document.getElementById('colFoil').checked;
+            const qty     = parseInt(document.getElementById('colQty').value) || 1;
+            const cond    = document.getElementById('colCondition').value;
+            const foil    = document.getElementById('colFoil').checked;
+            const setCode = document.getElementById('colSetCode')?.value.trim().toUpperCase() || null;
             try {
                 const res = await authFetch(COL_API, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ cardName, quantity: qty, condition: cond, foil })
+                    body: JSON.stringify({ cardName, quantity: qty, condition: cond, foil, setCode: setCode || null })
                 });
                 if (!res.ok) throw new Error('Failed to add card');
                 closeAddCardToCollectionModal();
