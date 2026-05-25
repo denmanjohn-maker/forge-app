@@ -4979,8 +4979,23 @@
             } catch (err) { showToast(err.message, true); }
         }
 
-        function printProxies(deckId) {
-            window.open(`${API_BASE}/${deckId}/proxy`, '_blank');
+        async function printProxies(deckId) {
+            showToast('Generating proxy sheet… this may take a minute');
+            try {
+                const res = await authFetch(`${API_BASE}/${deckId}/proxy`);
+                if (!res.ok) throw new Error(`Proxy generation failed (${res.status})`);
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'proxies.pdf';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 10000);
+            } catch (err) {
+                showToast(err.message, true);
+            }
         }
 
         // === Helpers ===
