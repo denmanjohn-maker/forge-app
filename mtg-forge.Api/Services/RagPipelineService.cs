@@ -630,13 +630,14 @@ public class RagPipelineService : IDeckGenerationService
 
         var refineRequest = new DeckGenerationRequest
         {
-            Colors           = existingDeck.Colors,
-            Format           = existingDeck.Format,
-            PowerLevel       = existingDeck.PowerLevel,
-            BudgetRange      = existingDeck.BudgetRange,
-            PreferredStrategy = existingDeck.Strategy,
+            Colors             = existingDeck.Colors,
+            Format             = existingDeck.Format,
+            PowerLevel         = existingDeck.PowerLevel,
+            BudgetRange        = existingDeck.BudgetRange,
             PreferredCommander = existingDeck.Commander,
-            AdditionalNotes  = refinementContext
+            AdditionalNotes    = refinementContext
+            // PreferredStrategy intentionally omitted — the existing strategy is long prose,
+            // not a short archetype keyword, and would be echoed back as the deck name by forge-ai-api.
         };
 
         return GenerateDeckAsync(refineRequest);
