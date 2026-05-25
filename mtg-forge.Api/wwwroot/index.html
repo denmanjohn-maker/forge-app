@@ -35,8 +35,8 @@
             --bg-panel: #161616;
             --bg-hover: #1E1E1E;
             --text-primary: #E8E4D9;
-            --text-secondary: #9A9488;
-            --text-muted: #5C5850;
+            --text-secondary: #C0B8A8;
+            --text-muted: #8A8478;
             --border: #2A2A35;
             --border-gold: rgba(201, 168, 76, 0.3);
             --mana-white: #F9FAF4;
@@ -1600,11 +1600,11 @@
         .btn-outline {
             background: none;
             border: 1px solid var(--border);
-            color: var(--text-secondary);
+            color: var(--text-primary);
             padding: 0.6rem 1.25rem;
             border-radius: 6px;
             font-family: 'Cinzel', serif;
-            font-size: 0.75rem;
+            font-size: 0.8rem;
             font-weight: 600;
             letter-spacing: 0.05em;
             cursor: pointer;
@@ -1632,6 +1632,63 @@
 
         .btn-danger:hover {
             background: var(--danger-hover);
+        }
+
+        /* Export dropdown */
+        .export-dropdown-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .export-dropdown {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            z-index: 200;
+            background: var(--bg-panel);
+            border: 1px solid var(--border-gold);
+            border-radius: 8px;
+            padding: 0.4rem 0;
+            min-width: 160px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+        }
+
+        .export-dropdown.hidden { display: none; }
+
+        .export-dropdown button {
+            display: block;
+            width: 100%;
+            background: none;
+            border: none;
+            text-align: left;
+            padding: 0.5rem 1rem;
+            font-family: 'Cinzel', serif;
+            font-size: 0.78rem;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+        }
+
+        .export-dropdown button:hover {
+            background: var(--bg-hover);
+            color: var(--gold);
+        }
+
+        .export-dropdown hr {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 0.3rem 0;
+        }
+
+        .export-dropdown .export-section-label {
+            display: block;
+            padding: 0.3rem 1rem 0.1rem;
+            font-family: 'Cinzel', serif;
+            font-size: 0.65rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            cursor: default;
         }
 
         /* Toast notifications */
@@ -3204,7 +3261,7 @@
     <!-- Primer Modal -->
     <div class="modal-overlay hidden" id="primerModal">
         <div class="modal" style="max-width:720px;width:96%;max-height:90vh;display:flex;flex-direction:column;">
-            <h3 style="margin-bottom:0.75rem;">&#128221; Deck Primer</h3>
+            <h3 style="margin-bottom:0.75rem;">&#128221; Strategy Notes</h3>
             <p style="font-family:'Crimson Text',serif;font-size:0.9rem;color:var(--text-muted);margin-bottom:0.75rem;">Write a strategy guide using Markdown. Explain your win conditions, key synergies, and how to play the deck.</p>
             <textarea id="primerTextarea" class="primer-textarea" placeholder="## Overview&#10;&#10;This deck wins by..."></textarea>
             <div class="modal-actions" style="margin-top:1rem;">
@@ -4229,14 +4286,21 @@
                 `).join('')}
 
                 <div class="detail-actions" style="display:flex;gap:0.75rem;margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--border);flex-wrap:wrap;">
-                    <button class="btn-outline" onclick="exportDeck('mtga')">&#8659; MTGA</button>
-                    <button class="btn-outline" onclick="exportDeck('text')">&#8659; Text</button>
-                    <button class="btn-outline" onclick="exportDeck('csv')">&#8659; CSV</button>
-                    <button class="btn-outline" onclick="exportDeck('moxfield')">&#8659; Moxfield</button>
-                    <button class="btn-outline" onclick="exportDeck('archidekt')">&#8659; Archidekt</button>
-                    <button class="btn-outline" onclick="exportDeck('deckbox')">&#8659; Deckbox</button>
-                    <button class="btn-outline" onclick="exportDeck('deckstats')">&#8659; Deckstats</button>
-                    <button class="btn-outline" onclick="openEditModal(currentDetailDeck)">&#9998; Edit</button>
+                    <div class="export-dropdown-wrapper">
+                        <button class="btn-outline" onclick="toggleExportDropdown(event)">&#8659; Export</button>
+                        <div class="export-dropdown hidden" id="exportDropdown">
+                            <button onclick="exportDeck('mtga');closeExportDropdown()">MTGA Format</button>
+                            <button onclick="exportDeck('text');closeExportDropdown()">Plain Text</button>
+                            <hr>
+                            <span class="export-section-label">CSV Formats</span>
+                            <button onclick="exportDeck('csv');closeExportDropdown()">Generic CSV</button>
+                            <button onclick="exportDeck('moxfield');closeExportDropdown()">Moxfield</button>
+                            <button onclick="exportDeck('archidekt');closeExportDropdown()">Archidekt</button>
+                            <button onclick="exportDeck('deckbox');closeExportDropdown()">Deckbox</button>
+                            <button onclick="exportDeck('deckstats');closeExportDropdown()">Deckstats</button>
+                        </div>
+                    </div>
+                    <button class="btn-outline" onclick="openEditModal(currentDetailDeck)">&#9998; Edit Details</button>
                     <button class="btn-outline" onclick="openCardEditorModal()">&#9998; Edit Cards</button>
                     <button class="btn-outline" onclick="openHandSimulator()">&#127922; Hand Simulator</button>
                     <button class="btn-outline" onclick="openCompareModal()">&#8644; Compare</button>
@@ -4245,7 +4309,7 @@
                     <button class="btn-outline" onclick="openRecommendationsModal('${deck.id}')">&#10024; AI Recommendations</button>
                     <button class="btn-outline" onclick="openCombosModal('${deck.id}')">&#9889; Combos</button>
                     <button class="btn-outline" onclick="openHistoryModal('${deck.id}')">&#128337; History</button>
-                    <button class="btn-outline" onclick="openPrimerModal('${deck.id}', ${JSON.stringify(deck.primer || '')})">&#128221; Primer</button>
+                    <button class="btn-outline" onclick="openPrimerModal('${deck.id}', ${JSON.stringify(deck.primer || '')})">&#128221; Strategy Notes</button>
                     <button class="btn-danger" onclick="openDeleteModal('${deck.id}')">&#128293; Banish Deck</button>
                 </div>
 
@@ -4886,6 +4950,24 @@
             };
             lightbox.addEventListener('transitionend', _lightboxHideHandler, { once: true });
         }
+
+        // === Export Dropdown ===
+        function toggleExportDropdown(e) {
+            e.stopPropagation();
+            const dd = document.getElementById('exportDropdown');
+            if (!dd) return;
+            dd.classList.toggle('hidden');
+        }
+
+        function closeExportDropdown() {
+            const dd = document.getElementById('exportDropdown');
+            if (dd) dd.classList.add('hidden');
+        }
+
+        document.addEventListener('click', function(e) {
+            const wrapper = e.target.closest('.export-dropdown-wrapper');
+            if (!wrapper) closeExportDropdown();
+        });
 
         // === Deck Export ===
         async function exportDeck(format) {
@@ -5581,7 +5663,7 @@
                 if (currentDetailDeck) currentDetailDeck.primer = primer;
                 closePrimerModal();
                 renderPrimerDisplay(primer);
-                showToast('Primer saved');
+                showToast('Strategy notes saved');
             } catch (err) {
                 showToast(err.message, true);
             }
@@ -5598,7 +5680,7 @@
             const html = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(rawHtml) : rawHtml;
             el.innerHTML = `
                 <div class="primer-section">
-                    <h4>&#128221; Strategy Primer</h4>
+                    <h4>&#128221; Strategy Notes</h4>
                     <div class="primer-body">${html}</div>
                 </div>`;
         }
@@ -6151,7 +6233,6 @@
                     <details style="margin-top:0.75rem;">
                         <summary style="cursor:pointer;font-family:'Cinzel',serif;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold-light);">
                             ${data.missingCards.length} Missing Card${data.missingCards.length !== 1 ? 's' : ''} · ~$${(data.shoppingListTotal||0).toFixed(2)} to complete
-                            <button onclick="copyShoppingList(event)" style="margin-left:0.75rem;padding:0.1rem 0.5rem;font-size:0.7rem;vertical-align:middle;">&#128203; Copy List</button>
                         </summary>
                         <div style="margin-top:0.5rem;display:flex;flex-direction:column;gap:0.2rem;">
                             ${data.missingCards.map(m => `
@@ -6160,6 +6241,7 @@
                                     <span style="color:var(--text-muted);">$${(m.estimatedPrice||0).toFixed(2)} ea</span>
                                 </div>`).join('')}
                         </div>
+                        <button onclick="copyShoppingList(event)" class="btn-outline" style="margin-top:0.75rem;font-size:0.75rem;padding:0.35rem 0.85rem;">&#128203; Copy Shopping List</button>
                     </details>`;
             }
 
