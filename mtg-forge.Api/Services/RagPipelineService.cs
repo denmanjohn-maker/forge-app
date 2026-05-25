@@ -81,6 +81,12 @@ public class RagPipelineService : IDeckGenerationService
                 ? themedAddendum
                 : $"{sanitizedNotes}\n\n{themedAddendum}";
 
+        if (request.ThemeHints is { Count: > 0 })
+        {
+            var hintsText = $"Theme hints: {string.Join(", ", request.ThemeHints)}.";
+            extraContext = string.IsNullOrWhiteSpace(extraContext) ? hintsText : $"{extraContext}\n{hintsText}";
+        }
+
         if (themedMatches.Count > 0)
         {
             var matchedNames = string.Join(", ", themedMatches.Select(s => s.DisplayName));
@@ -604,6 +610,36 @@ public class RagPipelineService : IDeckGenerationService
             _logger.LogWarning(ex, "Failed to generate card recommendations for deck {Id}", deck.Id);
             return new List<CardRecommendation>();
         }
+    }
+
+    // ─── Deck Refinement ─────────────────────────────────────────────────────
+
+    public Task<DeckConfiguration> RefineDeckAsync(DeckConfiguration existingDeck, string refinementPrompt)
+    {
+        var cardSummary = string.Join(", ", existingDeck.Cards
+            .Where(c => !string.Equals(c.Category, "Land", StringComparison.OrdinalIgnoreCase))
+            .Take(20)
+            .Select(c => c.Name));
+
+        var refinementContext = $"""
+            REFINEMENT INSTRUCTION: {refinementPrompt}
+
+            This is a refinement of an existing deck. Current non-land cards include: {cardSummary}.
+            Modify the deck to satisfy the refinement instruction while preserving the overall strategy where possible.
+            """;
+
+        var refineRequest = new DeckGenerationRequest
+        {
+            Colors           = existingDeck.Colors,
+            Format           = existingDeck.Format,
+            PowerLevel       = existingDeck.PowerLevel,
+            BudgetRange      = existingDeck.BudgetRange,
+            PreferredStrategy = existingDeck.Strategy,
+            PreferredCommander = existingDeck.Commander,
+            AdditionalNotes  = refinementContext
+        };
+
+        return GenerateDeckAsync(refineRequest);
     }
 
     /// <summary>

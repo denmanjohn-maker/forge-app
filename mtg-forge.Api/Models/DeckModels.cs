@@ -71,6 +71,20 @@ public class DeckGenerationRequest
     public string? PreferredStrategy { get; set; }
     public string? PreferredCommander { get; set; }
     public string? AdditionalNotes { get; set; }
+    /// <summary>Optional tribe/archetype hints (e.g. ["Elves", "Aggro"]) appended to extraContext.</summary>
+    public List<string>? ThemeHints { get; set; }
+}
+
+/// <summary>Payload for <c>POST /api/decks/{id}/refine</c>.</summary>
+public class DeckRefinementRequest
+{
+    public string RefinementPrompt { get; set; } = null!;
+}
+
+/// <summary>Payload for <c>POST /api/decks/{id}/optimize-budget</c>.</summary>
+public class OptimizeBudgetRequest
+{
+    public decimal TargetBudget { get; set; }
 }
 
 /// <summary>
@@ -155,6 +169,7 @@ public class CardRecommendation
     public string Category { get; set; } = null!;
     public string EstimatedBudgetTier { get; set; } = "mid";
     public bool IsOwned { get; set; }
+    public decimal EstimatedPrice { get; set; }
 }
 
 /// <summary>Payload for <c>POST /api/decks/{id}/add-card</c>.</summary>

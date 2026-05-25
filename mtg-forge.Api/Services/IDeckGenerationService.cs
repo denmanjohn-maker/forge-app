@@ -48,4 +48,12 @@ public interface IDeckGenerationService
     /// taking into account its strategy, colors, format, and budget.
     /// </summary>
     Task<List<CardRecommendation>> GetCardRecommendationsAsync(DeckConfiguration deck);
+
+    /// <summary>
+    /// Refines an existing deck based on a natural-language instruction
+    /// (e.g. "make it more aggressive" or "replace the most expensive cards").
+    /// Generates a new deck with the same metadata and budget constraints but
+    /// adjusted to satisfy the refinement prompt.
+    /// </summary>
+    Task<DeckConfiguration> RefineDeckAsync(DeckConfiguration existingDeck, string refinementPrompt);
 }

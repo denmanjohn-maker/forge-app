@@ -37,8 +37,9 @@ public class DecksController : ControllerBase
     private readonly SaltScoreService _saltService;
     private readonly CollectionService _collectionService;
     private readonly IHttpClientFactory _httpFactory;
+    private readonly ProxyService _proxyService;
 
-    public DecksController(DeckService deckService, IDeckGenerationService llmService, ScryfallService scryfallService, PricingService pricingService, ILogger<DecksController> logger, GenerationJobStore jobStore, IServiceScopeFactory scopeFactory, SaltScoreService saltService, CollectionService collectionService, IHttpClientFactory httpFactory)
+    public DecksController(DeckService deckService, IDeckGenerationService llmService, ScryfallService scryfallService, PricingService pricingService, ILogger<DecksController> logger, GenerationJobStore jobStore, IServiceScopeFactory scopeFactory, SaltScoreService saltService, CollectionService collectionService, IHttpClientFactory httpFactory, ProxyService proxyService)
     {
         _deckService = deckService;
         _llmService = llmService;
@@ -50,6 +51,7 @@ public class DecksController : ControllerBase
         _saltService = saltService;
         _collectionService = collectionService;
         _httpFactory = httpFactory;
+        _proxyService = proxyService;
     }
 
     private string GetUserId() => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -690,8 +692,18 @@ public class DecksController : ControllerBase
 
             var recs = await _llmService.GetCardRecommendationsAsync(deck);
             var ownedNames = await _collectionService.GetOwnedNamesAsync(GetUserId());
+
+            // Enrich with pricing data so the UI can show exact prices instead of just tier labels
+            var recCards = recs.Select(r => new CardEntry { Name = r.Name, Quantity = 1 }).ToList();
+            await _pricingService.ApplyPricesAsync(recCards);
+            var priceMap = recCards.ToDictionary(c => c.Name, c => c.EstimatedPrice, StringComparer.OrdinalIgnoreCase);
+
             foreach (var rec in recs)
+            {
                 rec.IsOwned = ownedNames.Contains(rec.Name);
+                if (priceMap.TryGetValue(rec.Name, out var price))
+                    rec.EstimatedPrice = price;
+            }
             return Ok(recs);
         }
         catch (Exception ex)
@@ -699,6 +711,141 @@ public class DecksController : ControllerBase
             _logger.LogError(ex, "Failed to get recommendations for deck {Id}", id);
             return StatusCode(500, new { error = "Failed to generate recommendations" });
         }
+    }
+
+    // === Deck Metrics ===
+
+    [HttpGet("{id}/metrics")]
+    public async Task<IActionResult> GetMetrics(string id)
+    {
+        var deck = await _deckService.GetByIdAsync(id);
+        if (deck is null) return NotFound();
+        if (!IsAdmin() && deck.UserId != GetUserId()) return Forbid();
+
+        var metrics = DeckMetricsCalculator.Calculate(deck.Cards);
+        return Ok(new
+        {
+            metrics.ManaCurve,
+            metrics.AverageCmc,
+            metrics.LandCount,
+            metrics.CreatureCount,
+            metrics.RampCount,
+            metrics.RemovalCount,
+            metrics.CardDrawCount,
+            metrics.ColorPipDistribution,
+            metrics.TotalCost
+        });
+    }
+
+    // === Budget Optimization ===
+
+    [HttpPost("{id}/optimize-budget")]
+    public async Task<IActionResult> OptimizeBudget(string id, [FromBody] OptimizeBudgetRequest request)
+    {
+        var deck = await _deckService.GetByIdAsync(id);
+        if (deck is null) return NotFound();
+        if (!IsAdmin() && deck.UserId != GetUserId()) return Forbid();
+
+        var budgetMax = request.TargetBudget;
+        if (budgetMax <= 0) return BadRequest(new { error = "TargetBudget must be greater than 0." });
+
+        if (deck.EstimatedTotalPrice <= budgetMax)
+            return Ok(deck);
+
+        var perCardMax = budgetMax <= 50m ? 1.00m : budgetMax <= 150m ? 2.00m : 5.00m;
+        var cheapCardPool = await _pricingService.GetCheapCardsAsync(perCardMax, 300);
+
+        const int maxRetries = 3;
+        for (var attempt = 0; attempt < maxRetries && deck.EstimatedTotalPrice > budgetMax; attempt++)
+        {
+            var expensiveCards = deck.Cards
+                .Where(c => !c.Category.Equals("Commander", StringComparison.OrdinalIgnoreCase)
+                         && !c.CardType.Contains("Basic Land", StringComparison.OrdinalIgnoreCase)
+                         && c.EstimatedPrice > perCardMax)
+                .OrderByDescending(c => c.EstimatedPrice)
+                .Take(25)
+                .ToList();
+
+            if (expensiveCards.Count == 0) break;
+
+            var replacements = await _llmService.SuggestBudgetReplacementsAsync(
+                deck, expensiveCards, deck.EstimatedTotalPrice, budgetMax, cheapCardPool);
+
+            if (replacements.Count == 0) break;
+
+            var existingNames = new HashSet<string>(deck.Cards.Select(c => c.Name), StringComparer.OrdinalIgnoreCase);
+            for (var i = 0; i < Math.Min(expensiveCards.Count, replacements.Count); i++)
+            {
+                var replacement = replacements[i];
+                if (existingNames.Contains(replacement.Name)) continue;
+                var idx = deck.Cards.IndexOf(expensiveCards[i]);
+                if (idx >= 0)
+                {
+                    existingNames.Remove(deck.Cards[idx].Name);
+                    deck.Cards[idx] = replacement;
+                    existingNames.Add(replacement.Name);
+                }
+            }
+
+            await _pricingService.ApplyPricesAsync(deck.Cards);
+            deck.TotalCards = deck.Cards.Sum(c => c.Quantity);
+            deck.EstimatedTotalPrice = deck.Cards.Sum(c => c.EstimatedPrice * c.Quantity);
+        }
+
+        var updateRequest = new DeckUpdateRequest { Cards = deck.Cards };
+        await _deckService.UpdateAsync(id, updateRequest, GetUserId());
+
+        var updated = await _deckService.GetByIdAsync(id);
+        return Ok(updated);
+    }
+
+    // === Deck Refinement ===
+
+    [HttpPost("{id}/refine")]
+    public IActionResult RefineDeck(string id, [FromBody] DeckRefinementRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.RefinementPrompt))
+            return BadRequest(new { error = "RefinementPrompt must be specified." });
+
+        var userId = GetUserId();
+        var displayName = GetDisplayName();
+
+        var job = _jobStore.Create(userId);
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var deckService = scope.ServiceProvider.GetRequiredService<DeckService>();
+                var llm = scope.ServiceProvider.GetRequiredService<IDeckGenerationService>();
+                var pricing = scope.ServiceProvider.GetRequiredService<PricingService>();
+
+                var existingDeck = await deckService.GetByIdAsync(id);
+                if (existingDeck is null)
+                {
+                    _jobStore.Update(job.Id, GenerationJobStatus.Failed, error: "Deck not found.");
+                    return;
+                }
+
+                var refined = await llm.RefineDeckAsync(existingDeck, request.RefinementPrompt);
+                await pricing.ApplyPricesAsync(refined.Cards);
+                refined.TotalCards = refined.Cards.Sum(c => c.Quantity);
+                refined.EstimatedTotalPrice = refined.Cards.Sum(c => c.EstimatedPrice * c.Quantity);
+                refined.UserId = userId;
+                refined.UserDisplayName = displayName;
+
+                var saved = await deckService.CreateAsync(refined);
+                _jobStore.Update(job.Id, GenerationJobStatus.Completed, deck: saved);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Deck refinement failed for job {JobId}", job.Id);
+                _jobStore.Update(job.Id, GenerationJobStatus.Failed, error: "Deck refinement failed. Please try again.");
+            }
+        });
+
+        return Accepted(new { jobId = job.Id });
     }
 
     [HttpPost("{id}/add-card")]
@@ -855,6 +1002,28 @@ public class DecksController : ControllerBase
             MissingCards = missing.OrderByDescending(m => m.EstimatedPrice).ToList(),
             ShoppingListTotal = shoppingTotal
         });
+    }
+
+    // === Proxy Sheet Generation ===
+
+    [HttpGet("{id}/proxy")]
+    public async Task<IActionResult> GetProxySheet(string id)
+    {
+        var deck = await _deckService.GetByIdAsync(id);
+        if (deck is null) return NotFound();
+        if (!IsAdmin() && deck.UserId != GetUserId()) return Forbid();
+
+        try
+        {
+            var pdfBytes = await _proxyService.GenerateProxySheetAsync(deck);
+            var safeName = string.Concat((deck.DeckName ?? "deck").Where(c => char.IsLetterOrDigit(c) || c == '-' || c == '_'));
+            return File(pdfBytes, "application/pdf", $"{safeName}-proxies.pdf");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Proxy sheet generation failed for deck {Id}", id);
+            return StatusCode(500, new { error = "Failed to generate proxy sheet." });
+        }
     }
 
     [HttpDelete("{id}")]

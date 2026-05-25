@@ -2754,6 +2754,32 @@
                                 </select>
                             </div>
 
+                            <!-- Tribe Focus -->
+                            <div class="form-group">
+                                <label class="form-label">Tribe Focus (Optional)</label>
+                                <select class="form-select" id="tribeSelect">
+                                    <option value="">Any / No tribe focus</option>
+                                    <option value="Elves">Elves</option>
+                                    <option value="Dragons">Dragons</option>
+                                    <option value="Vampires">Vampires</option>
+                                    <option value="Zombies">Zombies</option>
+                                    <option value="Goblins">Goblins</option>
+                                    <option value="Merfolk">Merfolk</option>
+                                    <option value="Humans">Humans</option>
+                                    <option value="Slivers">Slivers</option>
+                                    <option value="Angels">Angels</option>
+                                    <option value="Demons">Demons</option>
+                                    <option value="Soldiers">Soldiers</option>
+                                    <option value="Spirits">Spirits</option>
+                                    <option value="Wizards">Wizards</option>
+                                    <option value="Cats">Cats</option>
+                                    <option value="Dinosaurs">Dinosaurs</option>
+                                    <option value="Wolves">Wolves</option>
+                                    <option value="Pirates">Pirates</option>
+                                    <option value="Rogues">Rogues</option>
+                                </select>
+                            </div>
+
                             <!-- Commander Preference -->
                             <div class="form-group">
                                 <label class="form-label">Preferred Commander (Optional)</label>
@@ -3305,6 +3331,18 @@
                 </div>
             </div>
             <p id="recsBudgetNote" style="font-family:'Crimson Text',serif;font-size:0.88rem;color:var(--text-muted);margin-bottom:0.75rem;">Cards that synergize with your commander and strategy, suggested by the AI.</p>
+            <div style="margin-bottom:0.75rem;padding:0.6rem 0.75rem;background:var(--bg-deep);border:1px solid var(--border);border-radius:6px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.35rem;">
+                    <label style="font-family:'Cinzel',serif;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);">&#9881; Optimize Budget</label>
+                    <span id="budgetSliderLabel" style="font-family:'Cinzel',serif;font-size:0.82rem;color:var(--text-secondary);">$150</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.75rem;">
+                    <span style="font-size:0.75rem;color:var(--text-muted);">$10</span>
+                    <input type="range" id="budgetSlider" min="10" max="500" value="150" step="5" style="flex:1;accent-color:var(--gold);" oninput="document.getElementById('budgetSliderLabel').textContent='$'+this.value">
+                    <span style="font-size:0.75rem;color:var(--text-muted);">$500</span>
+                    <button class="btn-outline" style="padding:0.25rem 0.6rem;font-size:0.78rem;white-space:nowrap;" onclick="optimizeBudget()">Apply</button>
+                </div>
+            </div>
             <div id="recommendationsBody" style="overflow-y:auto;flex:1;"></div>
         </div>
     </div>
@@ -3885,8 +3923,11 @@
             const powerLevel = document.querySelector('input[name="powerLevel"]:checked').value;
             const budget = document.querySelector('input[name="budget"]:checked').value;
             const strategy = document.getElementById('strategy').value;
+            const tribe = document.getElementById('tribeSelect').value;
             const commander = document.getElementById('commander').value;
             const notes = document.getElementById('notes').value;
+
+            const themeHints = [tribe].filter(Boolean);
 
             const request = {
                 colors,
@@ -3895,7 +3936,8 @@
                 budgetRange: budget,
                 preferredStrategy: strategy || null,
                 preferredCommander: commander || null,
-                additionalNotes: notes || null
+                additionalNotes: notes || null,
+                themeHints: themeHints.length > 0 ? themeHints : null
             };
 
             _setGeneratingUI(true);
@@ -3912,6 +3954,32 @@
                     throw new Error(err.details || err.error || 'Generation failed');
                 }
 
+                const { jobId } = await res.json();
+                sessionStorage.setItem(GENERATION_JOB_KEY, jobId);
+                _generationPollTimer = null;
+                _pollGenerationJob(jobId);
+            } catch (err) {
+                _setGeneratingUI(false);
+                showToast(err.message, true);
+            }
+        }
+
+        async function refineDeck(deckId) {
+            const input = document.getElementById('refinePromptInput');
+            const prompt = input ? input.value.trim() : '';
+            if (!prompt) { showToast('Enter a refinement instruction first', true); return; }
+
+            _setGeneratingUI(true);
+            try {
+                const res = await authFetch(`${API_BASE}/${deckId}/refine`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ refinementPrompt: prompt })
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error || 'Refinement failed');
+                }
                 const { jobId } = await res.json();
                 sessionStorage.setItem(GENERATION_JOB_KEY, jobId);
                 _generationPollTimer = null;
@@ -3959,6 +4027,14 @@
                     <button class="btn-outline" onclick="viewDeckDetail('${deck.id}')">View Full Deck</button>
                     <button class="btn-outline" onclick="switchView('library')">Go to Library</button>
                 </div>
+                ${deck.id ? `
+                <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);">
+                    <div style="font-family:'Cinzel',serif;font-size:0.85rem;color:var(--gold);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">&#9998; Refine This Deck</div>
+                    <div style="display:flex;gap:0.5rem;">
+                        <input type="text" id="refinePromptInput" class="form-input" style="flex:1;margin:0;padding:0.5rem 0.75rem;font-size:0.9rem;" placeholder="e.g. Make it more aggressive, add more ramp..." maxlength="300">
+                        <button class="btn-outline" style="white-space:nowrap;" onclick="refineDeck('${deck.id}')">&#8635; Refine</button>
+                    </div>
+                </div>` : ''}
             `;
         }
 
@@ -4120,6 +4196,113 @@
             }
         }
 
+        function buildStatsPanelHtml(deck) {
+            const cards = deck.cards || [];
+            const lands = cards.filter(c => (c.category || '').toLowerCase() === 'land' || (c.cardType || '').toLowerCase().includes('land'));
+            const nonLands = cards.filter(c => (c.category || '').toLowerCase() !== 'land' && !(c.cardType || '').toLowerCase().includes('land'));
+            const totalSpells = nonLands.reduce((s,c) => s + c.quantity, 0);
+            const totalLands = lands.reduce((s,c) => s + c.quantity, 0);
+
+            // Category coverage (semantic categories from AI-generated decks)
+            const rampCount = cards.filter(c => /^ramp$/i.test((c.category||'').trim())).reduce((s,c) => s + c.quantity, 0);
+            const removalCount = cards.filter(c => /^removal$/i.test((c.category||'').trim())).reduce((s,c) => s + c.quantity, 0);
+            const drawCount = cards.filter(c => /^(card draw|draw)$/i.test((c.category||'').trim())).reduce((s,c) => s + c.quantity, 0);
+            const hasSemanticCats = rampCount + removalCount + drawCount > 0;
+
+            // Color pip demand from non-land mana costs
+            const pipDemand = { W:0, U:0, B:0, R:0, G:0 };
+            nonLands.forEach(c => {
+                (c.manaCost||'').replace(/\{([WUBRG])\}/g, (_, col) => { pipDemand[col] = (pipDemand[col]||0) + c.quantity; });
+            });
+            const totalPips = Object.values(pipDemand).reduce((s,v) => s + v, 0);
+
+            // Estimated land sources per color (use basic land names + deck colors as proxy)
+            const basicLandColors = { Plains:'W', Island:'U', Swamp:'B', Mountain:'R', Forest:'G' };
+            const landSources = { W:0, U:0, B:0, R:0, G:0 };
+            lands.forEach(c => {
+                const basic = basicLandColors[c.name];
+                if (basic) { landSources[basic] += c.quantity; return; }
+                // For non-basics, distribute by deck colors (rough heuristic)
+                const deckColors = deck.colors || [];
+                if (deckColors.length > 0)
+                    deckColors.forEach(col => { if (col in landSources) landSources[col] += c.quantity / deckColors.length; });
+            });
+
+            const covBar = (label, count, recommended, color) => {
+                const pct = Math.min(Math.round((count / recommended) * 100), 100);
+                const ok = count >= recommended;
+                return `<div style="margin-bottom:0.5rem;">
+                    <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:3px;">
+                        <span style="color:var(--text-secondary);">${label}</span>
+                        <span style="color:${ok ? '#81c784' : '#ef9a9a'};">${count} / ${recommended}+ ${ok ? '✓' : '⚠'}</span>
+                    </div>
+                    <div style="height:8px;background:var(--bg-deep);border-radius:4px;overflow:hidden;">
+                        <div style="width:${pct}%;height:100%;background:${ok ? color : '#ef9a9a'};border-radius:4px;transition:width 0.3s;"></div>
+                    </div>
+                </div>`;
+            };
+
+            const ratioW = totalSpells + totalLands > 0 ? Math.round((totalSpells / (totalSpells + totalLands)) * 100) : 0;
+
+            const colorRatioRows = Object.entries(pipDemand).filter(([,v]) => v > 0 || (deck.colors||[]).includes('v')).map(([col, pips]) => {
+                const sources = Math.round(landSources[col] || 0);
+                const recSources = totalPips > 0 ? Math.round((pips / totalPips) * totalLands * 1.1) : 0;
+                const ok = sources >= recSources || recSources === 0;
+                const colorBg = { W:'#f9f6e8', U:'#4a90d9', B:'#3a3a4a', R:'#d94a4a', G:'#4a9d5a' };
+                return `<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:4px;font-size:0.8rem;">
+                    <span class="mana-pip ${col}" style="width:18px;height:18px;font-size:0.65rem;flex-shrink:0;">${col}</span>
+                    <span style="color:var(--text-muted);min-width:70px;">${pips} pips needed</span>
+                    <span style="color:var(--text-muted);">~${sources} sources</span>
+                    ${!ok ? `<span style="color:#ef9a9a;font-size:0.72rem;">⚠ need ~${recSources}</span>` : `<span style="color:#81c784;font-size:0.72rem;">✓</span>`}
+                </div>`;
+            }).join('');
+
+            const panelId = 'statsPanel_' + (deck.id || 'x');
+            return `
+            <div style="margin-bottom:1rem;">
+                <button class="btn-filter-clear" style="font-size:0.78rem;margin-bottom:0.5rem;" onclick="
+                    const p=document.getElementById('${panelId}');
+                    const open=p.style.display!=='none';
+                    p.style.display=open?'none':'block';
+                    this.textContent=open?'&#128202; Show Analytics':'&#128202; Hide Analytics';
+                ">&#128202; Show Analytics</button>
+                <div id="${panelId}" style="display:none;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem;margin-bottom:1rem;">
+                        <div>${buildManaCurveHtml(deck.cards)}</div>
+                        <div>${buildColorChartHtml(deck.cards)}</div>
+                        <div>${buildTypeChartHtml(deck.cards)}</div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:0.5rem;">
+                        <div>
+                            <div style="font-family:'Cinzel',serif;font-size:1rem;color:var(--gold);margin-bottom:0.75rem;text-transform:uppercase;letter-spacing:0.05em;">Spell / Land Ratio</div>
+                            <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:0.4rem;">${totalSpells} spells &middot; ${totalLands} lands</div>
+                            <div style="height:10px;background:var(--bg-deep);border-radius:5px;overflow:hidden;">
+                                <div style="width:${ratioW}%;height:100%;background:linear-gradient(90deg,var(--gold-dark),var(--gold));border-radius:5px;"></div>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--text-muted);margin-top:3px;"><span>Lands</span><span>Spells</span></div>
+                            ${totalLands < 33 ? `<div style="font-size:0.75rem;color:#ef9a9a;margin-top:0.3rem;">⚠ Low land count (36–38 recommended)</div>` : ''}
+                            ${totalLands > 42 ? `<div style="font-size:0.75rem;color:#ffd54f;margin-top:0.3rem;">⚠ High land count — consider more spells</div>` : ''}
+                        </div>
+                        ${hasSemanticCats ? `
+                        <div>
+                            <div style="font-family:'Cinzel',serif;font-size:1rem;color:var(--gold);margin-bottom:0.75rem;text-transform:uppercase;letter-spacing:0.05em;">Coverage</div>
+                            ${covBar('Ramp', rampCount, 10, '#4a9d5a')}
+                            ${covBar('Removal', removalCount, 8, '#d94a4a')}
+                            ${covBar('Card Draw', drawCount, 10, '#4a90d9')}
+                        </div>` : ''}
+                    </div>
+
+                    ${colorRatioRows ? `
+                    <div style="margin-top:0.5rem;">
+                        <div style="font-family:'Cinzel',serif;font-size:1rem;color:var(--gold);margin-bottom:0.75rem;text-transform:uppercase;letter-spacing:0.05em;">Color Pip Demand vs. Sources</div>
+                        ${colorRatioRows}
+                        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.3rem;">* Source counts for non-basic lands are estimated from deck color identity</div>
+                    </div>` : ''}
+                </div>
+            </div>`;
+        }
+
         function buildColorChartHtml(cards) {
             const nonLands = (cards || []).filter(c => c.category !== 'Land' && c.category !== 'Commander');
             const colorMap = { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 };
@@ -4256,11 +4439,7 @@
 
                 ${deck.deckDescription ? `<div class="deck-description-box">${deck.deckDescription}</div>` : ''}
 
-                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem;margin-bottom:0.5rem;">
-                    <div>${buildManaCurveHtml(deck.cards)}</div>
-                    <div>${buildColorChartHtml(deck.cards)}</div>
-                    <div>${buildTypeChartHtml(deck.cards)}</div>
-                </div>
+                ${buildStatsPanelHtml(deck)}
 
                 ${Object.entries(categories).map(([cat, cards]) => `
                     <div class="category-section">
@@ -4308,6 +4487,7 @@
                     <button class="btn-outline" onclick="reAnalyzeDeck('${deck.id}')">&#9879; ${deck.lastAnalysis ? 'Re-Analyze' : 'Analyze with AI'}</button>
                     <button class="btn-outline" onclick="openRecommendationsModal('${deck.id}')">&#10024; AI Recommendations</button>
                     <button class="btn-outline" onclick="openCombosModal('${deck.id}')">&#9889; Combos</button>
+                    <button class="btn-outline" onclick="printProxies('${deck.id}')">&#128444; Print Proxies</button>
                     <button class="btn-outline" onclick="openHistoryModal('${deck.id}')">&#128337; History</button>
                     <button class="btn-outline" onclick="openPrimerModal('${deck.id}', ${JSON.stringify(deck.primer || '')})">&#128221; Strategy Notes</button>
                     <button class="btn-danger" onclick="openDeleteModal('${deck.id}')">&#128293; Banish Deck</button>
@@ -4797,6 +4977,10 @@
                 const copy = await res.json();
                 showToast(`Deck copied as "${copy.deckName}"!`);
             } catch (err) { showToast(err.message, true); }
+        }
+
+        function printProxies(deckId) {
+            window.open(`${API_BASE}/${deckId}/proxy`, '_blank');
         }
 
         // === Helpers ===
@@ -5825,6 +6009,30 @@
             document.getElementById('recommendationsModal').classList.add('hidden');
         }
 
+        async function optimizeBudget() {
+            if (!_recsDeckId) return;
+            const slider = document.getElementById('budgetSlider');
+            const targetBudget = parseFloat(slider.value);
+            const btn = slider.parentElement.querySelector('button');
+            if (btn) { btn.disabled = true; btn.textContent = '…'; }
+            try {
+                const res = await authFetch(`${API_BASE}/${_recsDeckId}/optimize-budget`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ targetBudget })
+                });
+                if (!res.ok) throw new Error('Optimization failed');
+                const updatedDeck = await res.json();
+                currentDetailDeck = updatedDeck;
+                renderDetail(updatedDeck);
+                showToast(`Deck optimized to ~$${(updatedDeck.estimatedTotalPrice || 0).toFixed(0)}`);
+            } catch (err) {
+                showToast(err.message, true);
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = 'Apply'; }
+            }
+        }
+
         function renderRecommendationsHtml(recs, deckId) {
             const escH = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
             const escAttr = s => String(s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -5845,6 +6053,7 @@
                         <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.2rem;">
                             <span class="rec-name">${escH(r.name)}</span>
                             <span class="budget-chip ${r.estimatedBudgetTier || 'mid'}">${r.estimatedBudgetTier || 'mid'}</span>
+                            ${r.estimatedPrice > 0 ? `<span style="font-size:0.75rem;color:var(--text-muted);font-family:'Cinzel',serif;">$${r.estimatedPrice.toFixed(2)}</span>` : ''}
                             <span style="font-size:0.72rem;padding:0.1rem 0.4rem;border-radius:4px;background:var(--bg-deep);border:1px solid var(--border);color:var(--text-muted);font-family:'Cinzel',serif;">${escH(r.category || '')}</span>
                             ${ownedChip}
                             <button class="rec-add-btn" id="rec-add-${escAttr(r.name)}"

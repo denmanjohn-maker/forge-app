@@ -105,6 +105,9 @@ builder.Services.AddSingleton<SaltScoreService>();
 // Scryfall
 builder.Services.AddHttpClient<ScryfallService>();
 
+// Proxy sheet generation
+builder.Services.AddSingleton<ProxyService>();
+
 // MTGJSON settings
 builder.Services.Configure<MtgJsonSettings>(
     builder.Configuration.GetSection("MtgJson"));
