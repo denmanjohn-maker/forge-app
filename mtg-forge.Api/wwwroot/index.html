@@ -1260,9 +1260,9 @@
         .mana-pip.G { background: linear-gradient(135deg, #1DA050, #0A5028); color: #B8F0C8; }
 
         .deck-card .mana-pip {
-            width: 52px;
-            height: 52px;
-            font-size: 1.5rem;
+            width: 28px;
+            height: 28px;
+            font-size: 0.85rem;
         }
 
         .deck-card-name {
@@ -1282,6 +1282,15 @@
             color: var(--gold);
             font-style: italic;
             margin-bottom: 0.5rem;
+        }
+
+        .deck-card-format {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-family: 'Crimson Text', serif;
+            margin-bottom: 0.4rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
         .deck-card-desc {
@@ -4165,8 +4174,10 @@
                         <div class="deck-card-colors">
                             ${(deck.colors || []).map(c => `<span class="mana-pip ${c}">${c}</span>`).join('')}
                         </div>
-                        <div class="deck-card-name">${deck.deckName || 'Untitled'}</div>
-                        ${deck.commander ? `<div class="deck-card-commander">${deck.commander}</div>` : ''}
+                        ${deck.commander
+                            ? `<div class="deck-card-name">${deck.commander}</div><div class="deck-card-format">${deck.format || ''}</div>`
+                            : `<div class="deck-card-name">${deck.deckName || 'Untitled'}</div><div class="deck-card-format">${deck.format || ''}</div>`
+                        }
                         <div class="deck-card-desc">${deck.deckDescription || deck.strategy || ''}</div>
                         ${(deck.tags || []).length ? `<div class="deck-card-tags">${(deck.tags).map(t => `<span class="deck-tag">${t}</span>`).join('')}</div>` : ''}
                     </div>
@@ -4174,7 +4185,6 @@
                         <div class="deck-card-meta">
                             <span>&#127183; ${deck.totalCards || '?'} cards</span>
                             <span>&#128176; $${(deck.estimatedTotalPrice || 0).toFixed(0)}</span>
-                            <span>${deck.format || ''}</span>
                         </div>
                         <button class="btn-fav-card ${deck.isFavorite ? 'active' : ''}" onclick="event.stopPropagation(); toggleFavorite('${deck.id}', this)" title="${deck.isFavorite ? 'Unfavorite' : 'Favorite'}">&#9733;</button>
                         <button class="btn-delete-card" onclick="event.stopPropagation(); openDeleteModal('${deck.id}')">&#128465;</button>
