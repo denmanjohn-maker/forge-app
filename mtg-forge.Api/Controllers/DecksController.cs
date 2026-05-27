@@ -939,11 +939,11 @@ public class DecksController : ControllerBase
         {
             var commanders = deck.Cards
                 .Where(c => c.Category.Equals("Commander", StringComparison.OrdinalIgnoreCase))
-                .Select(c => c.Name)
+                .Select(c => new { card = c.Name })
                 .ToList();
             var mainCards = deck.Cards
                 .Where(c => !c.Category.Equals("Commander", StringComparison.OrdinalIgnoreCase))
-                .Select(c => c.Name)
+                .Select(c => new { card = c.Name })
                 .ToList();
 
             var client = _httpFactory.CreateClient();
