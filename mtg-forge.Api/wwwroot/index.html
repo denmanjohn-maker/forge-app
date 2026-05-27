@@ -3321,17 +3321,6 @@
         </div>
     </div>
 
-    <!-- Combos Modal -->
-    <div class="modal-overlay hidden" id="combosModal">
-        <div class="modal" style="max-width:800px;width:96%;max-height:90vh;display:flex;flex-direction:column;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
-                <h3 style="margin:0;">&#9889; Combo Detection</h3>
-                <button class="btn-outline" style="padding:0.3rem 0.7rem;" onclick="closeCombosModal()">Close</button>
-            </div>
-            <p style="font-family:'Crimson Text',serif;font-size:0.88rem;color:var(--text-muted);margin-bottom:0.75rem;">Known infinite / synergistic combos in this deck, powered by Commander Spellbook.</p>
-            <div id="combosBody" style="overflow-y:auto;flex:1;"></div>
-        </div>
-    </div>
 
     <!-- Recommendations Modal -->
     <div class="modal-overlay hidden" id="recommendationsModal">
@@ -4516,7 +4505,6 @@
                     <button class="btn-outline" onclick="copyDeck('${deck.id}')">&#10064; Copy</button>
                     <button class="btn-outline" onclick="reAnalyzeDeck('${deck.id}')">&#9879; ${deck.lastAnalysis ? 'Re-Analyze' : 'Analyze with AI'}</button>
                     <button class="btn-outline" onclick="openRecommendationsModal('${deck.id}')">&#10024; AI Recommendations</button>
-                    <button class="btn-outline" onclick="openCombosModal('${deck.id}')">&#9889; Combos</button>
                     <button class="btn-outline" onclick="printProxies('${deck.id}')">&#128444; Print Proxies</button>
                     <button class="btn-outline" onclick="openHistoryModal('${deck.id}')">&#128337; History</button>
                     <button class="btn-outline" onclick="openPrimerModal('${deck.id}', ${JSON.stringify(deck.primer || '')})">&#128221; Strategy Notes</button>
@@ -4524,6 +4512,7 @@
                 </div>
 
                 ${cachedAnalysisHtml}
+                <div id="combosPanel"></div>
                 <div id="primerDisplay"></div>
                 <div id="ownershipDisplay"></div>`;
 
@@ -4573,7 +4562,8 @@
                 }
             });
 
-            // Post-render: load salt badges, ownership overlay, and primer
+            // Post-render: load salt badges, combos, ownership overlay, and primer
+            loadCombosPanel(deck.id);
             loadSaltBadges(deck.id);
             loadOwnershipOverlay(deck.id);
             renderPrimerDisplay(deck.primer);
@@ -5918,24 +5908,21 @@
         // FEATURE B: Combo Detection
         // ═══════════════════════════════════════════════════════════
 
-        async function openCombosModal(deckId) {
-            document.getElementById('combosModal').classList.remove('hidden');
-            const body = document.getElementById('combosBody');
-            body.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);font-family:\'Crimson Text\',serif;">Scanning for combos…</div>';
+        async function loadCombosPanel(deckId) {
+            const panel = document.getElementById('combosPanel');
+            if (!panel) return;
+            panel.innerHTML = `<div class="analysis-panel"><div class="analysis-panel-header">&#9889; Combo Detection</div><div class="analysis-body" style="text-align:center;color:var(--text-muted);font-family:'Crimson Text',serif;padding:1rem;">Scanning for combos…</div></div>`;
             try {
                 const res = await authFetch(`${API_BASE}/${deckId}/combos`);
-                if (!res.ok) throw new Error('Combo lookup failed');
+                if (!res.ok) { panel.innerHTML = ''; return; }
                 const data = await res.json();
                 const included = data?.results?.included || [];
                 const almost = data?.results?.almostIncluded || [];
-                body.innerHTML = renderCombosHtml(included, almost);
-            } catch (err) {
-                body.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);font-family:'Crimson Text',serif;">${err.message}</div>`;
+                if (included.length === 0 && almost.length === 0) { panel.innerHTML = ''; return; }
+                panel.innerHTML = `<div class="analysis-panel"><div class="analysis-panel-header">&#9889; Combo Detection <span style="font-family:'Crimson Text',serif;font-size:0.85rem;font-weight:normal;margin-left:0.5rem;opacity:0.8;">powered by Commander Spellbook</span></div><div class="analysis-body">${renderCombosHtml(included, almost)}</div></div>`;
+            } catch (_) {
+                panel.innerHTML = '';
             }
-        }
-
-        function closeCombosModal() {
-            document.getElementById('combosModal').classList.add('hidden');
         }
 
         function renderCombosHtml(included, almost) {
