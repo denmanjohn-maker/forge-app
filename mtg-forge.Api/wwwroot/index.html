@@ -5911,15 +5911,15 @@
         async function loadCombosPanel(deckId) {
             const panel = document.getElementById('combosPanel');
             if (!panel) return;
-            panel.innerHTML = `<div class="analysis-panel"><div class="analysis-panel-header">&#9889; Combo Detection</div><div class="analysis-body" style="text-align:center;color:var(--text-muted);font-family:'Crimson Text',serif;padding:1rem;">Scanning for combos…</div></div>`;
+            const header = `<div class="analysis-panel-header">&#9889; Combo Detection <span style="font-family:'Crimson Text',serif;font-size:0.85rem;font-weight:normal;margin-left:0.5rem;opacity:0.8;">powered by Commander Spellbook</span></div>`;
+            panel.innerHTML = `<div class="analysis-panel">${header}<div class="analysis-body" style="text-align:center;color:var(--text-muted);font-family:'Crimson Text',serif;padding:1rem;">Scanning for combos…</div></div>`;
             try {
                 const res = await authFetch(`${API_BASE}/${deckId}/combos`);
                 if (!res.ok) { panel.innerHTML = ''; return; }
                 const data = await res.json();
                 const included = data?.results?.included || [];
                 const almost = data?.results?.almostIncluded || [];
-                if (included.length === 0 && almost.length === 0) { panel.innerHTML = ''; return; }
-                panel.innerHTML = `<div class="analysis-panel"><div class="analysis-panel-header">&#9889; Combo Detection <span style="font-family:'Crimson Text',serif;font-size:0.85rem;font-weight:normal;margin-left:0.5rem;opacity:0.8;">powered by Commander Spellbook</span></div><div class="analysis-body">${renderCombosHtml(included, almost)}</div></div>`;
+                panel.innerHTML = `<div class="analysis-panel">${header}<div class="analysis-body">${renderCombosHtml(included, almost)}</div></div>`;
             } catch (_) {
                 panel.innerHTML = '';
             }
