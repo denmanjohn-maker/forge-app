@@ -57,7 +57,8 @@ public class ProxyService
                 container.Page(page =>
                 {
                     page.Size(PageSizes.Letter);
-                    page.Margin(36); // 0.5" margin
+                    page.MarginHorizontal(28); // 556pt available ≥ 552pt needed (3×180 + 2×6)
+                    page.MarginVertical(10);   // 772pt available ≥ 768pt needed (3×252 + 2×6)
 
                     page.Content().Column(col =>
                     {

@@ -4279,11 +4279,11 @@
             const panelId = 'statsPanel_' + (deck.id || 'x');
             return `
             <div style="margin-bottom:1rem;">
-                <button class="btn-filter-clear" style="font-size:0.78rem;margin-bottom:0.5rem;" onclick="
+                <button class="btn-filter-clear" style="font-size:1rem;margin-bottom:0.5rem;" onclick="
                     const p=document.getElementById('${panelId}');
                     const open=p.style.display!=='none';
                     p.style.display=open?'none':'block';
-                    this.textContent=open?'&#128202; Show Analytics':'&#128202; Hide Analytics';
+                    this.innerHTML=open?'&#128202; Show Analytics':'&#128202; Hide Analytics';
                 ">&#128202; Show Analytics</button>
                 <div id="${panelId}" style="display:none;">
                     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem;margin-bottom:1rem;">
