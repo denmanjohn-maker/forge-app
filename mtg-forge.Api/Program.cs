@@ -104,6 +104,10 @@ builder.Services.AddSingleton<SaltScoreService>();
 
 // Scryfall
 builder.Services.AddHttpClient<ScryfallService>();
+builder.Services.AddHttpClient("Scryfall", client =>
+{
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("mtg-forge/1.0");
+});
 
 // Proxy sheet generation
 builder.Services.AddSingleton<ProxyService>();
