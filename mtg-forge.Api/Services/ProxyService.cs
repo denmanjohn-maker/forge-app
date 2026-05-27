@@ -118,26 +118,37 @@ public class ProxyService
             {
                 var metaUrl = $"https://api.scryfall.com/cards/named?fuzzy={Uri.EscapeDataString(name)}";
                 var metaResp = await client.GetAsync(metaUrl);
-                if (!metaResp.IsSuccessStatusCode) continue;
+                if (!metaResp.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("ProxyService: Scryfall metadata request failed for '{Card}' — HTTP {Status}", name, (int)metaResp.StatusCode);
+                    continue;
+                }
 
                 var meta = await metaResp.Content.ReadFromJsonAsync<ScryfallCard>();
                 var imageUri = meta?.ImageUris?.Normal
                     ?? meta?.CardFaces?.FirstOrDefault()?.ImageUris?.Normal;
 
-                if (imageUri is null) continue;
+                if (imageUri is null)
+                {
+                    _logger.LogWarning("ProxyService: no image URI found for '{Card}'", name);
+                    continue;
+                }
 
                 var imgResp = await client.GetAsync(imageUri);
                 if (imgResp.IsSuccessStatusCode)
                     result[name] = await imgResp.Content.ReadAsByteArrayAsync();
+                else
+                    _logger.LogWarning("ProxyService: image download failed for '{Card}' — HTTP {Status} from {Uri}", name, (int)imgResp.StatusCode, imageUri);
 
                 await Task.Delay(110); // ~9 req/sec to stay under Scryfall's limit
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "ProxyService: failed to fetch image for '{Card}'", name);
+                _logger.LogWarning(ex, "ProxyService: exception fetching image for '{Card}'", name);
             }
         }
 
+        _logger.LogInformation("ProxyService: fetched {Count}/{Total} card images", result.Count, cardNames.Count);
         return result;
     }
 
