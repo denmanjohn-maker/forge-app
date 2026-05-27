@@ -4014,7 +4014,7 @@
                 </div>
                 <h3 style="font-family:'Cinzel',serif;font-size:1.25rem;color:var(--gold);margin-bottom:0.25rem;">${deck.deckName || 'Untitled Deck'}</h3>
                 ${deck.commander ? `<div style="color:var(--text-secondary);font-style:italic;margin-bottom:0.75rem;">Commander: ${deck.commander}</div>` : ''}
-                ${deck.deckDescription ? `<p style="color:var(--text-secondary);font-size:0.9rem;line-height:1.5;margin-bottom:1rem;">${deck.deckDescription}</p>` : ''}
+                ${deck.deckDescription ? `<p style="color:var(--text-secondary);font-size:0.9rem;line-height:1.5;margin-bottom:1rem;">${parseDeckDescription(deck.deckDescription)}</p>` : ''}
                 <div style="display:flex;gap:1rem;margin-bottom:1rem;">
                     <div class="stat-box">
                         <div class="stat-value">${deck.totalCards || (deck.cards||[]).reduce((s,c)=>s+c.quantity,0)}</div>
@@ -4182,7 +4182,7 @@
                                 return `<div class="deck-card-name">${title}</div><div class="deck-card-format">${deck.format || ''}</div>`;
                               })()
                         }
-                        <div class="deck-card-desc">${deck.deckDescription || deck.strategy || ''}</div>
+                        <div class="deck-card-desc">${parseDeckDescription(deck.deckDescription) || deck.strategy || ''}</div>
                         ${(deck.tags || []).length ? `<div class="deck-card-tags">${(deck.tags).map(t => `<span class="deck-tag">${t}</span>`).join('')}</div>` : ''}
                     </div>
                     <div class="deck-card-footer">
@@ -4195,6 +4195,18 @@
                     </div>
                 </div>
             `).join('');
+        }
+
+        function parseDeckDescription(desc) {
+            if (!desc) return '';
+            const trimmed = desc.trim();
+            if (trimmed.startsWith('{')) {
+                try {
+                    const parsed = JSON.parse(trimmed);
+                    return parsed.reasoning || parsed.description || '';
+                } catch (_) {}
+            }
+            return desc;
         }
 
         // === Deck Detail ===
@@ -4455,7 +4467,7 @@
                     </div>
                 </div>
 
-                ${deck.deckDescription ? `<div class="deck-description-box">${deck.deckDescription}</div>` : ''}
+                ${deck.deckDescription ? `<div class="deck-description-box">${parseDeckDescription(deck.deckDescription)}</div>` : ''}
 
                 ${buildStatsPanelHtml(deck)}
 
