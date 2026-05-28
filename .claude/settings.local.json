@@ -37,7 +37,16 @@
       "mcp__gitnexus__context",
       "mcp__gitnexus__detect_changes",
       "Skill(gitnexus-exploring)",
-      "mcp__gitnexus__impact"
+      "mcp__gitnexus__impact",
+      "Skill(gitnexus-cli)",
+      "Bash(npx gitnexus *)",
+      "Skill(use-railway)",
+      "Bash(RAILWAY_CALLER=\"skill:use-railway@1.2.0\" RAILWAY_AGENT_SESSION=\"railway-skill-$\\(date +%s\\)-$$\" railway status --json)",
+      "WebFetch(domain:backend.commanderspellbook.com)",
+      "Bash(curl -s -X POST https://backend.commanderspellbook.com/find-my-combos/ -H 'Content-Type: application/json' -d '{\"commanders\":[\"Kardur, Doomscourge\"],\"main\":[\"Sol Ring\",\"Ashnod'\\\\''s Altar\",\"Nim Deathmantle\",\"Gravecrawler\"]}')",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl -s \"https://backend.commanderspellbook.com/find-my-combos/\")",
+      "Bash(curl -s -X POST https://backend.commanderspellbook.com/find-my-combos/ -H 'Content-Type: application/json' -d '{\"commanders\":[{\"card\":\"Kardur, Doomscourge\"}],\"main\":[{\"card\":\"Sol Ring\"},{\"card\":\"Ashnod'\\\\''s Altar\"},{\"card\":\"Nim Deathmantle\"},{\"card\":\"Gravecrawler\"}]}')"
     ]
   }
 }
