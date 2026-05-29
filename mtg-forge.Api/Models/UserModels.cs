@@ -15,13 +15,18 @@ public class User
     public string? Id { get; set; }
 
     public string Username { get; set; } = null!;
-    public string PasswordHash { get; set; } = null!;
+    public string? PasswordHash { get; set; }
     public string DisplayName { get; set; } = null!;
     public string Role { get; set; } = "User";
     public List<string> GroupIds { get; set; } = new();
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastLogin { get; set; }
+
+    // OAuth provider IDs — null for local-only accounts
+    public string? GoogleId { get; set; }
+    public string? DiscordId { get; set; }
+    public string? AvatarUrl { get; set; }
 }
 
 /// <summary>

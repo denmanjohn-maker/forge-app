@@ -27,9 +27,10 @@ public class AuthService
     public string HashPassword(string password) =>
         BCrypt.Net.BCrypt.HashPassword(password);
 
-    /// <summary>Verifies a plain-text <paramref name="password"/> against a stored BCrypt <paramref name="hash"/>.</summary>
-    public bool VerifyPassword(string password, string hash) =>
-        BCrypt.Net.BCrypt.Verify(password, hash);
+    /// <summary>Verifies a plain-text <paramref name="password"/> against a stored BCrypt <paramref name="hash"/>.
+    /// Returns <c>false</c> if <paramref name="hash"/> is null (e.g. OAuth-only accounts have no password).</summary>
+    public bool VerifyPassword(string password, string? hash) =>
+        hash is not null && BCrypt.Net.BCrypt.Verify(password, hash);
 
     /// <summary>
     /// Creates a signed JWT bearer token for <paramref name="user"/>, embedding
