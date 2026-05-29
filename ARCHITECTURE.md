@@ -172,6 +172,38 @@ Streaming-parses large MTGJSON payloads (printings then prices) using state-mach
 - **Databases:** MongoDB (decks, users, groups collections in `mtgdeckforge` db) + PostgreSQL (ASP.NET Identity tables + MTGJSON pricing cache in `AppDbContext`)
 - **LLM mode:** `RagPipelineService` is the only registered `IDeckGenerationService`. It proxies deck generation to **forge-ai-api** and calls DeepInfra directly for analysis. `ClaudeService` (Anthropic) exists in the codebase but is not registered. There is no runtime `LlmProvider` switch.
 
+### Authentication
+
+The app supports two login methods, both issuing the same JWT bearer token consumed by the SPA:
+
+**Username / password (local accounts)**
+- `POST /api/auth/login` — `AuthService` verifies a BCrypt hash stored in the MongoDB `users` collection and returns a signed JWT.
+- `PasswordHash` is nullable on `User`; OAuth-only accounts have no password and cannot use this endpoint.
+
+**Social login (OAuth2 — Google & Discord)**
+- `GET /api/auth/google` / `GET /api/auth/discord` — start the authorization-code flow; a CSRF `state` is stored in an HTTP-only cookie.
+- Callback endpoints exchange the code for an access token, fetch the user profile, and call `OAuthService.FindOrCreate*Async` which looks up (or creates) a `User` document in MongoDB by `GoogleId` / `DiscordId`. If the provider email/username matches an existing local account the OAuth ID is linked rather than duplicated.
+- A JWT is issued and the browser is redirected to `/?oauth_token=<jwt>`. The SPA reads it, calls `GET /api/auth/me`, and completes login.
+
+**MongoDB `User` document fields relevant to auth:**
+
+| Field | Purpose |
+|-------|---------|
+| `PasswordHash` | BCrypt hash — `null` for OAuth-only accounts |
+| `GoogleId` | Google OAuth subject ID (`sub` claim) |
+| `DiscordId` | Discord snowflake user ID |
+| `AvatarUrl` | Provider avatar URL (populated on first OAuth login) |
+
+**Services:**
+- `AuthService` — password hashing, JWT generation, credential verification
+- `UserService` — MongoDB CRUD for `User` and `Group` documents; includes `GetByGoogleIdAsync` / `GetByDiscordIdAsync`
+- `OAuthService` — CSRF state cookie management, `FindOrCreateGoogleUserAsync`, `FindOrCreateDiscordUserAsync`
+
+**Controllers:**
+- `AuthController` — local login/register/me/admin user management
+- `GoogleAuthController` — `GET /api/auth/google` + `GET /api/auth/google/callback`
+- `DiscordAuthController` — `GET /api/auth/discord` + `GET /api/auth/discord/callback`
+
 ---
 
 ## All services

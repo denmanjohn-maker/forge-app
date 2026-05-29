@@ -162,6 +162,18 @@ builder.Services.Configure<JwtSettings>(
 // Auth services
 builder.Services.AddSingleton<UserService>();
 builder.Services.AddSingleton<AuthService>();
+
+// OAuth (Google + Discord)
+builder.Services.Configure<OAuthSettings>(builder.Configuration.GetSection("OAuth"));
+builder.Services.AddSingleton<OAuthService>();
+builder.Services.AddHttpClient("Google", client =>
+{
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("mtg-forge/1.0");
+});
+builder.Services.AddHttpClient("Discord", client =>
+{
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("mtg-forge/1.0");
+});
 builder.Services.AddScoped<PricingService>();
 builder.Services.AddHttpClient<MtgJsonPricingImportService>(client =>
 {

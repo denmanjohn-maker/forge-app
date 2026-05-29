@@ -75,6 +75,14 @@ public class UserService
         await _usersCollection.UpdateOneAsync(u => u.Id == id, update);
     }
 
+    /// <summary>Finds a user by their Google OAuth subject ID. Returns <c>null</c> if not found.</summary>
+    public async Task<User?> GetByGoogleIdAsync(string googleId) =>
+        await _usersCollection.Find(u => u.GoogleId == googleId).FirstOrDefaultAsync();
+
+    /// <summary>Finds a user by their Discord snowflake ID. Returns <c>null</c> if not found.</summary>
+    public async Task<User?> GetByDiscordIdAsync(string discordId) =>
+        await _usersCollection.Find(u => u.DiscordId == discordId).FirstOrDefaultAsync();
+
     // === Groups ===
 
     /// <summary>Returns all groups, sorted alphabetically by name.</summary>
