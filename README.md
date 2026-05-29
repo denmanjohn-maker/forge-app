@@ -313,7 +313,7 @@ The app uses a **dual authentication scheme** — JWT for API clients, cookie se
 
 **User accounts** are stored in two places:
 - **PostgreSQL** (`AspNetUsers`, `AspNetRoles`): ASP.NET Identity for login, password hashing, and role management
-- **MongoDB** (`users` collection): `UserService` stores display names and owns deck associations
+- **MongoDB** (`users` collection): `UserService` stores display names, OAuth provider IDs (`GoogleId`, `DiscordId`), avatar URLs, and deck associations
 
 **Roles:**
 - `Admin` — can view and manage all users' decks, trigger pricing refresh, access `/logging`
@@ -322,6 +322,38 @@ The app uses a **dual authentication scheme** — JWT for API clients, cookie se
 **Rate limiting:** Deck generation is capped at **20 requests per user per 24 hours** using ASP.NET Core's fixed-window rate limiter, keyed by the user's identity claim. Anonymous requests share one bucket.
 
 **Groups:** `GroupsController` (admin-only) supports creating user groups for deck sharing.
+
+### Social Login (Google & Discord)
+
+Users can sign in with their Google or Discord account instead of a username/password. Both flows use a manual OAuth2 authorization-code exchange — no additional middleware is required.
+
+**Flow:**
+1. The browser navigates to `GET /api/auth/google` or `GET /api/auth/discord`.
+2. The server stores a CSRF `state` in an HTTP-only cookie and redirects to the provider's consent screen.
+3. After the user grants consent, the provider redirects back to the callback endpoint.
+4. The server verifies the `state`, exchanges the code for an access token, fetches the user profile, and looks up (or creates) a matching `User` document in MongoDB.
+5. A standard JWT is issued and the browser is redirected to the SPA at `/?oauth_token=<jwt>`.
+6. The SPA reads the token, calls `GET /api/auth/me`, stores the result in `localStorage`, and enters the app — identical to a normal login.
+
+**Account linking:** If a Google/Discord account's email or username matches an existing local account, the OAuth ID is linked to that account rather than creating a duplicate.
+
+**Setup requirements:**
+
+| Provider | Developer portal | Required redirect URI |
+|----------|------------------|-----------------------|
+| Google   | [console.cloud.google.com/apis/credentials](https://console.cloud.google.com/apis/credentials) | `https://<your-domain>/api/auth/google/callback` |
+| Discord  | [discord.com/developers/applications](https://discord.com/developers/applications) | `https://<your-domain>/api/auth/discord/callback` |
+
+Set the following Railway environment variables (secrets must **never** be in source control):
+
+| Variable | Description |
+|----------|-------------|
+| `OAUTH__GOOGLE__CLIENTSECRET` | Google OAuth client secret |
+| `OAUTH__GOOGLE__REDIRECTURI` | Full callback URL registered in Google Cloud Console |
+| `OAUTH__DISCORD__CLIENTSECRET` | Discord OAuth client secret |
+| `OAUTH__DISCORD__REDIRECTURI` | Full callback URL registered in Discord Developer Portal |
+
+The Client IDs are already set in `appsettings.json` (they are public values visible in browser OAuth requests).
 
 ---
 
@@ -385,13 +417,18 @@ Returns the `BUILD_VERSION` environment variable if set, otherwise derives a ver
 
 ### Auth
 
-| Method  | Endpoint                    | Auth  | Description                        |
-|---------|-----------------------------|-------|------------------------------------|
-| `POST`  | `/api/auth/login`           | None  | Login, returns JWT + cookie        |
-| `POST`  | `/api/auth/register`        | None  | Register a new account             |
-| `POST`  | `/api/auth/logout`          | User  | Invalidate cookie session          |
-| `GET`   | `/api/auth/me`              | User  | Current user profile               |
-| `PATCH` | `/api/auth/me`              | User  | Update display name / password     |
+| Method  | Endpoint                          | Auth  | Description                                  |
+|---------|-----------------------------------|-------|----------------------------------------------|
+| `POST`  | `/api/auth/login`                 | None  | Login with username/password, returns JWT    |
+| `POST`  | `/api/auth/register`              | Admin | Register a new local account                 |
+| `GET`   | `/api/auth/me`                    | User  | Current user profile                         |
+| `GET`   | `/api/auth/users`                 | Admin | List all users                               |
+| `POST`  | `/api/auth/users/{id}/reset-password` | Admin | Reset a user's password                  |
+| `DELETE`| `/api/auth/users/{id}`            | Admin | Delete a user                                |
+| `GET`   | `/api/auth/google`                | None  | Initiate Google OAuth2 login                 |
+| `GET`   | `/api/auth/google/callback`       | None  | Google OAuth2 callback (server-side only)    |
+| `GET`   | `/api/auth/discord`               | None  | Initiate Discord OAuth2 login                |
+| `GET`   | `/api/auth/discord/callback`      | None  | Discord OAuth2 callback (server-side only)   |
 
 ### Pricing (Admin)
 
@@ -571,6 +608,10 @@ Generation takes 30–90 seconds (Qdrant search + LLM inference).
 | `CORS_ALLOWED_ORIGINS`      | Comma-separated allowed origins              | Open in development                            |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | OpenTelemetry collector endpoint           | `http://localhost:4317`                        |
 | `BUILD_VERSION`             | Version string for `/api/version`            | Derived from assembly timestamp if unset       |
+| `OAUTH__GOOGLE__CLIENTSECRET` | Google OAuth2 client secret               | Required to enable Google login                |
+| `OAUTH__GOOGLE__REDIRECTURI`  | Google OAuth2 redirect URI                | `https://<your-domain>/api/auth/google/callback` |
+| `OAUTH__DISCORD__CLIENTSECRET`| Discord OAuth2 client secret              | Required to enable Discord login               |
+| `OAUTH__DISCORD__REDIRECTURI` | Discord OAuth2 redirect URI               | `https://<your-domain>/api/auth/discord/callback` |
 
 ---
 

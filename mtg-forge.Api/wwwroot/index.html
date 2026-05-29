@@ -3615,8 +3615,9 @@
             history.replaceState(null, '', window.location.pathname);
 
             if (oauthError) {
-                // Show login with the error message visible
-                document.getElementById('loginError').textContent = decodeURIComponent(oauthError);
+                // Show login with the error message visible (truncate to prevent crafted URL abuse)
+                const safeError = decodeURIComponent(oauthError).slice(0, 200);
+                document.getElementById('loginError').textContent = safeError;
                 return;
             }
 
