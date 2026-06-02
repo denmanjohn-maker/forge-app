@@ -21,7 +21,7 @@ public class ProxyService
     // Standard MTG card dimensions in points (1 inch = 72pt)
     private const float CardWidthPt  = 2.5f  * 72f; // 180pt
     private const float CardHeightPt = 3.5f  * 72f; // 252pt
-    private const float GutterPt     = 6f;
+    private const float GutterPt     = 4f;           // tighter gutter gives 8pt headroom on Letter
     private const int   CardsPerRow  = 3;
     private const int   RowsPerPage  = 3;
     private const int   CardsPerPage = CardsPerRow * RowsPerPage;
@@ -60,8 +60,8 @@ public class ProxyService
                 container.Page(page =>
                 {
                     page.Size(PageSizes.Letter);
-                    page.MarginHorizontal(28); // 556pt available ≥ 552pt needed (3×180 + 2×6)
-                    page.MarginVertical(10);   // 772pt available ≥ 768pt needed (3×252 + 2×6)
+                    page.MarginHorizontal(28); // 556pt available > 548pt needed (3×180 + 2×4)
+                    page.MarginVertical(10);   // 772pt available > 764pt needed (3×252 + 2×4)
 
                     page.Content().Column(col =>
                     {
