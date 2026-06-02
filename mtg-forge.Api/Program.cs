@@ -89,6 +89,8 @@ builder.Services.AddMemoryCache();
 builder.Services.Configure<MongoDbSettings>(
     builder.Configuration.GetSection("MongoDb"));
 builder.Services.AddSingleton<DeckService>();
+builder.Services.AddSingleton<GameLogService>();
+builder.Services.AddSingleton<AiSessionService>();
 builder.Services.AddSingleton<GenerationJobStore>();
 builder.Services.AddSingleton<CollectionService>();
 

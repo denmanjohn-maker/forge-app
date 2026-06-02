@@ -21,7 +21,7 @@ namespace MtgForge.Api.Services;
 ///
 /// Works both locally (localhost endpoints) and on Railway (internal DNS endpoints).
 /// </summary>
-public class RagPipelineService : IDeckGenerationService
+public partial class RagPipelineService : IDeckGenerationService
 {
     private readonly IHttpClientFactory _factory;
     private readonly RagPipelineSettings _settings;
