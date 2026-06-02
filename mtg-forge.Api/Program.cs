@@ -97,8 +97,16 @@ builder.Services.AddSingleton<CollectionService>();
 // RAG pipeline (mtg-forge-ai + Together.ai)
 builder.Services.Configure<RagPipelineSettings>(
     builder.Configuration.GetSection("RagPipeline"));
-builder.Services.AddHttpClient<RagPipelineService>();
-builder.Services.AddTransient<IDeckGenerationService, RagPipelineService>();
+// RagPipelineService resolves IHttpClientFactory in its constructor (it does NOT
+// take an HttpClient), so it must be registered as a normal service rather than a
+// typed client. Registering it via AddHttpClient<RagPipelineService>() makes the
+// concrete type only resolvable through the typed-client factory, which throws
+// "A Typed client must provide a constructor taking a 'HttpClient'" whenever a
+// controller injects the concrete RagPipelineService (e.g. AiChatController,
+// DeckExplainController).
+builder.Services.AddHttpClient();
+builder.Services.AddTransient<RagPipelineService>();
+builder.Services.AddTransient<IDeckGenerationService>(sp => sp.GetRequiredService<RagPipelineService>());
 Log.Information("LLM provider: Rag (mtg-forge-ai + Together.ai)");
 
 // Salt score service (caches EDHREC data)
