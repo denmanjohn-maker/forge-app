@@ -113,10 +113,15 @@ Log.Information("LLM provider: Rag (mtg-forge-ai + Together.ai)");
 builder.Services.AddSingleton<SaltScoreService>();
 
 // Scryfall
-builder.Services.AddHttpClient<ScryfallService>();
+builder.Services.AddHttpClient<ScryfallService>(client =>
+{
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("mtg-forge/1.0");
+    client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+});
 builder.Services.AddHttpClient("Scryfall", client =>
 {
     client.DefaultRequestHeaders.UserAgent.ParseAdd("mtg-forge/1.0");
+    client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
 });
 
 // Proxy sheet generation

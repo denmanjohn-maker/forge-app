@@ -26,7 +26,6 @@ public class ScryfallService
     {
         _httpClient = httpClient;
         _logger = logger;
-        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("mtg-forge/1.0");
     }
 
     /// <summary>
