@@ -69,12 +69,18 @@ public partial class RagPipelineService
         };
 
         var client = _factory.CreateClient();
+        client.BaseAddress = new Uri(_settings.LlmBaseUrl);
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _settings.LlmApiKey);
-        var url = $"{_settings.LlmBaseUrl.TrimEnd('/')}/chat/completions";
 
         var reqContent = new StringContent(JsonSerializer.Serialize(requestBody), System.Text.Encoding.UTF8, "application/json");
-        var response = await client.PostAsync(url, reqContent);
-        response.EnsureSuccessStatusCode();
+        var response = await client.PostAsync("/v1/chat/completions", reqContent);
+        
+        if (!response.IsSuccessStatusCode)
+        {
+            var err = await response.Content.ReadAsStringAsync();
+            _logger.LogError("BrewWithAiAsync: LLM returned {Status} — {Body}", response.StatusCode, err);
+            throw new Exception($"LLM returned error {response.StatusCode}");
+        }
 
         var body = await response.Content.ReadAsStringAsync();
         using var jsonDoc = JsonDocument.Parse(body);
