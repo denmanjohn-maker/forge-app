@@ -10,4 +10,7 @@ public class MongoDbSettings
     public string JobsCollectionName { get; set; } = "generationJobs";
     public string DeckHistoryCollectionName { get; set; } = "deckHistory";
     public string CollectionCollectionName { get; set; } = "userCollections";
+    public string GameLogsCollectionName { get; set; } = "gameLogs";
+    public string WinRateCacheCollectionName { get; set; } = "winRateCache";
+    public string AiSessionsCollectionName { get; set; } = "aiSessions";
 }

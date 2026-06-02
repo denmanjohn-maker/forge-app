@@ -2515,6 +2515,8 @@
         .owned-chip.unowned { background:rgba(244,67,54,0.12);color:#ef9a9a; }
 
     </style>
+    <script src="winrates.js"></script>
+    <script src="aichat.js"></script>
 </head>
 <body>
 
@@ -4306,6 +4308,8 @@
                 const deck = await res.json();
                 currentDetailDeck = deck;
                 renderDetail(deck);
+                fetchWinRates(deck.id);
+                fetchGameLogs(deck.id);
                 document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
                 document.getElementById('view-detail').classList.add('active');
                 document.querySelectorAll('.nav-tab, .mobile-nav-btn').forEach(t => t.classList.remove('active'));
@@ -4558,7 +4562,38 @@
 
                 ${deck.deckDescription ? `<div class="deck-description-box">${parseDeckDescription(deck.deckDescription)}</div>` : ''}
 
-                ${buildStatsPanelHtml(deck)}
+                  <!-- WIN RATE TRACKER AND COLLAB AI -->
+                  <div style="display:flex; gap:1.5rem; margin-bottom:2rem; flex-wrap:wrap;">
+                      <!-- Win Rates -->
+                      <div class="panel" style="flex:1; min-width:300px; padding:1.5rem;">
+                          <h3 style="color:var(--gold); margin-top:0;">Win Rate Tracking</h3>
+                          <div id="winRateStats" style="margin-bottom:1rem;">Loading stats...</div>
+                          
+                          <form id="gameLogForm" onsubmit="submitGameLog(event)" style="display:flex; gap:0.5rem; margin-bottom:1rem;">
+                              <select id="logResult" style="padding:0.5rem; background:var(--bg-deep); color:var(--text-primary); border:1px solid var(--border); border-radius:4px;"><option value="win">Win</option><option value="loss">Loss</option><option value="draw">Draw</option></select>
+                              <input type="text" id="logOpponent" placeholder="Opponent Deck" style="flex:1; padding:0.5rem; background:var(--bg-deep); color:var(--text-primary); border:1px solid var(--border); border-radius:4px;">
+                              <button type="submit" style="padding:0.5rem 1rem; background:var(--gold); color:#000; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">Log</button>
+                          </form>
+                          <input type="text" id="logNotes" placeholder="Notes (optional)" style="width:100%; padding:0.5rem; background:var(--bg-deep); color:var(--text-primary); border:1px solid var(--border); border-radius:4px; box-sizing:border-box;">
+                          
+                          <div style="margin-top:1rem;">
+                              <h4 style="color:var(--text-secondary); margin-bottom:0.5rem;">Recent Logs</h4>
+                              <div id="gameLogsTable" style="max-height:150px; overflow-y:auto; border:1px solid var(--border); border-radius:4px; padding:0.5rem;"></div>
+                          </div>
+                      </div>
+
+                      <!-- Interactive AI Brewing -->
+                      <div class="panel" style="flex:1; min-width:300px; padding:1.5rem;">
+                          <h3 style="color:var(--gold); margin-top:0;">Collaborative AI Brewing</h3>
+                          <div id="aiChatLog" style="height:250px; overflow-y:auto; margin-bottom:1rem; padding:0.5rem; border:1px solid var(--border); border-radius:4px; background:var(--bg-deep);">
+                              <div class="text-secondary" style="font-style:italic;">Start a conversation with Forge AI about this deck. Ask it for swap suggestions or how to counter specific matchups!</div>
+                          </div>
+                          <form onsubmit="sendAiBrewMessage(event)" style="display:flex; gap:0.5rem;">
+                              <input type="text" id="aiChatInput" placeholder="Ask AI..." style="flex:1; padding:0.75rem; background:var(--bg-deep); color:var(--text-primary); border:1px solid var(--border); border-radius:4px;">
+                              <button type="submit" style="padding:0.75rem 1.25rem; background:var(--mana-blue); color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">Send</button>
+                          </form>
+                      </div>
+                  </div>
 
                 ${Object.entries(categories).map(([cat, cards]) => `
                     <div class="category-section">
