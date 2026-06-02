@@ -116,7 +116,9 @@ public class ProxyService
         {
             try
             {
-                var metaUrl = $"https://api.scryfall.com/cards/named?fuzzy={Uri.EscapeDataString(name)}";
+                // Card names are occasionally stored with surrounding quotes; strip them before querying.
+                var cleanName = name.Trim().Trim('"');
+                var metaUrl = $"https://api.scryfall.com/cards/named?fuzzy={Uri.EscapeDataString(cleanName)}";
                 var metaResp = await client.GetAsync(metaUrl);
                 if (!metaResp.IsSuccessStatusCode)
                 {

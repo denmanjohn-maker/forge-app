@@ -883,7 +883,7 @@ public partial class RagPipelineService : IDeckGenerationService
         var cards = local.Sections
             .SelectMany(s => s.Cards.Select(c => new CardEntry
             {
-                Name           = c.Name,
+                Name           = c.Name.Trim().Trim('"'),
                 Quantity       = c.Quantity,
                 ManaCost       = c.ManaCost ?? "",
                 Cmc            = (int)Math.Round(c.Cmc),
