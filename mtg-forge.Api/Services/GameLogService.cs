@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using MtgForge.Api.Models;
@@ -8,9 +9,11 @@ public class GameLogService
 {
     private readonly IMongoCollection<GameLog> _gameLogs;
     private readonly IMongoCollection<DeckWinRateStats> _winRates;
+    private readonly ILogger<GameLogService> _logger;
 
-    public GameLogService(IOptions<MongoDbSettings> settings)
+    public GameLogService(IOptions<MongoDbSettings> settings, ILogger<GameLogService> logger)
     {
+        _logger = logger;
         var client = new MongoClient(settings.Value.ConnectionString);
         var database = client.GetDatabase(settings.Value.DatabaseName);
 
@@ -35,18 +38,32 @@ public class GameLogService
     public async Task<GameLog> CreateAsync(GameLog log)
     {
         await _gameLogs.InsertOneAsync(log);
-        await UpdateWinRateCacheAsync(log.DeckId);
+        await SafeUpdateWinRateCacheAsync(log.DeckId);
         return log;
     }
 
     public async Task DeleteAsync(string id, string deckId)
     {
         await _gameLogs.DeleteOneAsync(g => g.Id == id);
-        await UpdateWinRateCacheAsync(deckId);
+        await SafeUpdateWinRateCacheAsync(deckId);
     }
 
     public async Task<DeckWinRateStats?> GetWinRateAsync(string deckId) =>
         await _winRates.Find(w => w.DeckId == deckId).FirstOrDefaultAsync();
+
+    private async Task SafeUpdateWinRateCacheAsync(string deckId)
+    {
+        try
+        {
+            await UpdateWinRateCacheAsync(deckId);
+        }
+        catch (Exception ex)
+        {
+            // The game log itself persisted successfully; a cache-recompute
+            // failure must not fail the whole request. Surface it for diagnosis.
+            _logger.LogError(ex, "Failed to update win-rate cache for deck {DeckId}", deckId);
+        }
+    }
 
     private async Task UpdateWinRateCacheAsync(string deckId)
     {

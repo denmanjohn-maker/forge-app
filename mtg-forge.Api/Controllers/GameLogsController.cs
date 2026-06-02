@@ -35,17 +35,37 @@ public class GameLogsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] GameLog log)
+    public async Task<IActionResult> Create([FromBody] CreateGameLogRequest request)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
-        var deck = await _deckService.GetByIdAsync(log.DeckId);
+        if (string.IsNullOrWhiteSpace(request.DeckId))
+            return BadRequest("DeckId is required");
+        if (string.IsNullOrWhiteSpace(request.Result))
+            return BadRequest("Result is required");
+
+        var deck = await _deckService.GetByIdAsync(request.DeckId);
         if (deck == null) return NotFound("Deck not found");
         if (deck.UserId != userId && !User.IsInRole("Admin")) return Forbid();
 
-        log.UserId = userId;
-        log.Date = DateTime.UtcNow;
+        var now = DateTime.UtcNow;
+        var log = new GameLog
+        {
+            UserId = userId,
+            DeckId = request.DeckId,
+            Result = request.Result,
+            OpponentArchetype = request.OpponentArchetype,
+            OpponentDeckId = string.IsNullOrWhiteSpace(request.OpponentDeckId) ? null : request.OpponentDeckId,
+            Notes = request.Notes,
+            Format = string.IsNullOrWhiteSpace(request.Format) ? "Commander" : request.Format,
+            GameNumber = request.GameNumber,
+            TurnCount = request.TurnCount,
+            MulliganCount = request.MulliganCount,
+            Date = now,
+            CreatedAt = now
+        };
+
         var created = await _gameLogService.CreateAsync(log);
 
         return CreatedAtAction(nameof(GetByDeck), new { deckId = created.DeckId }, created);

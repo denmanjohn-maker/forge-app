@@ -39,6 +39,35 @@ public class GameLog
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
+/// <summary>
+/// Request body for creating a game log. Only contains client-supplied fields;
+/// UserId, Id, and Date are assigned server-side. Keeping UserId off the bound
+/// model avoids the implicit [Required] validation failure (non-nullable
+/// reference type) that would otherwise reject requests with HTTP 400, and
+/// prevents callers from spoofing ownership.
+/// </summary>
+public class CreateGameLogRequest
+{
+    public string DeckId { get; set; } = null!;
+
+    /// <summary>
+    /// "win", "loss", or "draw"
+    /// </summary>
+    public string Result { get; set; } = null!;
+
+    public string? OpponentArchetype { get; set; }
+
+    public string? OpponentDeckId { get; set; }
+
+    public string? Notes { get; set; }
+
+    public string? Format { get; set; }
+
+    public int? GameNumber { get; set; }
+    public int? TurnCount { get; set; }
+    public int? MulliganCount { get; set; }
+}
+
 public class DeckWinRateStats
 {
     [BsonId]
