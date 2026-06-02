@@ -126,12 +126,13 @@ public class ProxyService
             var batchOriginal = cardNames.Skip(i).Take(batchSize).ToList();
             var batchItems = batchOriginal
                 .Select(n => (original: n, clean: CleanCardName(n)))
+                .Where(x => !string.IsNullOrWhiteSpace(x.clean))
                 .ToList();
 
-            var body = JsonSerializer.Serialize(new
-            {
-                identifiers = batchItems.Select(x => new { name = x.clean })
-            });
+            if (batchItems.Count == 0) continue;
+
+            var identifiers = batchItems.Select(x => new { name = x.clean }).ToList();
+            var body = JsonSerializer.Serialize(new { identifiers });
 
             try
             {
@@ -141,7 +142,9 @@ public class ProxyService
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    _logger.LogWarning("ProxyService: Scryfall collection batch failed — HTTP {Status}", (int)response.StatusCode);
+                    var errBody = await response.Content.ReadAsStringAsync();
+                    _logger.LogWarning("ProxyService: Scryfall collection batch failed — HTTP {Status}. Body: {Body}. First name sent: {FirstName}",
+                        (int)response.StatusCode, errBody, batchItems[0].clean);
                 }
                 else
                 {
