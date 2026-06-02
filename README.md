@@ -18,14 +18,15 @@ A best-of-breed Magic: The Gathering deck analysis and generation tool powered b
 5. [Pricing Data Pipeline](#pricing-data-pipeline)
 6. [Tournament Meta Signals](#tournament-meta-signals)
 7. [Scryfall Enrichment](#scryfall-enrichment)
-8. [Budget Enforcement Loop](#budget-enforcement-loop)
-9. [Authentication & Multi-User Support](#authentication--multi-user-support)
-10. [Observability Stack](#observability-stack)
-11. [All API Endpoints](#all-api-endpoints)
-12. [Railway Deployment Guide](#railway-deployment-guide)
-13. [Environment Variables Reference](#environment-variables-reference)
-14. [Local Development](#local-development)
-15. [Project Structure](#project-structure)
+8. [Proxy Sheet Generation](#proxy-sheet-generation)
+9. [Budget Enforcement Loop](#budget-enforcement-loop)
+10. [Authentication & Multi-User Support](#authentication--multi-user-support)
+11. [Observability Stack](#observability-stack)
+12. [All API Endpoints](#all-api-endpoints)
+13. [Railway Deployment Guide](#railway-deployment-guide)
+14. [Environment Variables Reference](#environment-variables-reference)
+15. [Local Development](#local-development)
+16. [Project Structure](#project-structure)
 
 ---
 
@@ -278,9 +279,22 @@ GET /api/admin/meta-signals/status
 - Calls Scryfall's `/cards/collection` endpoint in batches of 75 (Scryfall's API limit).
 - Fills `ManaCost`, `Cmc`, `CardType`, and `EstimatedPrice` for any card where those fields are empty.
 - **Non-destructive**: fields already populated by the LLM or RAG pipeline are never overwritten.
-- Sets a `User-Agent: mtg-forge/1.0` header as required by Scryfall's API terms.
+- Sets `User-Agent: mtg-forge/1.0` and `Accept: application/json` headers on all requests, as required by Scryfall's API terms.
 
 This step runs automatically during CSV import. It does not run during RAG generation (the RAG pipeline provides full card data directly).
+
+---
+
+## Proxy Sheet Generation
+
+`ProxyService` generates a printable PDF of proxy cards suitable for sleeving and play-testing. Triggered via `GET /api/decks/{id}/proxy`.
+
+- **Card selection**: Basic lands are excluded; each non-land card is repeated by its quantity (e.g. 4× Lightning Bolt → 4 images on the sheet).
+- **Image fetching**: Calls Scryfall's `POST /cards/collection` endpoint in batches of 75. Card names are aggressively cleaned (quotes stripped, invisible Unicode removed) before the request, since LLM-generated decks can embed zero-width spaces or surrounding quote characters.
+- **Unrecognised cards**: The collection endpoint silently returns a `not_found` array for hallucinated or misspelled card names. Those cards fall back to a labeled gray placeholder on the sheet.
+- **Dual-faced cards**: When Scryfall returns a card named "Front // Back", the service also indexes by the front face name alone so the lookup succeeds for any form the card name takes.
+- **Layout**: QuestPDF renders a 3×3 grid at standard card dimensions (2.5″ × 3.5″) on US Letter pages. Images are drawn with `.FitUnproportionally()` to fill each slot exactly — avoiding an `AspectRatio` minimum-size constraint that Scryfall's 488×680 px images would otherwise trigger.
+- **Scryfall headers**: Both `User-Agent: mtg-forge/1.0` and `Accept: application/json` are required by Scryfall on all requests; both are set centrally in `Program.cs`.
 
 ---
 
@@ -413,6 +427,7 @@ Returns the `BUILD_VERSION` environment variable if set, otherwise derives a ver
 | `POST`    | `/api/decks/{id}/analyze`             | User      | AI analysis: synergy, weaknesses, upgrade suggestions |
 | `GET`     | `/api/decks/{id}/export/csv`          | User      | Export as CSV (`?format=moxfield\|archidekt\|deckbox\|deckstats`) |
 | `POST`    | `/api/decks/import/csv`               | User      | Import a CSV deck list (auto-detects format)     |
+| `GET`     | `/api/decks/{id}/proxy`               | User      | Generate a printable proxy sheet PDF (3×3 grid, Letter pages) |
 | `GET`     | `/api/decks/metrics`                  | User      | Aggregate metrics for the current user's decks   |
 
 ### Auth
@@ -709,6 +724,7 @@ mtg-forge/
     │   ├── UserService.cs            # MongoDB CRUD for User documents
     │   ├── AuthService.cs            # Password hashing, JWT generation
     │   ├── ScryfallService.cs        # Card metadata enrichment (batched collection API)
+    │   ├── ProxyService.cs           # Printable proxy sheet PDF (QuestPDF, Scryfall images, 3×3 grid)
     │   ├── PricingService.cs         # PostgreSQL price lookups + card name normalization
     │   ├── MtgJsonPricingImportService.cs      # Streaming MTGJSON import → PostgreSQL
     │   ├── PricingRefreshHostedService.cs      # Background service: daily pricing refresh

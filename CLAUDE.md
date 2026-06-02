@@ -70,6 +70,7 @@ Key environment variables:
 - `POST /api/decks/{id}/analyze` — AI deck analysis
 - `GET /api/decks/{id}/export/csv?format=moxfield` — export (moxfield/archidekt/deckbox/deckstats)
 - `POST /api/decks/import/csv` — import with auto-format detection
+- `GET /api/decks/{id}/proxy` — generate a printable proxy sheet PDF (3×3 grid on Letter pages, card images from Scryfall)
 - `GET /healthz` — health check
 
 ## Notes
@@ -78,6 +79,8 @@ Key environment variables:
 - CORS is wide open (AllowAny) — development configuration.
 - The frontend uses three Google Fonts: Cinzel, Crimson Text, MedievalSharp.
 - Docker multi-stage build: `sdk:10.0` → build, `aspnet:10.0` → runtime, exposed on port 5000.
+- **Scryfall HTTP clients**: Both `User-Agent: mtg-forge/1.0` and `Accept: application/json` are required by Scryfall on every request. Both headers are configured centrally in `Program.cs` via `AddHttpClient` — do not rely on setting them inside service constructors.
+- **Proxy PDF**: `ProxyService` uses QuestPDF. Card images must use `.FitUnproportionally()` — Scryfall's 488×680 px images have a large natural size that QuestPDF's default `AspectRatio` constraint would enforce, overflowing the 180×252 pt card slots.
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
