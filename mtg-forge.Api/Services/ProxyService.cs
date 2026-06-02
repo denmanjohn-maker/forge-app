@@ -1,3 +1,6 @@
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using MtgForge.Api.Models;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -109,44 +112,96 @@ public class ProxyService
     private async Task<Dictionary<string, byte[]>> FetchCardImagesAsync(List<string> cardNames)
     {
         var result = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
+        if (cardNames.Count == 0) return result;
+
         var client = _httpFactory.CreateClient("Scryfall");
 
-        // Scryfall rate limit: max 10 req/sec; stagger requests
-        foreach (var name in cardNames)
+        // Step 1: Resolve image URIs via the batch collection endpoint (75 per request),
+        // the same endpoint used by ScryfallService for enrichment.
+        var imageUriMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        const int batchSize = 75;
+
+        for (int i = 0; i < cardNames.Count; i += batchSize)
         {
+            var batchOriginal = cardNames.Skip(i).Take(batchSize).ToList();
+            var batchItems = batchOriginal
+                .Select(n => (original: n, clean: CleanCardName(n)))
+                .ToList();
+
+            var body = JsonSerializer.Serialize(new
+            {
+                identifiers = batchItems.Select(x => new { name = x.clean })
+            });
+
             try
             {
-                // Card names are occasionally stored with surrounding quotes; strip them before querying.
-                var cleanName = name.Trim().Trim('"');
-                var metaUrl = $"https://api.scryfall.com/cards/named?fuzzy={Uri.EscapeDataString(cleanName)}";
-                var metaResp = await client.GetAsync(metaUrl);
-                if (!metaResp.IsSuccessStatusCode)
+                var response = await client.PostAsync(
+                    "https://api.scryfall.com/cards/collection",
+                    new StringContent(body, Encoding.UTF8, "application/json"));
+
+                if (!response.IsSuccessStatusCode)
                 {
-                    _logger.LogWarning("ProxyService: Scryfall metadata request failed for '{Card}' — HTTP {Status}", name, (int)metaResp.StatusCode);
-                    continue;
+                    _logger.LogWarning("ProxyService: Scryfall collection batch failed — HTTP {Status}", (int)response.StatusCode);
                 }
-
-                var meta = await metaResp.Content.ReadFromJsonAsync<ScryfallCard>();
-                var imageUri = meta?.ImageUris?.Normal
-                    ?? meta?.CardFaces?.FirstOrDefault()?.ImageUris?.Normal;
-
-                if (imageUri is null)
-                {
-                    _logger.LogWarning("ProxyService: no image URI found for '{Card}'", name);
-                    continue;
-                }
-
-                var imgResp = await client.GetAsync(imageUri);
-                if (imgResp.IsSuccessStatusCode)
-                    result[name] = await imgResp.Content.ReadAsByteArrayAsync();
                 else
-                    _logger.LogWarning("ProxyService: image download failed for '{Card}' — HTTP {Status} from {Uri}", name, (int)imgResp.StatusCode, imageUri);
+                {
+                    var collResult = await response.Content.ReadFromJsonAsync<ScryfallCollectionResult>();
+                    if (collResult?.Data != null)
+                    {
+                        // Index canonical names → image URIs
+                        var canonicalUris = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                        foreach (var card in collResult.Data)
+                        {
+                            if (string.IsNullOrEmpty(card.Name)) continue;
+                            var uri = card.ImageUris?.Normal
+                                ?? card.CardFaces?.FirstOrDefault()?.ImageUris?.Normal;
+                            if (uri == null) continue;
 
-                await Task.Delay(110); // ~9 req/sec to stay under Scryfall's limit
+                            canonicalUris[card.Name] = uri;
+                            // DFC: "Front // Back" — also index by front face name
+                            var slash = card.Name.IndexOf(" // ", StringComparison.Ordinal);
+                            if (slash > 0) canonicalUris[card.Name[..slash]] = uri;
+                        }
+
+                        // Map original card names to URIs via cleaned name
+                        foreach (var (original, clean) in batchItems)
+                        {
+                            if (canonicalUris.TryGetValue(clean, out var uri))
+                                imageUriMap[original] = uri;
+                        }
+
+                        _logger.LogInformation("ProxyService: batch {Start} — {Found}/{Sent} cards resolved",
+                            i, canonicalUris.Count, batchItems.Count);
+                    }
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "ProxyService: exception fetching image for '{Card}'", name);
+                _logger.LogWarning(ex, "ProxyService: collection batch starting at {Start} threw", i);
+            }
+
+            if (i + batchSize < cardNames.Count)
+                await Task.Delay(110);
+        }
+
+        _logger.LogInformation("ProxyService: resolved {UriCount}/{Total} image URIs", imageUriMap.Count, cardNames.Count);
+
+        // Step 2: Download images sequentially to stay within Scryfall's rate limit
+        foreach (var (name, uri) in imageUriMap)
+        {
+            try
+            {
+                var imgResp = await client.GetAsync(uri);
+                if (imgResp.IsSuccessStatusCode)
+                    result[name] = await imgResp.Content.ReadAsByteArrayAsync();
+                else
+                    _logger.LogWarning("ProxyService: image download failed for '{Card}' — HTTP {Status}", name, (int)imgResp.StatusCode);
+
+                await Task.Delay(110);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "ProxyService: exception downloading image for '{Card}'", name);
             }
         }
 
@@ -154,29 +209,44 @@ public class ProxyService
         return result;
     }
 
+    /// <summary>
+    /// Strips surrounding quotes, leading/trailing whitespace, and any control or
+    /// zero-width Unicode characters that the LLM occasionally embeds in card names.
+    /// </summary>
+    private static string CleanCardName(string name) =>
+        string.Concat(name.Trim().Trim('"').Where(c => !char.IsControl(c))).Trim();
+
     private static bool IsBasicLand(CardEntry card) =>
         card.CardType?.Contains("Basic Land", StringComparison.OrdinalIgnoreCase) == true ||
         new[] { "Plains", "Island", "Swamp", "Mountain", "Forest", "Wastes" }
             .Any(b => string.Equals(card.Name, b, StringComparison.OrdinalIgnoreCase));
 
     // Minimal Scryfall response DTOs
+    private class ScryfallCollectionResult
+    {
+        [JsonPropertyName("data")]
+        public List<ScryfallCard>? Data { get; set; }
+    }
+
     private class ScryfallCard
     {
-        [System.Text.Json.Serialization.JsonPropertyName("image_uris")]
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
+        [JsonPropertyName("image_uris")]
         public ScryfallImageUris? ImageUris { get; set; }
-        [System.Text.Json.Serialization.JsonPropertyName("card_faces")]
+        [JsonPropertyName("card_faces")]
         public List<ScryfallCardFace>? CardFaces { get; set; }
     }
 
     private class ScryfallCardFace
     {
-        [System.Text.Json.Serialization.JsonPropertyName("image_uris")]
+        [JsonPropertyName("image_uris")]
         public ScryfallImageUris? ImageUris { get; set; }
     }
 
     private class ScryfallImageUris
     {
-        [System.Text.Json.Serialization.JsonPropertyName("normal")]
+        [JsonPropertyName("normal")]
         public string? Normal { get; set; }
     }
 }
