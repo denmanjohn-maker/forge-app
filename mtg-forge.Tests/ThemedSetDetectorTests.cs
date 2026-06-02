@@ -57,7 +57,7 @@ public class ThemedSetDetectorTests
     [Fact]
     public void BuildPromptAddendum_ReturnsNull_ForNoMatch()
     {
-        Assert.Null(ThemedSetDetector.BuildPromptAddendum(null));
+        Assert.Null(ThemedSetDetector.BuildPromptAddendum((string?)null));
         Assert.Null(ThemedSetDetector.BuildPromptAddendum(""));
         Assert.Null(ThemedSetDetector.BuildPromptAddendum("standard goblin tribal"));
     }

@@ -21,7 +21,7 @@ public class AiSessionService
     public async Task<AiChatSession?> GetSessionAsync(string id) =>
         await _sessions.Find(s => s.Id == id).FirstOrDefaultAsync();
 
-    public async Task<AiChatSession> CreateSessionAsync(string userId, string deckId)
+    public async Task<AiChatSession> CreateSessionAsync(string userId, string? deckId)
     {
         var session = new AiChatSession { UserId = userId, DeckId = deckId };
         await _sessions.InsertOneAsync(session);

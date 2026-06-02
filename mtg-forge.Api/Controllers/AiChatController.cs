@@ -26,7 +26,7 @@ public class AiChatController : ControllerBase
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
-        AiChatSession session;
+        AiChatSession? session;
         if (string.IsNullOrEmpty(req.SessionId))
         {
             session = await _sessionService.CreateSessionAsync(userId, null);

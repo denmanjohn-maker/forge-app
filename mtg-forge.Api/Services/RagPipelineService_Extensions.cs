@@ -31,7 +31,7 @@ public partial class RagPipelineService
 
         var userPrompt = $"Deck Name: {deck.DeckName}\nStrategy: {deck.Strategy}\nCards:\n{cardList}";
 
-        var responseJson = await CallDeepInfraAsync(systemPrompt, userPrompt, 0.4);
+        var responseJson = await CallLlmAsync(systemPrompt, userPrompt, jsonMode: true, temperature: 0.4, operation: "explain_deck", deckId: deck.Id, format: deck.Format);
 
         if (string.IsNullOrWhiteSpace(responseJson))
         {

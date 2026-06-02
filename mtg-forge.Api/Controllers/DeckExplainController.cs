@@ -26,7 +26,7 @@ public class DeckExplainController : ControllerBase
         if (deck == null) return NotFound();
 
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (deck.UserId != userId && !deck.Id.EndsWith("example") && !User.IsInRole("Admin"))
+        if (deck.UserId != userId && deck.Id != null && !deck.Id.EndsWith("example") && !User.IsInRole("Admin"))
         {
             return Forbid();
         }
