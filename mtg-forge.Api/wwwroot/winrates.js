@@ -1,7 +1,15 @@
 // WIN RATE JS SCRIPTS
+function _forgeAuthHeaders(json) {
+    const h = json ? { 'Content-Type': 'application/json' } : {};
+    if (typeof authToken !== 'undefined' && authToken) {
+        h['Authorization'] = 'Bearer ' + authToken;
+    }
+    return h;
+}
+
 async function fetchWinRates(deckId) {
     try {
-        const res = await fetch(`/api/gamelogs/deck/${deckId}/stats`, { headers: getAuthHeaders() });
+        const res = await fetch(`/api/gamelogs/deck/${deckId}/stats`, { headers: _forgeAuthHeaders(false) });
         if (res.ok) {
             const stats = await res.json();
             if (stats) {
@@ -52,7 +60,7 @@ async function submitGameLog(event) {
     try {
         const res = await fetch('/api/gamelogs', {
             method: 'POST',
-            headers: getAuthHeaders(),
+            headers: _forgeAuthHeaders(true),
             body: JSON.stringify(payload)
         });
         if (res.ok) {
@@ -71,7 +79,7 @@ async function submitGameLog(event) {
 
 async function fetchGameLogs(deckId) {
     try {
-        const res = await fetch(`/api/gamelogs/deck/${deckId}`, { headers: getAuthHeaders() });
+        const res = await fetch(`/api/gamelogs/deck/${deckId}`, { headers: _forgeAuthHeaders(false) });
         if (res.ok) {
             const logs = await res.json();
             const formatLoc = d => new Date(d).toLocaleDateString();

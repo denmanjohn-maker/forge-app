@@ -17,9 +17,14 @@ async function sendAiBrewMessage(event) {
         const payload = { prompt: msg };
         if (aiSessionId) payload.sessionId = aiSessionId;
 
+        const headers = { 'Content-Type': 'application/json' };
+        if (typeof authToken !== 'undefined' && authToken) {
+            headers['Authorization'] = 'Bearer ' + authToken;
+        }
+
         const res = await fetch('/api/ai/chat/brew', {
             method: 'POST',
-            headers: getAuthHeaders(),
+            headers: headers,
             body: JSON.stringify(payload)
         });
 
@@ -29,10 +34,11 @@ async function sendAiBrewMessage(event) {
             document.getElementById(loadingId).remove();
             appendAiMessage('assistant', data.reply);
         } else {
-            document.getElementById(loadingId).innerText = 'Error reaching AI.';
+            const errText = await res.text().catch(() => '');
+            document.getElementById(loadingId).innerText = `Error reaching AI (${res.status}). ${errText}`;
         }
     } catch (e) {
-        document.getElementById(loadingId).innerText = 'Error reaching AI.';
+        document.getElementById(loadingId).innerText = 'Error reaching AI: ' + (e && e.message ? e.message : e);
     }
 }
 
