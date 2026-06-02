@@ -53,43 +53,64 @@ public partial class RagPipelineService
 
     public async Task<string> BrewWithAiAsync(AiChatSession session, string prompt)
     {
-        // Build prior messages into context
-        var systemPrompt = "You are 'Forge AI' - a collaborative Magic: The Gathering deck building assistant. " +
+        if (string.IsNullOrWhiteSpace(_settings.LlmApiKey))
+            throw new InvalidOperationException(
+                "RagPipeline:LlmApiKey is required. Set it via environment variable RAGPIPELINE__LLMAPIKEY.");
+
+        const string systemPrompt =
+            "You are 'Forge AI' - a collaborative Magic: The Gathering deck building assistant. " +
             "You are conversing with a player and helping them refine their deck strategy. " +
             "Be conversational, helpful, and concise.";
 
-        var requestBody = new
+        // Build the conversation: system + prior turns + the new user prompt.
+        var messages = session.Messages
+            .Select(m => new { role = m.Role, content = m.Content })
+            .Prepend(new { role = "system", content = systemPrompt })
+            .Append(new { role = "user", content = prompt })
+            .ToList();
+
+        var payload = new
         {
             model = _settings.Model,
-            messages = new List<object> { new { role = "system", content = systemPrompt } }
-                .Concat(session.Messages.Select(m => new { role = m.Role, content = m.Content }))
-                .Concat(new[] { new { role = "user", content = prompt } }),
+            stream = false,
+            max_tokens = 1000,
             temperature = 0.7,
-            max_tokens = 1000
+            messages
         };
 
+        var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        });
+
+        // Mirror CallLlmAsync's client setup so the chat path cannot drift from the
+        // proven analysis path — in particular the 5-minute timeout (the default
+        // HttpClient timeout of 100s can be exceeded by large LLM responses).
         var client = _factory.CreateClient();
         client.BaseAddress = new Uri(_settings.LlmBaseUrl);
-        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _settings.LlmApiKey);
+        client.Timeout = TimeSpan.FromMinutes(5);
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _settings.LlmApiKey);
 
-        var reqContent = new StringContent(JsonSerializer.Serialize(requestBody), System.Text.Encoding.UTF8, "application/json");
-        var response = await client.PostAsync("/v1/chat/completions", reqContent);
-        
+        using var reqContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+        using var response = await client.PostAsync("/v1/chat/completions", reqContent);
+
         if (!response.IsSuccessStatusCode)
         {
             var err = await response.Content.ReadAsStringAsync();
             _logger.LogError("BrewWithAiAsync: LLM returned {Status} — {Body}", response.StatusCode, err);
-            throw new Exception($"LLM returned error {response.StatusCode}");
+            throw new InvalidOperationException($"LLM returned error {response.StatusCode}: {err}");
         }
 
         var body = await response.Content.ReadAsStringAsync();
-        using var jsonDoc = JsonDocument.Parse(body);
-        var assistantMsg = jsonDoc.RootElement
-            .GetProperty("choices")[0]
-            .GetProperty("message")
-            .GetProperty("content")
-            .GetString();
+        var chatResponse = JsonSerializer.Deserialize<ChatCompletionResponse>(body, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+        });
 
-        return assistantMsg ?? "Error generating response.";
+        return chatResponse?.Choices?.FirstOrDefault()?.Message?.Content
+            ?? throw new InvalidOperationException("Empty response from LLM.");
     }
 }

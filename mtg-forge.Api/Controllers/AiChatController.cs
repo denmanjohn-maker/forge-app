@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MongoDB.Bson;
 using MtgForge.Api.Models;
 using MtgForge.Api.Services;
 
@@ -13,11 +14,16 @@ public class AiChatController : ControllerBase
 {
     private readonly AiSessionService _sessionService;
     private readonly RagPipelineService _ragService;
+    private readonly ILogger<AiChatController> _logger;
 
-    public AiChatController(AiSessionService sessionService, RagPipelineService ragService)
+    public AiChatController(
+        AiSessionService sessionService,
+        RagPipelineService ragService,
+        ILogger<AiChatController> logger)
     {
         _sessionService = sessionService;
         _ragService = ragService;
+        _logger = logger;
     }
 
     [HttpPost("brew")]
@@ -25,26 +31,40 @@ public class AiChatController : ControllerBase
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userId)) return Unauthorized();
+        if (req is null || string.IsNullOrWhiteSpace(req.Prompt))
+            return BadRequest("A prompt is required.");
 
         AiChatSession? session;
-        if (string.IsNullOrEmpty(req.SessionId))
+        if (string.IsNullOrWhiteSpace(req.SessionId))
         {
             session = await _sessionService.CreateSessionAsync(userId, null);
         }
         else
         {
+            if (!ObjectId.TryParse(req.SessionId, out _))
+                return BadRequest("Invalid session id.");
+
             session = await _sessionService.GetSessionAsync(req.SessionId);
             if (session == null) return NotFound("Session not found.");
             if (session.UserId != userId) return Forbid();
         }
 
-        // Add user prompt
+        // Call the LLM BEFORE persisting the user message so a transient AI failure
+        // doesn't leave a dangling user message (which would corrupt the chat history
+        // and could produce consecutive user turns on retry).
+        string aiResponse;
+        try
+        {
+            aiResponse = await _ragService.BrewWithAiAsync(session, req.Prompt);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "BrewWithAiAsync failed for session {SessionId}", session.Id);
+            return StatusCode(StatusCodes.Status502BadGateway,
+                new { error = "The AI service is currently unavailable. Please try again." });
+        }
+
         await _sessionService.AddMessageAsync(session.Id!, new AiChatMessage { Role = "user", Content = req.Prompt });
-
-        // Retrieve AI completion
-        var aiResponse = await _ragService.BrewWithAiAsync(session, req.Prompt);
-
-        // Add assistant response
         await _sessionService.AddMessageAsync(session.Id!, new AiChatMessage { Role = "assistant", Content = aiResponse });
 
         return Ok(new { sessionId = session.Id, reply = aiResponse });
