@@ -29,7 +29,6 @@ public class ProxyService
     public ProxyService(IHttpClientFactory httpFactory, ILogger<ProxyService> logger)
     {
         QuestPDF.Settings.License = LicenseType.Community;
-        QuestPDF.Settings.EnableDebugging = true;
         _httpFactory = httpFactory;
         _logger = logger;
     }
@@ -82,7 +81,7 @@ public class ProxyService
                                     if (card != null && imageMap.TryGetValue(card.Name, out var imgBytes))
                                     {
                                         rowEl.ConstantItem(CardWidthPt).Height(CardHeightPt)
-                                            .Image(imgBytes);
+                                            .Image(imgBytes).FitUnproportionally();
                                     }
                                     else if (card != null)
                                     {
