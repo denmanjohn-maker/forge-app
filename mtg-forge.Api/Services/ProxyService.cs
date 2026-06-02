@@ -29,6 +29,7 @@ public class ProxyService
     public ProxyService(IHttpClientFactory httpFactory, ILogger<ProxyService> logger)
     {
         QuestPDF.Settings.License = LicenseType.Community;
+        QuestPDF.Settings.EnableDebugging = true;
         _httpFactory = httpFactory;
         _logger = logger;
     }
