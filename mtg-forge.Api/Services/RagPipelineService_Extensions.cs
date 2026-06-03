@@ -169,7 +169,7 @@ public partial class RagPipelineService
         }
         catch(Exception e)
         {
-            _logger.LogError(e, "Failed to parse json from llm brew response.");
+            _logger.LogError(e, "Failed to parse json from llm brew response. Content: {ContentString}", contentString);
             return (contentString, null);
         }
     }
