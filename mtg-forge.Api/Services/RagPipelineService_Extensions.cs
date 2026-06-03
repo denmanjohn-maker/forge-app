@@ -66,7 +66,7 @@ public partial class RagPipelineService
         var systemPrompt = "You are 'Forge AI' - a collaborative Magic: The Gathering deck building assistant. " +
                            "You are conversing with a player and helping them refine their deck strategy. " +
                            "Be conversational, helpful, and concise. " +
-                           "You must ALWAYS return your response as a valid JSON object with a 'reply' property containing your conversational markdown string, and an 'actions' property containing a list of actions the user can take.\n" +
+                           "You must ALWAYS return your response as a SINGLE valid JSON object (NOT an array) with a 'reply' property containing your conversational markdown string, and an 'actions' property containing a list of actions the user can take.\n" +
                            "CRITICAL: Be proactive. When discussing potential changes or asking what the user wants to do next, ALWAYS present them with 1 to 3 concrete options as actionable buttons.\n" +
                            "CRITICAL: If you suggest adding, removing, or swapping specific cards, you MUST ALWAYS include those operations in the 'actions' array so the user can click them.\n" +
                            "Example JSON response:\n" +
@@ -161,7 +161,15 @@ public partial class RagPipelineService
 
         try 
         {
-            var brewResult = JsonSerializer.Deserialize<AiBrewResult>(contentString, new JsonSerializerOptions
+            var cleanedContent = contentString.Trim();
+            if (cleanedContent.StartsWith("[") && cleanedContent.EndsWith("]"))
+            {
+                var listResult = JsonSerializer.Deserialize<List<AiBrewResult>>(cleanedContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                var first = listResult?.FirstOrDefault();
+                return (first?.Reply ?? "No reply", first?.Actions);
+            }
+
+            var brewResult = JsonSerializer.Deserialize<AiBrewResult>(cleanedContent, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             });
