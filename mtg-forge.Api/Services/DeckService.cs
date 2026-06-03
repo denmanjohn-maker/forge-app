@@ -161,8 +161,14 @@ public class DeckService
             var existing = await GetByIdAsync(id);
             if (existing != null && userId != null)
             {
-                var oldMap = existing.Cards.ToDictionary(c => c.Name, c => c.Quantity, StringComparer.OrdinalIgnoreCase);
-                var newMap = req.Cards.ToDictionary(c => c.Name, c => c.Quantity, StringComparer.OrdinalIgnoreCase);
+                var oldMap = existing.Cards
+                    .GroupBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(g => g.Key, g => g.Sum(c => c.Quantity), StringComparer.OrdinalIgnoreCase);
+                
+                var newMap = req.Cards
+                    .GroupBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(g => g.Key, g => g.Sum(c => c.Quantity), StringComparer.OrdinalIgnoreCase);
+                
                 var added = newMap.Keys.Except(oldMap.Keys, StringComparer.OrdinalIgnoreCase).ToList();
                 var removed = oldMap.Keys.Except(newMap.Keys, StringComparer.OrdinalIgnoreCase).ToList();
                 var qtyChanged = newMap.Keys
