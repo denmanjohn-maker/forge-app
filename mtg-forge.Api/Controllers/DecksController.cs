@@ -347,7 +347,18 @@ public class DecksController : ControllerBase
         await _pricingService.ApplyPricesAsync(new List<CardEntry> { newCard });
 
         deck.Cards.Remove(cardToRemove);
-        deck.Cards.Add(newCard);
+        
+        // Merge into existing if the card is already in the deck
+        var existingCard = deck.Cards.FirstOrDefault(c => string.Equals(c.Name, newCard.Name, StringComparison.OrdinalIgnoreCase));
+        if (existingCard != null)
+        {
+            existingCard.Quantity += newCard.Quantity;
+        }
+        else
+        {
+            deck.Cards.Add(newCard);
+        }
+
         deck.TotalCards = deck.Cards.Sum(c => c.Quantity);
         deck.EstimatedTotalPrice = deck.Cards.Sum(c => c.EstimatedPrice * c.Quantity);
         deck.UpdatedAt = DateTime.UtcNow;
@@ -860,24 +871,30 @@ public class DecksController : ControllerBase
         if (!IsAdmin() && deck.UserId != GetUserId())
             return Forbid();
 
-        // Reject if the card is already in the deck (case-insensitive)
-        if (deck.Cards.Any(c => string.Equals(c.Name, request.CardName, StringComparison.OrdinalIgnoreCase)))
-            return Conflict(new { error = $"'{request.CardName}' is already in this deck." });
+        var existingCard = deck.Cards.FirstOrDefault(c => string.Equals(c.Name, request.CardName, StringComparison.OrdinalIgnoreCase));
 
-        var newCard = new CardEntry
+        if (existingCard != null)
         {
-            Name = request.CardName,
-            Quantity = 1,
-            Category = !string.IsNullOrWhiteSpace(request.Category) ? request.Category : "Mainboard",
-            RoleInDeck = ""
-        };
+            existingCard.Quantity += 1;
+        }
+        else
+        {
+            var newCard = new CardEntry
+            {
+                Name = request.CardName,
+                Quantity = 1,
+                Category = !string.IsNullOrWhiteSpace(request.Category) ? request.Category : "Mainboard",
+                RoleInDeck = ""
+            };
 
-        var enriched = await _scryfallService.EnrichCardsAsync(new List<CardEntry> { newCard });
-        if (enriched.Count > 0)
-            newCard = enriched[0];
-        await _pricingService.ApplyPricesAsync(new List<CardEntry> { newCard });
+            var enriched = await _scryfallService.EnrichCardsAsync(new List<CardEntry> { newCard });
+            if (enriched.Count > 0)
+                newCard = enriched[0];
+            await _pricingService.ApplyPricesAsync(new List<CardEntry> { newCard });
 
-        deck.Cards.Add(newCard);
+            deck.Cards.Add(newCard);
+        }
+
         deck.TotalCards = deck.Cards.Sum(c => c.Quantity);
         deck.EstimatedTotalPrice = deck.Cards.Sum(c => c.EstimatedPrice * c.Quantity);
         deck.UpdatedAt = DateTime.UtcNow;
