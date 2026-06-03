@@ -66,10 +66,13 @@ public class AiChatController : ControllerBase
         // Call the LLM BEFORE persisting the user message so a transient AI failure
         // doesn't leave a dangling user message (which would corrupt the chat history
         // and could produce consecutive user turns on retry).
-        string aiResponse;
+        string aiResponseText;
+        List<AiChatAction>? actions;
         try
         {
-            aiResponse = await _ragService.BrewWithAiAsync(session, req.Prompt, user, deck);
+            var result = await _ragService.BrewWithAiAsync(session, req.Prompt, user, deck);
+            aiResponseText = result.Reply;
+            actions = result.Actions;
         }
         catch (Exception ex)
         {
@@ -79,8 +82,13 @@ public class AiChatController : ControllerBase
         }
 
         await _sessionService.AddMessageAsync(session.Id!, new AiChatMessage { Role = "user", Content = req.Prompt });
-        await _sessionService.AddMessageAsync(session.Id!, new AiChatMessage { Role = "assistant", Content = aiResponse });
+        await _sessionService.AddMessageAsync(session.Id!, new AiChatMessage 
+        { 
+            Role = "assistant", 
+            Content = aiResponseText,
+            Actions = actions
+        });
 
-        return Ok(new { sessionId = session.Id, reply = aiResponse });
+        return Ok(new { sessionId = session.Id, reply = aiResponseText, actions = actions });
     }
 }

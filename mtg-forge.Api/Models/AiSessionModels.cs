@@ -22,6 +22,14 @@ public class AiChatSession
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
 
+public class AiChatAction
+{
+    public string Type { get; set; } = null!; // "add", "remove", "swap"
+    public string? RemoveCard { get; set; }
+    public string? AddCard { get; set; }
+    public string Label { get; set; } = null!;
+}
+
 public class AiChatMessage
 {
     /// <summary>
@@ -30,6 +38,8 @@ public class AiChatMessage
     public string Role { get; set; } = null!;
 
     public string Content { get; set; } = null!;
+    
+    public List<AiChatAction>? Actions { get; set; }
 
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 }

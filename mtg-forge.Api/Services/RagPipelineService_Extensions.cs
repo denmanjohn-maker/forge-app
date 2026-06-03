@@ -51,7 +51,13 @@ public partial class RagPipelineService
         }
     }
 
-    public async Task<string> BrewWithAiAsync(AiChatSession session, string prompt, User? user, DeckConfiguration? deck)
+    private class AiBrewResult
+    {
+        public string Reply { get; set; } = string.Empty;
+        public List<AiChatAction>? Actions { get; set; }
+    }
+
+    public async Task<(string Reply, List<AiChatAction>? Actions)> BrewWithAiAsync(AiChatSession session, string prompt, User? user, DeckConfiguration? deck)
     {
         if (string.IsNullOrWhiteSpace(_settings.LlmApiKey))
             throw new InvalidOperationException(
@@ -59,7 +65,16 @@ public partial class RagPipelineService
 
         var systemPrompt = "You are 'Forge AI' - a collaborative Magic: The Gathering deck building assistant. " +
                            "You are conversing with a player and helping them refine their deck strategy. " +
-                           "Be conversational, helpful, and concise.";
+                           "Be conversational, helpful, and concise. " +
+                           "You must ALWAYS return your response as a valid JSON object with a 'reply' property containing your conversational markdown string, and an optional 'actions' property containing a list of actions the user can take.\n" +
+                           "Example JSON response:\n" +
+                           "{\n" +
+                           "  \"reply\": \"I think you need more ramp. Here are some options:\",\n" +
+                           "  \"actions\": [\n" +
+                           "    { \"type\": \"add\", \"addCard\": \"Sol Ring\", \"label\": \"Add Sol Ring\" },\n" +
+                           "    { \"type\": \"swap\", \"removeCard\": \"Forest\", \"addCard\": \"Arcane Signet\", \"label\": \"Swap Forest for Arcane Signet\" }\n" +
+                           "  ]\n" +
+                           "}";
 
         if (user != null)
         {
@@ -96,7 +111,8 @@ public partial class RagPipelineService
             stream = false,
             max_tokens = 1000,
             temperature = 0.7,
-            messages
+            messages,
+            response_format = new { type = "json_object" }
         };
 
         var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions
@@ -131,7 +147,21 @@ public partial class RagPipelineService
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
         });
 
-        return chatResponse?.Choices?.FirstOrDefault()?.Message?.Content
+        var contentString = chatResponse?.Choices?.FirstOrDefault()?.Message?.Content
             ?? throw new InvalidOperationException("Empty response from LLM.");
+
+        try 
+        {
+            var brewResult = JsonSerializer.Deserialize<AiBrewResult>(contentString, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+            return (brewResult?.Reply ?? "No reply", brewResult?.Actions);
+        }
+        catch(Exception e)
+        {
+            _logger.LogError(e, "Failed to parse json from llm brew response.");
+            return (contentString, null);
+        }
     }
 }
