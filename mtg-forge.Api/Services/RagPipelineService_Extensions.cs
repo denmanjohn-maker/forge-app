@@ -100,7 +100,13 @@ public partial class RagPipelineService
 
         // Build the conversation: system + prior turns + the new user prompt.
         var messages = session.Messages
-            .Select(m => new { role = m.Role, content = m.Content })
+            .Select(m => new 
+            { 
+                role = m.Role, 
+                content = m.Role == "assistant" 
+                    ? JsonSerializer.Serialize(new AiBrewResult { Reply = m.Content, Actions = m.Actions }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull })
+                    : m.Content 
+            })
             .Prepend(new { role = "system", content = systemPrompt })
             .Append(new { role = "user", content = prompt })
             .ToList();

@@ -51,7 +51,7 @@ function appendAiMessage(role, content, actions = null) {
     if (actions && actions.length > 0) {
         const buttons = actions.map(act => {
             const actJson = escHtml(JSON.stringify(act));
-            return `<button onclick="executeAiAction(this, '${actJson}')" style="margin-top:0.5rem; margin-right:0.5rem; padding:0.4rem 0.75rem; background:var(--bg-hover); color:var(--mana-blue); border:1px solid var(--mana-blue); border-radius:12px; font-size:0.8rem; cursor:pointer: font-weight:bold;">✨ ${escHtml(act.label)}</button>`;
+            return `<button data-action="${actJson}" onclick="executeAiAction(this)" style="margin-top:0.5rem; margin-right:0.5rem; padding:0.4rem 0.75rem; background:var(--bg-hover); color:var(--mana-blue); border:1px solid var(--mana-blue); border-radius:12px; font-size:0.8rem; cursor:pointer; font-weight:bold;">✨ ${escHtml(act.label)}</button>`;
         }).join('');
         actionsHtml = `<div style="margin-top:0.75rem;">${buttons}</div>`;
     }
@@ -73,9 +73,10 @@ function escHtml(s) {
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
-async function executeAiAction(btnEl, actionJson) {
+async function executeAiAction(btnEl) {
     if (!aiCurrentDeckId) return;
     try {
+        const actionJson = btnEl.getAttribute('data-action');
         btnEl.innerText = "⏳ Applying...";
         btnEl.disabled = true;
         
