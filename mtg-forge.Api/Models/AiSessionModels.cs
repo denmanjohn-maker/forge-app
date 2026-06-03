@@ -37,5 +37,6 @@ public class AiChatMessage
 public class AiBrewRequest
 {
     public string? SessionId { get; set; }
+    public string? DeckId { get; set; }
     public string Prompt { get; set; } = null!;
 }

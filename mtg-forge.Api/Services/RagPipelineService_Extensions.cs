@@ -51,16 +51,37 @@ public partial class RagPipelineService
         }
     }
 
-    public async Task<string> BrewWithAiAsync(AiChatSession session, string prompt)
+    public async Task<string> BrewWithAiAsync(AiChatSession session, string prompt, User? user, DeckConfiguration? deck)
     {
         if (string.IsNullOrWhiteSpace(_settings.LlmApiKey))
             throw new InvalidOperationException(
                 "RagPipeline:LlmApiKey is required. Set it via environment variable RAGPIPELINE__LLMAPIKEY.");
 
-        const string systemPrompt =
-            "You are 'Forge AI' - a collaborative Magic: The Gathering deck building assistant. " +
-            "You are conversing with a player and helping them refine their deck strategy. " +
-            "Be conversational, helpful, and concise.";
+        var systemPrompt = "You are 'Forge AI' - a collaborative Magic: The Gathering deck building assistant. " +
+                           "You are conversing with a player and helping them refine their deck strategy. " +
+                           "Be conversational, helpful, and concise.";
+
+        if (user != null)
+        {
+            systemPrompt += $"\n\nYou are talking to: {user.DisplayName}.";
+        }
+
+        if (deck != null)
+        {
+            systemPrompt += $"\n\nThe user is currently working on the following deck:\n" +
+                            $"- Deck Name: {deck.DeckName}\n" +
+                            $"- Commander: {deck.Commander}\n" +
+                            $"- Format: {deck.Format}\n" +
+                            $"- Strategy: {deck.Strategy}\n" +
+                            $"- Power Level: {deck.PowerLevel}\n" +
+                            $"- Colors: {string.Join(", ", deck.Colors)}\n\n" +
+                            "Decklist:\n";
+
+            foreach (var card in deck.Cards)
+            {
+                systemPrompt += $"- {card.Quantity}x {card.Name} ({card.Category})\n";
+            }
+        }
 
         // Build the conversation: system + prior turns + the new user prompt.
         var messages = session.Messages

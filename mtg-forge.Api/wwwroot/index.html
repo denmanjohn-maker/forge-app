@@ -4525,6 +4525,21 @@
         }
 
         function renderDetail(deck) {
+            // --- AI Context Reset ---
+            if (typeof aiCurrentDeckId !== 'undefined') {
+                if (aiCurrentDeckId !== deck.id) {
+                    aiCurrentDeckId = deck.id;
+                    aiSessionId = null; 
+                    
+                    // Clear the chat log visual state
+                    const chatLog = document.getElementById('aiChatLog');
+                    if (chatLog) {
+                        chatLog.innerHTML = `<div class="text-secondary" style="font-style:italic;">Start a conversation with Forge AI about this deck. Ask it for swap suggestions or how to counter specific matchups!</div>`;
+                    }
+                }
+            }
+            // ------------------------
+
             const categories = groupByCategory(deck.cards || []);
             const totalCards = (deck.cards || []).reduce((s, c) => s + c.quantity, 0);
             const nonLandCards = (deck.cards || []).filter(c => c.category !== 'Land');

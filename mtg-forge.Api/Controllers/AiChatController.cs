@@ -14,15 +14,21 @@ public class AiChatController : ControllerBase
 {
     private readonly AiSessionService _sessionService;
     private readonly RagPipelineService _ragService;
+    private readonly UserService _userService;
+    private readonly DeckService _deckService;
     private readonly ILogger<AiChatController> _logger;
 
     public AiChatController(
         AiSessionService sessionService,
         RagPipelineService ragService,
+        UserService userService,
+        DeckService deckService,
         ILogger<AiChatController> logger)
     {
         _sessionService = sessionService;
         _ragService = ragService;
+        _userService = userService;
+        _deckService = deckService;
         _logger = logger;
     }
 
@@ -37,7 +43,7 @@ public class AiChatController : ControllerBase
         AiChatSession? session;
         if (string.IsNullOrWhiteSpace(req.SessionId))
         {
-            session = await _sessionService.CreateSessionAsync(userId, null);
+            session = await _sessionService.CreateSessionAsync(userId, req.DeckId);
         }
         else
         {
@@ -49,13 +55,21 @@ public class AiChatController : ControllerBase
             if (session.UserId != userId) return Forbid();
         }
 
+        // Fetch User and Deck context
+        var user = await _userService.GetByIdAsync(userId);
+        DeckConfiguration? deck = null;
+        if (!string.IsNullOrEmpty(session.DeckId))
+        {
+            deck = await _deckService.GetByIdAsync(session.DeckId);
+        }
+
         // Call the LLM BEFORE persisting the user message so a transient AI failure
         // doesn't leave a dangling user message (which would corrupt the chat history
         // and could produce consecutive user turns on retry).
         string aiResponse;
         try
         {
-            aiResponse = await _ragService.BrewWithAiAsync(session, req.Prompt);
+            aiResponse = await _ragService.BrewWithAiAsync(session, req.Prompt, user, deck);
         }
         catch (Exception ex)
         {

@@ -1,4 +1,5 @@
 let aiSessionId = null;
+let aiCurrentDeckId = null;
 
 async function sendAiBrewMessage(event) {
     if (event) event.preventDefault();
@@ -16,6 +17,7 @@ async function sendAiBrewMessage(event) {
     try {
         const payload = { prompt: msg };
         if (aiSessionId) payload.sessionId = aiSessionId;
+        if (aiCurrentDeckId && !aiSessionId) payload.deckId = aiCurrentDeckId;
 
         const headers = { 'Content-Type': 'application/json' };
         if (typeof authToken !== 'undefined' && authToken) {
