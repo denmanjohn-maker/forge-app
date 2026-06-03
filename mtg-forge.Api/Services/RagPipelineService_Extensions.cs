@@ -66,7 +66,8 @@ public partial class RagPipelineService
         var systemPrompt = "You are 'Forge AI' - a collaborative Magic: The Gathering deck building assistant. " +
                            "You are conversing with a player and helping them refine their deck strategy. " +
                            "Be conversational, helpful, and concise. " +
-                           "You must ALWAYS return your response as a valid JSON object with a 'reply' property containing your conversational markdown string, and an optional 'actions' property containing a list of actions the user can take.\n" +
+                           "You must ALWAYS return your response as a valid JSON object with a 'reply' property containing your conversational markdown string, and an 'actions' property containing a list of actions the user can take.\n" +
+                           "CRITICAL: If you suggest adding, removing, or swapping specific cards, you MUST ALWAYS include those operations in the 'actions' array so the user can click them.\n" +
                            "Example JSON response:\n" +
                            "{\n" +
                            "  \"reply\": \"I think you need more ramp. Here are some options:\",\n" +
