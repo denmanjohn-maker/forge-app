@@ -67,13 +67,15 @@ public partial class RagPipelineService
                            "You are conversing with a player and helping them refine their deck strategy. " +
                            "Be conversational, helpful, and concise. " +
                            "You must ALWAYS return your response as a valid JSON object with a 'reply' property containing your conversational markdown string, and an 'actions' property containing a list of actions the user can take.\n" +
+                           "CRITICAL: Be proactive. When discussing potential changes or asking what the user wants to do next, ALWAYS present them with 1 to 3 concrete options as actionable buttons.\n" +
                            "CRITICAL: If you suggest adding, removing, or swapping specific cards, you MUST ALWAYS include those operations in the 'actions' array so the user can click them.\n" +
                            "Example JSON response:\n" +
                            "{\n" +
-                           "  \"reply\": \"I think you need more ramp. Here are some options:\",\n" +
+                           "  \"reply\": \"What do you want to focus on next?\",\n" +
                            "  \"actions\": [\n" +
                            "    { \"type\": \"add\", \"addCard\": \"Sol Ring\", \"label\": \"Add Sol Ring\" },\n" +
-                           "    { \"type\": \"swap\", \"removeCard\": \"Forest\", \"addCard\": \"Arcane Signet\", \"label\": \"Swap Forest for Arcane Signet\" }\n" +
+                           "    { \"type\": \"swap\", \"removeCard\": \"Forest\", \"addCard\": \"Arcane Signet\", \"label\": \"Swap Forest for Arcane Signet\" },\n" +
+                           "    { \"type\": \"reply\", \"message\": \"I want to improve my mana ramp.\", \"label\": \"Option 1: Focus on Ramp\" }\n" +
                            "  ]\n" +
                            "}";
 

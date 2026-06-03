@@ -95,6 +95,11 @@ async function executeAiAction(btnEl) {
         } else if (act.type === 'swap' && act.addCard && act.removeCard) {
             url = `/api/decks/${aiCurrentDeckId}/apply-upgrade`;
             payload = { removeCard: act.removeCard, addCard: act.addCard, reason: "AI Suggestion" };
+        } else if (act.type === 'reply') {
+            btnEl.style.display = 'none';
+            document.getElementById('aiChatInput').value = act.message || act.label;
+            sendAiBrewMessage();
+            return;
         } else {
             btnEl.innerText = "❌ Unknown Action";
             return;
