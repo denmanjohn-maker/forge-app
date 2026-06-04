@@ -329,9 +329,23 @@ public class DecksController : ControllerBase
             return Forbid();
 
         var cardToRemove = deck.Cards.FirstOrDefault(c =>
-            string.Equals(c.Name, upgrade.RemoveCard, StringComparison.OrdinalIgnoreCase));
+            string.Equals(c.Name, upgrade.RemoveCard, StringComparison.OrdinalIgnoreCase) || 
+            (c.Category != null && c.Category.Equals("Commander", StringComparison.OrdinalIgnoreCase) && string.Equals(upgrade.RemoveCard, "commander", StringComparison.OrdinalIgnoreCase)) ||
+            (string.Equals(deck.Commander, c.Name, StringComparison.OrdinalIgnoreCase) && string.Equals(upgrade.RemoveCard, "commander", StringComparison.OrdinalIgnoreCase)) ||
+            (c.Name.Contains(upgrade.RemoveCard, StringComparison.OrdinalIgnoreCase)) ||
+            (upgrade.RemoveCard.Contains(c.Name, StringComparison.OrdinalIgnoreCase)));
+            
+        if (cardToRemove is null && (string.Equals(deck.Commander, upgrade.RemoveCard, StringComparison.OrdinalIgnoreCase) || deck.Commander.Contains(upgrade.RemoveCard, StringComparison.OrdinalIgnoreCase)))
+        {
+            // Just in case the commander string doesn't match an actual card perfectly
+            cardToRemove = new CardEntry { Name = deck.Commander, Quantity = 1, Category = "Commander", RoleInDeck = "Commander" };
+        }
+
         if (cardToRemove is null)
+        {
+            _logger.LogWarning("ApplyUpgrade failed: Card '{RemoveCard}' not found. Commander was '{Commander}'", upgrade.RemoveCard, deck.Commander);
             return BadRequest(new { error = $"Card '{upgrade.RemoveCard}' not found in deck." });
+        }
 
         var newCard = new CardEntry
         {
