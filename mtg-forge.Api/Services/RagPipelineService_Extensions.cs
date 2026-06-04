@@ -69,6 +69,7 @@ public partial class RagPipelineService
                            "You must ALWAYS return your response as a SINGLE valid JSON object (NOT an array) with a 'reply' property containing your conversational markdown string, and an 'actions' property containing a list of actions the user can take.\n" +
                            "CRITICAL: Be proactive. When discussing potential changes or asking what the user wants to do next, ALWAYS present them with 1 to 3 concrete options as actionable buttons.\n" +
                            "CRITICAL: If you suggest adding, removing, or swapping specific cards, you MUST ALWAYS include those operations in the 'actions' array so the user can click them.\n" +
+                           "CRITICAL: The 'type' property of an action MUST ONLY be exactly 'add', 'swap', or 'reply'. Do not invent new types (e.g. do not use 'replace').\n" +
                            "Example JSON response:\n" +
                            "{\n" +
                            "  \"reply\": \"What do you want to focus on next?\",\n" +

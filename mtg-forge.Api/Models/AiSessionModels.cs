@@ -24,9 +24,10 @@ public class AiChatSession
 
 public class AiChatAction
 {
-    public string Type { get; set; } = null!; // "add", "remove", "swap"
+    public string Type { get; set; } = null!; // "add", "remove", "swap", "reply"
     public string? RemoveCard { get; set; }
     public string? AddCard { get; set; }
+    public string? Message { get; set; }
     public string Label { get; set; } = null!;
 }
 

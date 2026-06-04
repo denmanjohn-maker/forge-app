@@ -92,7 +92,7 @@ async function executeAiAction(btnEl) {
         if (act.type === 'add' && act.addCard) {
             url = `/api/decks/${aiCurrentDeckId}/add-card`;
             payload = { cardName: act.addCard };
-        } else if (act.type === 'swap' && act.addCard && act.removeCard) {
+        } else if ((act.type === 'swap' || act.type === 'replace') && act.addCard && act.removeCard) {
             url = `/api/decks/${aiCurrentDeckId}/apply-upgrade`;
             payload = { removeCard: act.removeCard, addCard: act.addCard, reason: "AI Suggestion" };
         } else if (act.type === 'reply') {
