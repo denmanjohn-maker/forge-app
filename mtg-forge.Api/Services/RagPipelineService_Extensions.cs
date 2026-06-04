@@ -8,6 +8,51 @@ namespace MtgForge.Api.Services;
 // modifying the massive existing file directly.
 public partial class RagPipelineService
 {
+    private class CommanderIdentityResponse
+    {
+        public string DeckName { get; set; } = null!;
+        public string Strategy { get; set; } = null!;
+    }
+
+    public async Task UpdateCommanderIdentityAsync(DeckConfiguration deck)
+    {
+        var schema = """
+            {
+              "deckName": "string - a creative name for the deck featuring the new commander (max 50 chars)",
+              "strategy": "string - a 2-3 sentence bio and strategy describing how the deck wins with this new commander"
+            }
+            """;
+
+        var systemPrompt = $"""
+            You are a Magic: The Gathering deck architect. The user just swapped their commander to {deck.Commander}.
+            Their deck colors are {string.Join(", ", deck.Colors)} and the format is {deck.Format}.
+            Please generate an updated deck name and a short strategy bio describing how this deck operates under the new commander.
+            Respond ONLY with a valid JSON object matching this schema:
+            {schema}
+            """;
+
+        var topCards = string.Join("\n", deck.Cards.Where(c => c.Category != "Basic Land" && c.Category != "Commander").OrderByDescending(c => c.EstimatedPrice).Take(15).Select(c => $"- {c.Quantity}x {c.Name}"));
+        var userPrompt = $"New Commander: {deck.Commander}\nTop Cards in deck:\n{topCards}";
+
+        var responseJson = await CallLlmAsync(systemPrompt, userPrompt, jsonMode: true, temperature: 0.7, operation: "update_commander_identity", deckId: deck.Id, format: deck.Format);
+
+        try
+        {
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var result = JsonSerializer.Deserialize<CommanderIdentityResponse>(responseJson, options);
+            if (result != null && !string.IsNullOrWhiteSpace(result.DeckName))
+            {
+                deck.DeckName = result.DeckName;
+                deck.Strategy = result.Strategy;
+                deck.DeckDescription = result.Strategy;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to update commander identity. Response: {Response}", responseJson);
+        }
+    }
+
     public async Task<DeckExplanation> ExplainDeckAsync(DeckConfiguration deck)
     {
         var schema = """

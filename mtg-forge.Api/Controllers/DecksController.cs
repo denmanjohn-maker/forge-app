@@ -379,10 +379,19 @@ public class DecksController : ControllerBase
 
         var updateRequest = new DeckUpdateRequest { Cards = deck.Cards };
 
-        if (string.Equals(deck.Commander, cardToRemove.Name, StringComparison.OrdinalIgnoreCase))
+        bool isCommanderSwap = string.Equals(deck.Commander, cardToRemove.Name, StringComparison.OrdinalIgnoreCase) || deck.Commander.Contains(cardToRemove.Name, StringComparison.OrdinalIgnoreCase);
+
+        if (isCommanderSwap)
         {
             deck.Commander = newCard.Name;
             updateRequest.Commander = newCard.Name;
+            
+            // Ask AI to refresh the strategy bio and deck name since the commander changed
+            await _llmService.UpdateCommanderIdentityAsync(deck);
+            
+            updateRequest.DeckName = deck.DeckName;
+            updateRequest.Strategy = deck.Strategy;
+            updateRequest.DeckDescription = deck.DeckDescription;
         }
 
         await _deckService.UpdateAsync(id, updateRequest, GetUserId());

@@ -56,4 +56,10 @@ public interface IDeckGenerationService
     /// adjusted to satisfy the refinement prompt.
     /// </summary>
     Task<DeckConfiguration> RefineDeckAsync(DeckConfiguration existingDeck, string refinementPrompt);
+
+    /// <summary>
+    /// Updates the deck's name, strategy, and description based on a newly swapped commander.
+    /// Modifies the provided <see cref="DeckConfiguration"/> object in place.
+    /// </summary>
+    Task UpdateCommanderIdentityAsync(DeckConfiguration deck);
 }
