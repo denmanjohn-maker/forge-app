@@ -364,6 +364,13 @@ public class DecksController : ControllerBase
         deck.UpdatedAt = DateTime.UtcNow;
 
         var updateRequest = new DeckUpdateRequest { Cards = deck.Cards };
+
+        if (string.Equals(deck.Commander, cardToRemove.Name, StringComparison.OrdinalIgnoreCase))
+        {
+            deck.Commander = newCard.Name;
+            updateRequest.Commander = newCard.Name;
+        }
+
         await _deckService.UpdateAsync(id, updateRequest, GetUserId());
 
         _logger.LogInformation("Applied upgrade on deck {Id}", id.Replace(Environment.NewLine, ""));
