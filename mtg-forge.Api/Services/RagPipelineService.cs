@@ -207,7 +207,8 @@ public partial class RagPipelineService : IDeckGenerationService
                   "addCard": "exact card name to add",
                   "reason": "why this swap improves the deck"
                 }
-              ]
+              ],
+              "primer": "string - detailed markdown-formatted strategy guide including Mulligan Guide, Key Synergies, and Win Conditions"
             }
             """;
 

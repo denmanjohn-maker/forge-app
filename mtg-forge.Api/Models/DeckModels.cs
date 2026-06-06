@@ -115,6 +115,7 @@ public class DeckAnalysis
 {
     public string SynergyAssessment { get; set; } = null!;
     public string OverallRating { get; set; } = null!;
+    public string? Primer { get; set; }
     public List<string> Weaknesses { get; set; } = new();
     public List<string> ImprovementSuggestions { get; set; } = new();
     public List<CardUpgrade> CardUpgrades { get; set; } = new();

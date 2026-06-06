@@ -3381,6 +3381,20 @@
         </div>
     </div>
 
+
+    <!-- Metrics Modal -->
+    <div class="modal-overlay hidden" id="metricsModal">
+        <div class="modal" style="max-width:720px;width:96%;max-height:90vh;display:flex;flex-direction:column;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                <h3 style="margin:0;">&#128202; Deck Analytics</h3>
+                <button class="btn-outline" style="padding:0.3rem 0.7rem;" onclick="closeMetricsModal()">Close</button>
+            </div>
+            <div id="metricsBody" style="overflow-y:auto;flex:1;">
+                <div style="text-align:center;color:var(--text-muted);padding-top:3rem;">Loading metrics...</div>
+            </div>
+        </div>
+    </div>
+
     <!-- History Modal -->
     <div class="modal-overlay hidden" id="historyModal">
         <div class="modal" style="max-width:680px;width:96%;max-height:88vh;display:flex;flex-direction:column;">
@@ -4669,6 +4683,7 @@
                     <button class="btn-outline" onclick="printProxies('${deck.id}')">&#128444; Print Proxies</button>
                     <button class="btn-outline" onclick="openHistoryModal('${deck.id}')">&#128337; History</button>
                     <button class="btn-outline" onclick="openPrimerModal('${deck.id}', ${JSON.stringify(deck.primer || '')})">&#128221; Strategy Notes</button>
+                    <button class="btn-outline" onclick="openMetricsModal('${deck.id}')">&#128202; Analytics</button>
                     <button class="btn-danger" onclick="openDeleteModal('${deck.id}')">&#128293; Banish Deck</button>
                 </div>
 
@@ -5158,6 +5173,65 @@
                 const copy = await res.json();
                 showToast(`Deck copied as "${copy.deckName}"!`);
             } catch (err) { showToast(err.message, true); }
+        }
+
+
+        async function openMetricsModal(deckId) {
+            document.getElementById('metricsModal').classList.remove('hidden');
+            const body = document.getElementById('metricsBody');
+            body.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding-top:3rem;">Loading metrics...</div>';
+            try {
+                const res = await authFetch(`${API_BASE}/${deckId}/metrics`);
+                if (!res.ok) throw new Error('Failed to load metrics');
+                const metrics = await res.json();
+                
+                // Build simple bar chart for mana curve
+                let maxCurve = 0;
+                for (let i = 0; i <= 7; i++) {
+                    if (metrics.manaCurve[i] > maxCurve) maxCurve = metrics.manaCurve[i];
+                }
+                
+                let curveHtml = '<div style="display:flex;align-items:flex-end;gap:8px;height:120px;margin-bottom:20px;padding-bottom:10px;border-bottom:1px solid var(--border);">';
+                for (let i = 0; i <= 7; i++) {
+                    const count = metrics.manaCurve[i] || 0;
+                    const h = maxCurve > 0 ? (count / maxCurve) * 100 : 0;
+                    curveHtml += `<div style="flex:1;display:flex;flex-direction:column;align-items:center;">
+                        <span style="font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;">${count}</span>
+                        <div style="width:100%;background:var(--gold);height:${h}px;border-radius:2px 2px 0 0;"></div>
+                        <span style="font-size:0.75rem;margin-top:4px;">${i === 7 ? '7+' : i}</span>
+                    </div>`;
+                }
+                curveHtml += '</div>';
+
+                // Build color pip distribution
+                const pips = metrics.colorPipDistribution;
+                const pipsHtml = Object.keys(pips).filter(k => pips[k] > 0)
+                    .map(k => `<span style="display:inline-block;padding:4px 8px;background:var(--bg-deep);border-radius:4px;margin-right:8px;">${k}: ${pips[k]}</span>`)
+                    .join('');
+
+                body.innerHTML = `
+                    <h4 style="margin-top:0;">Mana Curve (Avg CMC: ${metrics.averageCmc.toFixed(2)})</h4>
+                    ${curveHtml}
+                    
+                    <h4>Category Coverage</h4>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+                        <div>Lands: ${metrics.landCount}</div>
+                        <div>Creatures: ${metrics.creatureCount}</div>
+                        <div>Ramp: ${metrics.rampCount !== null ? metrics.rampCount : 'N/A'}</div>
+                        <div>Removal: ${metrics.removalCount !== null ? metrics.removalCount : 'N/A'}</div>
+                        <div>Card Draw: ${metrics.cardDrawCount !== null ? metrics.cardDrawCount : 'N/A'}</div>
+                    </div>
+                    
+                    <h4>Color Pip Distribution</h4>
+                    <div>${pipsHtml || 'None'}</div>
+                `;
+            } catch (err) {
+                body.innerHTML = `<div style="color:var(--danger);text-align:center;padding-top:3rem;">${err.message}</div>`;
+            }
+        }
+
+        function closeMetricsModal() {
+            document.getElementById('metricsModal').classList.add('hidden');
         }
 
         async function printProxies(deckId) {

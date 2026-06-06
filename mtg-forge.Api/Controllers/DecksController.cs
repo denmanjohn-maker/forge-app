@@ -1053,6 +1053,95 @@ public class DecksController : ControllerBase
 
     // === Proxy Sheet Generation ===
 
+
+    /// <summary>
+    /// Compares two decks and returns the differences.
+    /// </summary>
+    [HttpGet("{id}/compare/{targetId}")]
+    public async Task<IActionResult> Compare(string id, string targetId)
+    {
+        var deck1 = await _deckService.GetByIdAsync(id);
+        var deck2 = await _deckService.GetByIdAsync(targetId);
+
+        if (deck1 is null || deck2 is null)
+            return NotFound();
+
+        if (!IsAdmin() && (deck1.UserId != GetUserId() || deck2.UserId != GetUserId()))
+            return Forbid();
+
+        static Dictionary<string, CardEntry> NormalizeCardsByName(IEnumerable<CardEntry> cards)
+        {
+            return cards
+                .GroupBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(
+                    g => g.Key,
+                    g =>
+                    {
+                        var first = g.First();
+                        return new CardEntry
+                        {
+                            Name = first.Name,
+                            Quantity = g.Sum(c => c.Quantity),
+                            ManaCost = first.ManaCost,
+                            Cmc = first.Cmc,
+                            CardType = first.CardType,
+                            Category = first.Category,
+                            RoleInDeck = first.RoleInDeck,
+                            EstimatedPrice = first.EstimatedPrice
+                        };
+                    },
+                    StringComparer.OrdinalIgnoreCase);
+        }
+
+        var dict1 = NormalizeCardsByName(deck1.Cards);
+        var dict2 = NormalizeCardsByName(deck2.Cards);
+
+        var added = new List<object>();
+        var removed = new List<object>();
+        var unchanged = new List<object>();
+
+        foreach (var c in dict2.Values)
+        {
+            if (!dict1.TryGetValue(c.Name, out var original))
+            {
+                added.Add(new { Name = c.Name, QuantityDelta = c.Quantity, Card = c });
+            }
+            else if (c.Quantity > original.Quantity)
+            {
+                added.Add(new { Name = c.Name, QuantityDelta = c.Quantity - original.Quantity, Card = c });
+                unchanged.Add(new { Name = c.Name, Quantity = original.Quantity, Card = original });
+            }
+            else if (c.Quantity < original.Quantity)
+            {
+                removed.Add(new { Name = c.Name, QuantityDelta = original.Quantity - c.Quantity, Card = original });
+                unchanged.Add(new { Name = c.Name, Quantity = c.Quantity, Card = c });
+            }
+            else
+            {
+                unchanged.Add(new { Name = c.Name, Quantity = c.Quantity, Card = c });
+            }
+        }
+
+        foreach (var c in dict1.Values)
+        {
+            if (!dict2.ContainsKey(c.Name))
+            {
+                removed.Add(new { Name = c.Name, QuantityDelta = c.Quantity, Card = c });
+            }
+        }
+
+        return Ok(new
+        {
+            BaseDeckId = deck1.Id,
+            BaseDeckName = deck1.DeckName,
+            TargetDeckId = deck2.Id,
+            TargetDeckName = deck2.DeckName,
+            Added = added,
+            Removed = removed,
+            Unchanged = unchanged
+        });
+    }
+
     [HttpGet("{id}/proxy")]
     public async Task<IActionResult> GetProxySheet(string id)
     {
