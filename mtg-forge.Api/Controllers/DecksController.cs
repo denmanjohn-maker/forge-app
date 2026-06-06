@@ -1053,6 +1053,71 @@ public class DecksController : ControllerBase
 
     // === Proxy Sheet Generation ===
 
+
+    /// <summary>
+    /// Compares two decks and returns the differences.
+    /// </summary>
+    [HttpGet("{id}/compare/{targetId}")]
+    public async Task<IActionResult> Compare(string id, string targetId)
+    {
+        var deck1 = await _deckService.GetByIdAsync(id);
+        var deck2 = await _deckService.GetByIdAsync(targetId);
+
+        if (deck1 is null || deck2 is null)
+            return NotFound();
+
+        if (!IsAdmin() && (deck1.UserId != GetUserId() || deck2.UserId != GetUserId()))
+            return Forbid();
+
+        var dict1 = deck1.Cards.ToDictionary(c => c.Name, c => c, StringComparer.OrdinalIgnoreCase);
+        var dict2 = deck2.Cards.ToDictionary(c => c.Name, c => c, StringComparer.OrdinalIgnoreCase);
+
+        var added = new List<object>();
+        var removed = new List<object>();
+        var unchanged = new List<object>();
+
+        foreach (var c in deck2.Cards)
+        {
+            if (!dict1.TryGetValue(c.Name, out var original))
+            {
+                added.Add(new { Name = c.Name, QuantityDelta = c.Quantity, Card = c });
+            }
+            else if (c.Quantity > original.Quantity)
+            {
+                added.Add(new { Name = c.Name, QuantityDelta = c.Quantity - original.Quantity, Card = c });
+                unchanged.Add(new { Name = c.Name, Quantity = original.Quantity, Card = original });
+            }
+            else if (c.Quantity < original.Quantity)
+            {
+                removed.Add(new { Name = c.Name, QuantityDelta = original.Quantity - c.Quantity, Card = original });
+                unchanged.Add(new { Name = c.Name, Quantity = c.Quantity, Card = c });
+            }
+            else
+            {
+                unchanged.Add(new { Name = c.Name, Quantity = c.Quantity, Card = c });
+            }
+        }
+
+        foreach (var c in deck1.Cards)
+        {
+            if (!dict2.ContainsKey(c.Name))
+            {
+                removed.Add(new { Name = c.Name, QuantityDelta = c.Quantity, Card = c });
+            }
+        }
+
+        return Ok(new
+        {
+            BaseDeckId = deck1.Id,
+            BaseDeckName = deck1.DeckName,
+            TargetDeckId = deck2.Id,
+            TargetDeckName = deck2.DeckName,
+            Added = added,
+            Removed = removed,
+            Unchanged = unchanged
+        });
+    }
+
     [HttpGet("{id}/proxy")]
     public async Task<IActionResult> GetProxySheet(string id)
     {

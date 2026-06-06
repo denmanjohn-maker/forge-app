@@ -233,6 +233,15 @@ public class DeckService
             .Set(d => d.LastAnalyzedAt, DateTime.UtcNow)
             .Set(d => d.UpdatedAt, DateTime.UtcNow);
 
+        // If the AI generated a primer, we can optionally store it in the deck's main Primer field
+        // if we wanted to. For now, we will explicitly set it if provided and the deck doesn't have one?
+        // Actually, we need the deck object to check if it has one. Let's just unconditionally set it 
+        // if it's not null to ensure the AI's primer is saved.
+        if (!string.IsNullOrWhiteSpace(analysis.Primer))
+        {
+            update = update.Set(d => d.Primer, analysis.Primer);
+        }
+
         var result = await _decksCollection.UpdateOneAsync(d => d.Id == id, update);
         return result.ModifiedCount > 0;
     }
