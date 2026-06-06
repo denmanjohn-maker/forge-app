@@ -1069,14 +1069,38 @@ public class DecksController : ControllerBase
         if (!IsAdmin() && (deck1.UserId != GetUserId() || deck2.UserId != GetUserId()))
             return Forbid();
 
-        var dict1 = deck1.Cards.ToDictionary(c => c.Name, c => c, StringComparer.OrdinalIgnoreCase);
-        var dict2 = deck2.Cards.ToDictionary(c => c.Name, c => c, StringComparer.OrdinalIgnoreCase);
+        static Dictionary<string, CardEntry> NormalizeCardsByName(IEnumerable<CardEntry> cards)
+        {
+            return cards
+                .GroupBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(
+                    g => g.Key,
+                    g =>
+                    {
+                        var first = g.First();
+                        return new CardEntry
+                        {
+                            Name = first.Name,
+                            Quantity = g.Sum(c => c.Quantity),
+                            ManaCost = first.ManaCost,
+                            Cmc = first.Cmc,
+                            CardType = first.CardType,
+                            Category = first.Category,
+                            RoleInDeck = first.RoleInDeck,
+                            EstimatedPrice = first.EstimatedPrice
+                        };
+                    },
+                    StringComparer.OrdinalIgnoreCase);
+        }
+
+        var dict1 = NormalizeCardsByName(deck1.Cards);
+        var dict2 = NormalizeCardsByName(deck2.Cards);
 
         var added = new List<object>();
         var removed = new List<object>();
         var unchanged = new List<object>();
 
-        foreach (var c in deck2.Cards)
+        foreach (var c in dict2.Values)
         {
             if (!dict1.TryGetValue(c.Name, out var original))
             {
@@ -1098,7 +1122,7 @@ public class DecksController : ControllerBase
             }
         }
 
-        foreach (var c in deck1.Cards)
+        foreach (var c in dict1.Values)
         {
             if (!dict2.ContainsKey(c.Name))
             {

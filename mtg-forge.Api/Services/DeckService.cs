@@ -228,21 +228,31 @@ public class DeckService
     /// </summary>
     public async Task<bool> UpdateAnalysisAsync(string id, DeckAnalysis analysis)
     {
+        var deckFilter = Builders<DeckConfiguration>.Filter.Eq(d => d.Id, id);
         var update = Builders<DeckConfiguration>.Update
             .Set(d => d.LastAnalysis, analysis)
             .Set(d => d.LastAnalyzedAt, DateTime.UtcNow)
             .Set(d => d.UpdatedAt, DateTime.UtcNow);
 
-        // If the AI generated a primer, we can optionally store it in the deck's main Primer field
-        // if we wanted to. For now, we will explicitly set it if provided and the deck doesn't have one?
-        // Actually, we need the deck object to check if it has one. Let's just unconditionally set it 
-        // if it's not null to ensure the AI's primer is saved.
         if (!string.IsNullOrWhiteSpace(analysis.Primer))
         {
-            update = update.Set(d => d.Primer, analysis.Primer);
+            var missingPrimerFilter = Builders<DeckConfiguration>.Filter.And(
+                deckFilter,
+                Builders<DeckConfiguration>.Filter.Or(
+                    Builders<DeckConfiguration>.Filter.Eq(d => d.Primer, null),
+                    Builders<DeckConfiguration>.Filter.Eq(d => d.Primer, string.Empty)));
+
+            var resultWithPrimer = await _decksCollection.UpdateOneAsync(
+                missingPrimerFilter,
+                update.Set(d => d.Primer, analysis.Primer));
+
+            if (resultWithPrimer.ModifiedCount > 0)
+            {
+                return true;
+            }
         }
 
-        var result = await _decksCollection.UpdateOneAsync(d => d.Id == id, update);
+        var result = await _decksCollection.UpdateOneAsync(deckFilter, update);
         return result.ModifiedCount > 0;
     }
 
