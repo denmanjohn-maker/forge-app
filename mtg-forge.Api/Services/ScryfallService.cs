@@ -38,7 +38,7 @@ public class ScryfallService
 
         // Batch into groups of 75 (Scryfall limit)
         const int batchSize = 75;
-        var scrayfallData = new Dictionary<string, ScryfallCard>(StringComparer.OrdinalIgnoreCase);
+        var scryfallData = new Dictionary<string, ScryfallCard>(StringComparer.OrdinalIgnoreCase);
 
         var distinctNames = cards.Select(c => c.Name).Distinct().ToList();
 
@@ -69,11 +69,11 @@ public class ScryfallService
                     {
                         if (!string.IsNullOrEmpty(card.Name))
                         {
-                            scrayfallData[card.Name] = card;
+                            scryfallData[card.Name] = card;
                             // Double-faced cards return "Card A // Card B" — also index by front face
                             var slashIdx = card.Name.IndexOf(" // ", StringComparison.Ordinal);
                             if (slashIdx > 0)
-                                scrayfallData[card.Name[..slashIdx]] = card;
+                                scryfallData[card.Name[..slashIdx]] = card;
                         }
                     }
                 }
@@ -91,7 +91,7 @@ public class ScryfallService
         // Enrich each card
         foreach (var card in cards)
         {
-            if (!scrayfallData.TryGetValue(card.Name, out var sf)) continue;
+            if (!scryfallData.TryGetValue(card.Name, out var sf)) continue;
 
             if (string.IsNullOrEmpty(card.ManaCost) && !string.IsNullOrEmpty(sf.ManaCost))
                 card.ManaCost = sf.ManaCost;

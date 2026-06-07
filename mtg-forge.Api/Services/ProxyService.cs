@@ -90,7 +90,7 @@ public class ProxyService
                                             .Background("#e0e0e0")
                                             .AlignCenter().AlignMiddle()
                                             .Text(card.Name)
-                                            .FontSize(8).WrapAnywhere();
+                                            .FontSize(8);
                                     }
                                     else
                                     {

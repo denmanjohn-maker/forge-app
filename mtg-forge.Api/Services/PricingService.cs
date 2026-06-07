@@ -41,8 +41,7 @@ public class PricingService
             .ToArray());
 
         // Collapse multiple spaces into one
-        while (normalized.Contains("  "))
-            normalized = normalized.Replace("  ", " ");
+        normalized = System.Text.RegularExpressions.Regex.Replace(normalized, @"\s+", " ");
 
         return normalized;
     }

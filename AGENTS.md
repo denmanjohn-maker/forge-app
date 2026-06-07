@@ -41,3 +41,41 @@ This project is indexed by GitNexus as **forge-app** (3385 symbols, 6708 relatio
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
 
 <!-- gitnexus:end -->
+
+# mtg-forge — Agent Instructions
+
+## Commands
+```bash
+# Build
+dotnet build mtg-forge.sln
+
+# Tests
+dotnet test mtg-forge.sln
+dotnet test mtg-forge.Tests --filter "FullyQualifiedName~YourTestClass"
+
+# Local dependencies (MongoDB, PostgreSQL, Prometheus, Grafana)
+docker compose -f docker-compose-local.yml up -d
+
+# Run API
+cd mtg-forge.Api && dotnet run
+
+# DB Migrations (PostgreSQL)
+cd mtg-forge.Api && dotnet ef database update
+```
+
+## Architecture & Boundaries
+- **Project Structure**: `.NET 10` Web API hosting REST controllers, Razor Pages, and a **Vanilla JS SPA** (`wwwroot/index.html`). No frontend build step or framework exists.
+- **AI Backend**: **`ClaudeService` is NOT used in production.** Deck generation delegates entirely to `forge-ai-api` (RAG pipeline) via `RagPipelineService`.
+- **Companion Repo**: The `forge-ai-api` service is a git submodule at `companion/forge-ai-api/`. Check `companion/forge-ai-api-contract.md` for fast API reference.
+- **Dual Databases**: 
+  - `MongoDB` (`mtgdeckforge`): Deck documents, Users, Groups.
+  - `PostgreSQL`: ASP.NET Identity tables, `CardPrices`, `PricingImportRuns`.
+- **Authentication**: A "smart" auth policy resolves JWT bearer tokens for API clients and ASP.NET Identity cookies for Razor Pages. Do not strictly rely on ASP.NET Identity for API login.
+
+## Quirks & Conventions
+- **Scryfall HTTP Client**: Requests to Scryfall **MUST** include `User-Agent: mtg-forge/1.0` and `Accept: application/json`. Both are configured centrally in `Program.cs` via `AddHttpClient` — do not set them manually in service constructors.
+- **Proxy PDFs (QuestPDF)**: `ProxyService` generates 3x3 proxy grids. Scryfall images **must** use `.FitUnproportionally()` to fill the slot, avoiding default aspect ratio constraints that break the layout.
+- **Async Deck Generation**: `DecksController.Generate` is **fire-and-forget**. It creates a `GenerationJob`, runs processing in a background task, and immediately returns 202. The client polls for status.
+- **Budget Loop**: After deck generation, an automated loop compares deck cost using real `MTGJSON` prices from the PostgreSQL cache, replacing cards that exceed the budget ceiling.
+- **Pricing Data Import**: Large MTGJSON dumps stream incrementally (`MtgJsonPricingImportService`) rather than buffering into memory to prevent OOM errors.
+- **Testing**: Only xUnit is used. Avoid mocking libraries; use hand-rolled stubs (`HttpMessageHandler`). Test private methods via reflection if needed rather than making them public.
