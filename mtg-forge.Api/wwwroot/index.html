@@ -6747,6 +6747,9 @@
             navigator.clipboard.writeText(text).then(() => showToast('Shopping list copied!')).catch(() => showToast('Copy failed', true));
         }
 
+        // Expose deck refresh to aichat.js — used after AI action buttons are applied
+        window.loadDeckDetails = viewDeckDetail;
+
     </script>
     <footer style="text-align:center; padding:2.5rem 1rem; color:#f5c518; font-size:1.5rem; font-family:'Cinzel',serif; font-weight:700; border-top:1px solid rgba(212,179,109,0.15); margin-top:2rem;">
         <span id="appVersion"></span>
