@@ -335,9 +335,14 @@ public class DecksController : ControllerBase
             (c.Name.Contains(upgrade.RemoveCard, StringComparison.OrdinalIgnoreCase)) ||
             (upgrade.RemoveCard.Contains(c.Name, StringComparison.OrdinalIgnoreCase)));
             
-        if (cardToRemove is null && (string.Equals(deck.Commander, upgrade.RemoveCard, StringComparison.OrdinalIgnoreCase) || deck.Commander.Contains(upgrade.RemoveCard, StringComparison.OrdinalIgnoreCase)))
+        if (cardToRemove is null && (
+            string.Equals(deck.Commander, upgrade.RemoveCard, StringComparison.OrdinalIgnoreCase) ||
+            deck.Commander.Contains(upgrade.RemoveCard, StringComparison.OrdinalIgnoreCase) ||
+            upgrade.RemoveCard.Contains(deck.Commander, StringComparison.OrdinalIgnoreCase) ||
+            upgrade.RemoveCard.Contains("commander", StringComparison.OrdinalIgnoreCase)))
         {
-            // Just in case the commander string doesn't match an actual card perfectly
+            // Fallback: treat the remove as targeting the commander when names are a partial match
+            // or the AI used a generic "commander" label instead of the exact card name.
             cardToRemove = new CardEntry { Name = deck.Commander, Quantity = 1, Category = "Commander", RoleInDeck = "Commander" };
         }
 
@@ -360,7 +365,10 @@ public class DecksController : ControllerBase
             newCard = enriched[0];
         await _pricingService.ApplyPricesAsync(new List<CardEntry> { newCard });
 
-        deck.Cards.Remove(cardToRemove);
+        // Remove by name so the synthetic fallback entry (which has no reference in the list) also works.
+        var actualEntry = deck.Cards.FirstOrDefault(c => string.Equals(c.Name, cardToRemove.Name, StringComparison.OrdinalIgnoreCase));
+        if (actualEntry != null)
+            deck.Cards.Remove(actualEntry);
         
         // Merge into existing if the card is already in the deck
         var existingCard = deck.Cards.FirstOrDefault(c => string.Equals(c.Name, newCard.Name, StringComparison.OrdinalIgnoreCase));

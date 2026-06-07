@@ -34,10 +34,10 @@ public partial class RagPipelineService
         var topCards = string.Join("\n", deck.Cards.Where(c => c.Category != "Basic Land" && c.Category != "Commander").OrderByDescending(c => c.EstimatedPrice).Take(15).Select(c => $"- {c.Quantity}x {c.Name}"));
         var userPrompt = $"New Commander: {deck.Commander}\nTop Cards in deck:\n{topCards}";
 
-        var responseJson = await CallLlmAsync(systemPrompt, userPrompt, jsonMode: true, temperature: 0.7, operation: "update_commander_identity", deckId: deck.Id, format: deck.Format);
-
+        var responseJson = "";
         try
         {
+            responseJson = await CallLlmAsync(systemPrompt, userPrompt, jsonMode: true, temperature: 0.7, operation: "update_commander_identity", deckId: deck.Id, format: deck.Format);
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var result = JsonSerializer.Deserialize<CommanderIdentityResponse>(responseJson, options);
             if (result != null && !string.IsNullOrWhiteSpace(result.DeckName))
