@@ -328,7 +328,7 @@ public class DecksController : ControllerBase
                 return Forbid();
 
             var commander = deck.Cards
-                .FirstOrDefault(c => c.Category.Equals("Commander", StringComparison.OrdinalIgnoreCase))
+                ?.FirstOrDefault(c => "Commander".Equals(c.Category, StringComparison.OrdinalIgnoreCase))
                 ?.Name;
 
             if (string.IsNullOrWhiteSpace(commander))
