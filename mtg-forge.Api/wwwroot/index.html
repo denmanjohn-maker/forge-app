@@ -4679,6 +4679,7 @@
                     <button class="btn-outline" onclick="openCompareModal()">&#8644; Compare</button>
                     <button class="btn-outline" onclick="copyDeck('${deck.id}')">&#10064; Copy</button>
                     <button class="btn-outline" onclick="reAnalyzeDeck('${deck.id}')">&#9879; ${deck.lastAnalysis ? 'Re-Analyze' : 'Analyze with AI'}</button>
+                    <button class="btn-outline" onclick="reprocessDeck('${deck.id}')">&#x21BA; Reprocess</button>
                     <button class="btn-outline" onclick="openRecommendationsModal('${deck.id}')">&#10024; AI Recommendations</button>
                     <button class="btn-outline" onclick="printProxies('${deck.id}')">&#128444; Print Proxies</button>
                     <button class="btn-outline" onclick="openHistoryModal('${deck.id}')">&#128337; History</button>
@@ -5527,6 +5528,23 @@
                 section.innerHTML = buildAnalysisHtml(analysis, new Date().toISOString(), deckId);
             } catch (err) {
                 section.innerHTML = `<div style="color:var(--danger);font-size:0.9rem;margin-top:1rem;padding:1rem;">Analysis failed: ${err.message}</div>`;
+            }
+        }
+
+        async function reprocessDeck(deckId) {
+            showToast('Reprocessing deck...');
+            try {
+                const res = await authFetch(`${API_BASE}/${deckId}/reprocess`, { method: 'POST' });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.error || 'Reprocess failed');
+                }
+                const updatedDeck = await res.json();
+                currentDetailDeck = updatedDeck;
+                renderDetail(updatedDeck);
+                showToast(`Reprocessed — "${updatedDeck.deckName}"`);
+            } catch (err) {
+                showToast(`Reprocess failed: ${err.message}`, true);
             }
         }
 
