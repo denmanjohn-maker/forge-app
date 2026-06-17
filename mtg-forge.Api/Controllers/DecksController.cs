@@ -313,6 +313,51 @@ public class DecksController : ControllerBase
     }
 
     /// <summary>
+    /// Re-detects the commander from the card list, then uses the LLM to regenerate
+    /// the deck name, strategy, and description. Persists and returns the full updated deck.
+    /// </summary>
+    [HttpPost("{id}/reprocess")]
+    public async Task<ActionResult<DeckConfiguration>> Reprocess(string id)
+    {
+        try
+        {
+            var deck = await _deckService.GetByIdAsync(id);
+            if (deck is null)
+                return NotFound();
+            if (!IsAdmin() && deck.UserId != GetUserId())
+                return Forbid();
+
+            var commander = deck.Cards
+                .FirstOrDefault(c => c.Category.Equals("Commander", StringComparison.OrdinalIgnoreCase))
+                ?.Name;
+
+            if (string.IsNullOrWhiteSpace(commander))
+                return BadRequest(new { error = "No commander card found in the deck's card list." });
+
+            deck.Commander = commander;
+
+            _logger.LogInformation("Reprocessing deck {Id}: commander detected as '{Commander}'", id, commander);
+            await _llmService.UpdateCommanderIdentityAsync(deck);
+
+            await _deckService.UpdateAsync(id, new DeckUpdateRequest
+            {
+                Commander       = deck.Commander,
+                DeckName        = deck.DeckName,
+                Strategy        = deck.Strategy,
+                DeckDescription = deck.DeckDescription
+            }, GetUserId());
+
+            var updated = await _deckService.GetByIdAsync(id);
+            return Ok(updated);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to reprocess deck {Id}", id);
+            return StatusCode(500, new { error = "Failed to reprocess deck" });
+        }
+    }
+
+    /// <summary>
     /// Applies a single AI-suggested card swap: removes <c>RemoveCard</c>, enriches
     /// <c>AddCard</c> via Scryfall, applies local pricing, and saves the updated card list.
     /// </summary>
