@@ -4561,7 +4561,7 @@
                                             <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.5rem; flex-shrink:0;">
                                                 <!-- Stat boxes row -->
                                                 <div style="display:flex; gap:0.5rem;">
-                                                    <div class="stat-box-mini">
+                                                    <div class="stat-box-mini ${deck.format === "Commander" && totalCards !== 100 ? "invalid-count" : ""}">
                                                         <div class="stat-value-mini">${totalCards}</div>
                                                         <div class="stat-label-mini">Cards</div>
                                                     </div>
@@ -4580,6 +4580,18 @@
                                                 </div>
                                             </div>
                                         </div>
+                                        <!-- Invalid Card Count Warning Banner -->
+                                        ${
+                                            deck.format === "Commander" &&
+                                            totalCards !== 100
+                                                ? `
+                                        <div style="background:rgba(196, 84, 26, 0.12); border:1px solid rgba(196, 84, 26, 0.35); border-radius:6px; padding:0.65rem 1rem; color:var(--ember); font-family:'Source Sans 3',system-ui,sans-serif; font-size:0.88rem; display:flex; align-items:center; gap:0.6rem; margin-bottom:0.25rem; box-shadow:0 2px 10px rgba(0,0,0,0.2);">
+                                            <span style="font-size:1.1rem; line-height:1;">&#9888;</span>
+                                            <span><strong>Deck Size Warning:</strong> This Commander deck has <strong>${totalCards}</strong> cards instead of exactly 100. Use "Edit Cards" below or remove card quantities to reach a legal 100-card limit.</span>
+                                        </div>
+                                        `
+                                                : ""
+                                        }
                                         <!-- Commander bio -->
                                         ${deck.deckDescription ? `<div style="background:var(--bg-deep);border-left:3px solid var(--gold-dark);border-radius:0 6px 6px 0;padding:1rem 1.25rem;font-style:italic;color:var(--text-secondary);line-height:1.7;">${parseDeckDescription(deck.deckDescription)}</div>` : ""}
                                         <!-- Win Rate Tracking -->

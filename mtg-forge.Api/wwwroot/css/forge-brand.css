@@ -1724,6 +1724,15 @@ option {
     text-align: center;
 }
 
+.stat-box-mini.invalid-count {
+    border-color: rgba(196, 84, 26, 0.6) !important;
+    background: rgba(196, 84, 26, 0.08) !important;
+}
+
+.stat-box-mini.invalid-count .stat-value-mini {
+    color: var(--ember) !important;
+}
+
 .stat-value-mini {
     font-family: "JetBrains Mono", monospace !important;
     font-size: 0.95rem !important;
