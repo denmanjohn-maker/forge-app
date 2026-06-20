@@ -4107,7 +4107,17 @@
                                 </div>
                                 <div class="deck-card-footer">
                                     <div class="deck-card-meta">
-                                        <span>&#127183; ${deck.totalCards || "?"} cards</span>
+                                        <span style="${deck.format === "Commander" && deck.totalCards !== 100 ? "color:var(--ember);font-weight:600;" : ""}">
+                                            &#127183; ${deck.totalCards || "?"} cards
+                                            ${
+                                                deck.format === "Commander" &&
+                                                deck.totalCards !== 100
+                                                    ? `
+                                            <span style="color:var(--ember);cursor:help;margin-left:0.15rem;" title="Commander deck size violation: Deck must contain exactly 100 cards (currently has ${deck.totalCards}).">&#9888;</span>
+                                            `
+                                                    : ""
+                                            }
+                                        </span>
                                         <span>&#128176; $${(deck.estimatedTotalPrice || 0).toFixed(0)}</span>
                                     </div>
                                     <button class="btn-fav-card ${deck.isFavorite ? "active" : ""}" onclick="event.stopPropagation(); toggleFavorite('${deck.id}', this)" title="${deck.isFavorite ? "Unfavorite" : "Favorite"}">&#9733;</button>
