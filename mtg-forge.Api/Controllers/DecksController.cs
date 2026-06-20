@@ -329,10 +329,11 @@ public class DecksController : ControllerBase
 
             var commander = deck.Cards
                 ?.FirstOrDefault(c => "Commander".Equals(c.Category, StringComparison.OrdinalIgnoreCase))
-                ?.Name;
+                ?.Name
+                ?? deck.Commander;
 
             if (string.IsNullOrWhiteSpace(commander))
-                return BadRequest(new { error = "No commander card found in the deck's card list." });
+                return BadRequest(new { error = "No commander found. Set a commander in Edit Details or add a card with the Commander category." });
 
             deck.Commander = commander;
 
