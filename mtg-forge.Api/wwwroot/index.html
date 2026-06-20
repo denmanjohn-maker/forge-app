@@ -49,7 +49,7 @@
         />
         <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
-        <link rel="stylesheet" href="css/forge-brand.css" />
+        <link rel="stylesheet" href="css/forge-brand.css?v=1.0.1" />
         <script src="winrates.js"></script>
         <script src="aichat.js"></script>
     </head>
@@ -4530,32 +4530,35 @@
                                     ${deck.commander ? `<div style="flex-shrink:0;"><img id="commanderCardImage" class="detail-commander-image" src="" alt="${escHtml(deck.commander)}" style="display:none;"></div>` : ""}
                                     <!-- Right column: everything else -->
                                     <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:1.25rem;">
-                                        <!-- Deck identity -->
-                                        <div>
-                                            <div class="detail-colors">
-                                                ${(deck.colors || []).map((c) => `<span class="mana-pip ${c}">${c}</span>`).join("")}
+                                        <!-- Deck identity + Mini stats header row -->
+                                        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1.5rem; flex-wrap:wrap;">
+                                            <!-- Identity details (left) -->
+                                            <div style="flex:1; min-width:0;">
+                                                <div class="detail-colors">
+                                                    ${(deck.colors || []).map((c) => `<span class="mana-pip ${c}">${c}</span>`).join("")}
+                                                </div>
+                                                <h1 style="font-family:'Cinzel',serif;font-size:2rem;font-weight:900;background:linear-gradient(135deg,var(--gold-light),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:0.25rem;line-height:1.2;">${deck.deckName || "Untitled Deck"}</h1>
+                                                ${deck.commander ? `<div class="detail-commander">Commander: ${escHtml(deck.commander)}</div>` : ""}
+                                                <div class="detail-strategy">${deck.strategy || ""}</div>
                                             </div>
-                                            <h1 style="font-family:'Cinzel',serif;font-size:2rem;font-weight:900;background:linear-gradient(135deg,var(--gold-light),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:0.25rem;">${deck.deckName || "Untitled Deck"}</h1>
-                                            ${deck.commander ? `<div class="detail-commander">Commander: ${escHtml(deck.commander)}</div>` : ""}
-                                            <div class="detail-strategy">${deck.strategy || ""}</div>
+                                            <!-- Shrunk Stat Boxes (right) -->
+                                            <div style="display:flex; gap:0.5rem; flex-shrink:0;">
+                                                <div class="stat-box-mini">
+                                                    <div class="stat-value-mini">${totalCards}</div>
+                                                    <div class="stat-label-mini">Cards</div>
+                                                </div>
+                                                <div class="stat-box-mini">
+                                                    <div class="stat-value-mini">$${(deck.estimatedTotalPrice || 0).toFixed(0)}</div>
+                                                    <div class="stat-label-mini">Est. Cost</div>
+                                                </div>
+                                                <div class="stat-box-mini">
+                                                    <div class="stat-value-mini">${avgCmc}</div>
+                                                    <div class="stat-label-mini">Avg CMC</div>
+                                                </div>
+                                            </div>
                                         </div>
                                         <!-- Commander bio -->
                                         ${deck.deckDescription ? `<div style="background:var(--bg-deep);border-left:3px solid var(--gold-dark);border-radius:0 6px 6px 0;padding:1rem 1.25rem;font-style:italic;color:var(--text-secondary);line-height:1.7;">${parseDeckDescription(deck.deckDescription)}</div>` : ""}
-                                        <!-- Stat boxes -->
-                                        <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
-                                            <div class="stat-box">
-                                                <div class="stat-value">${totalCards}</div>
-                                                <div class="stat-label">Cards</div>
-                                            </div>
-                                            <div class="stat-box">
-                                                <div class="stat-value">$${(deck.estimatedTotalPrice || 0).toFixed(0)}</div>
-                                                <div class="stat-label">Est. Cost</div>
-                                            </div>
-                                            <div class="stat-box">
-                                                <div class="stat-value">${avgCmc}</div>
-                                                <div class="stat-label">Avg CMC</div>
-                                            </div>
-                                        </div>
                                         <!-- Win Rate Tracking -->
                                         <div style="border-top:1px solid var(--border); padding-top:1.25rem;">
                                             <h4 style="color:var(--gold); margin-top:0; margin-bottom:0.75rem;">Win Rate Tracking</h4>

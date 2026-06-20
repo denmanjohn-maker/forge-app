@@ -1707,6 +1707,31 @@ option {
     font-size: 0.75rem;
 }
 
+.stat-box-mini {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.4rem 0.6rem;
+    min-width: 64px;
+    text-align: center;
+}
+
+.stat-value-mini {
+    font-family: "JetBrains Mono", monospace !important;
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+    color: var(--gold);
+}
+
+.stat-label-mini {
+    font-family: "Cinzel", serif;
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 0.15rem;
+}
+
 /* Card list by category */
 .category-section {
     background: var(
