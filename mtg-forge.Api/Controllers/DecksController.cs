@@ -327,10 +327,10 @@ public class DecksController : ControllerBase
             if (!IsAdmin() && deck.UserId != GetUserId())
                 return Forbid();
 
-            var commander = deck.Cards
+            var detectedName = deck.Cards
                 ?.FirstOrDefault(c => "Commander".Equals(c.Category, StringComparison.OrdinalIgnoreCase))
-                ?.Name
-                ?? deck.Commander;
+                ?.Name;
+            var commander = string.IsNullOrWhiteSpace(detectedName) ? deck.Commander : detectedName;
 
             if (string.IsNullOrWhiteSpace(commander))
                 return BadRequest(new { error = "No commander found. Set a commander in Edit Details or add a card with the Commander category." });
