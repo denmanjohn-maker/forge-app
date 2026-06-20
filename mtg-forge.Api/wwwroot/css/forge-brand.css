@@ -18,7 +18,7 @@
     --bg-hover: #2d2733;
     --text-primary: #e8dfc8; /* Parchment text */
     --text-secondary: #8a9bad; /* Steel text */
-    --text-muted: #8E7F96; /* Ash text */
+    --text-muted: #8e7f96; /* Ash text */
     --border: #4a4050; /* Ash border */
     --border-gold: rgba(201, 146, 43, 0.35);
     --mana-white: #f9faf4;
@@ -1709,7 +1709,14 @@ option {
 
 /* Card list by category */
 .category-section {
+    background: var(
+        --bg-card
+    ); /* Solid Iron backplate to block out background art */
+    border: 1px solid var(--border); /* Metallic frame border */
+    border-radius: 8px; /* Brand md radius */
+    padding: 0.5rem 1.25rem; /* Clean internal breathing room */
     margin-bottom: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35); /* Floating depth shadow */
 }
 
 .category-header {
@@ -1717,8 +1724,6 @@ option {
     align-items: center;
     gap: 0.75rem;
     padding: 0.75rem 0;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 0.5rem;
     cursor: pointer;
 }
 
@@ -1750,6 +1755,9 @@ option {
 
 .category-body.expanded {
     display: block;
+    border-top: 1px solid var(--border); /* Thin divider when expanded */
+    padding-top: 0.5rem;
+    margin-top: 0.25rem;
 }
 
 .card-row {
