@@ -2122,13 +2122,32 @@
                             id="editDeckName"
                         />
                     </div>
-                    <div class="edit-field-group">
+                    <div class="edit-field-group" style="position: relative">
                         <label class="edit-label">Commander</label>
                         <input
                             type="text"
                             class="edit-input"
                             id="editCommander"
+                            autocomplete="off"
                         />
+                        <div
+                            id="editCommanderSuggestions"
+                            class="hidden"
+                            style="
+                                position: absolute;
+                                top: 100%;
+                                left: 0;
+                                right: 0;
+                                background: var(--bg-panel);
+                                border: 1px solid var(--border);
+                                border-radius: 6px;
+                                max-height: 160px;
+                                overflow-y: auto;
+                                z-index: 110;
+                                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+                                padding: 0.25rem 0;
+                            "
+                        ></div>
                     </div>
                     <div class="edit-field-group">
                         <label class="edit-label">Description</label>
