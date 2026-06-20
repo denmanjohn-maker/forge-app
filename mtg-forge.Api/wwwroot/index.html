@@ -4653,22 +4653,33 @@
                             <div id="primerDisplay"></div>
                             <div id="ownershipDisplay"></div>`;
 
-                // Display commander card image using Scryfall's direct image endpoint.
-                // Setting onload before src ensures the handler is in place even when
-                // the image is served from browser cache (which can fire onload
-                // synchronously in some browsers).
+                // Fetch and display commander card image.
+                // Capture the element reference now so a later deck render can't be
+                // overwritten by this async response (stale-closure guard). Reveal
+                // the image only in onload so there's no blank-area flash on slow
+                // connections; leave it hidden on error.
                 if (deck.commander) {
                     const cmdImgEl =
                         document.getElementById("commanderCardImage");
-                    if (cmdImgEl) {
-                        cmdImgEl.onload = () => {
-                            cmdImgEl.style.display = "";
-                        };
-                        cmdImgEl.onerror = () => {
-                            cmdImgEl.style.display = "none";
-                        };
-                        cmdImgEl.src = `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(deck.commander)}&format=image&version=normal`;
-                    }
+                    fetch(
+                        `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(deck.commander)}`,
+                    )
+                        .then((r) => r.json())
+                        .then((data) => {
+                            const imgUrl =
+                                data.image_uris?.normal ||
+                                data.card_faces?.[0]?.image_uris?.normal;
+                            if (imgUrl && cmdImgEl) {
+                                cmdImgEl.onload = () => {
+                                    cmdImgEl.style.display = "";
+                                };
+                                cmdImgEl.src = imgUrl;
+                                if (cmdImgEl.complete) {
+                                    cmdImgEl.style.display = "";
+                                }
+                            }
+                        })
+                        .catch(() => {});
                 }
 
                 // Attach card image hover listeners after rendering
