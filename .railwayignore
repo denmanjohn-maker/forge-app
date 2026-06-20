@@ -1,0 +1,7 @@
+companion/
+.claude/
+*.md
+docs/
+docker-compose*.yml
+ARCHITECTURE.md
+README.md
