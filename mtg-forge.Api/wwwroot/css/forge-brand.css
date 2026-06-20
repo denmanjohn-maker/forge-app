@@ -18,7 +18,7 @@
     --bg-hover: #2d2733;
     --text-primary: #e8dfc8; /* Parchment text */
     --text-secondary: #8a9bad; /* Steel text */
-    --text-muted: #4a4050; /* Ash text */
+    --text-muted: #8E7F96; /* Ash text */
     --border: #4a4050; /* Ash border */
     --border-gold: rgba(201, 146, 43, 0.35);
     --mana-white: #f9faf4;
@@ -54,8 +54,8 @@
         rgba(13, 11, 15, 0.78);
     --overlay-bg: rgba(13, 11, 15, 0.85);
     --lightbox-bg: rgba(13, 11, 15, 0.95);
-    --bg-grid-opacity: 0.35;
-    --bg-grid-filter: saturate(0.6) brightness(0.6);
+    --bg-grid-opacity: 0.12;
+    --bg-grid-filter: saturate(0.35) brightness(0.3);
 }
 
 html[data-theme="light"] {
@@ -239,9 +239,9 @@ body::before {
 
 .logo-subtitle {
     font-family: "Cinzel", serif;
-    font-size: 0.68rem;
+    font-size: 0.82rem;
     color: var(--text-secondary);
-    letter-spacing: 0.25em;
+    letter-spacing: 0.22em;
     text-transform: uppercase;
     margin-top: 2px;
 }
@@ -397,7 +397,7 @@ body::before {
 }
 
 .user-info-role {
-    font-size: 0.65rem;
+    font-size: 0.78rem;
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.1em;
@@ -1768,7 +1768,7 @@ option {
 }
 
 .card-qty {
-    color: var(--text-muted);
+    color: var(--text-secondary);
     font-weight: 600;
     text-align: center;
 }
@@ -1785,7 +1785,7 @@ option {
 
 .card-role-text {
     font-size: 0.8rem;
-    color: var(--text-muted);
+    color: var(--text-secondary);
     font-style: italic;
 }
 
@@ -1795,7 +1795,7 @@ option {
 }
 
 .card-price {
-    color: var(--gold-dark);
+    color: var(--gold);
     font-weight: 600;
     font-size: 0.875rem;
 }
@@ -3044,10 +3044,10 @@ body::after {
 }
 .collection-table th {
     font-family: "Cinzel", serif;
-    font-size: 0.7rem;
+    font-size: 0.85rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--text-muted);
+    color: var(--text-secondary);
     padding: 0.5rem 0.75rem;
     text-align: left;
     border-bottom: 1px solid var(--border);
@@ -3141,8 +3141,8 @@ body::after {
 }
 .history-meta {
     font-family: "Cinzel", serif;
-    font-size: 0.7rem;
-    color: var(--text-muted);
+    font-size: 0.82rem;
+    color: var(--text-secondary);
     margin-bottom: 0.25rem;
 }
 .history-summary {
@@ -3230,8 +3230,8 @@ body::after {
     color: #81c784;
 }
 .budget-chip {
-    font-size: 0.7rem;
-    padding: 0.1rem 0.4rem;
+    font-size: 0.85rem;
+    padding: 0.2rem 0.55rem;
     border-radius: 4px;
     font-family: "Cinzel", serif;
     letter-spacing: 0.04em;
@@ -3249,8 +3249,8 @@ body::after {
     color: #ef9a9a;
 }
 .owned-chip {
-    font-size: 0.7rem;
-    padding: 0.1rem 0.4rem;
+    font-size: 0.85rem;
+    padding: 0.2rem 0.55rem;
     border-radius: 4px;
     font-family: "Cinzel", serif;
     letter-spacing: 0.04em;
@@ -3263,7 +3263,6 @@ body::after {
     background: rgba(244, 67, 54, 0.12);
     color: #ef9a9a;
 }
-
 
 /* --- JetBrains Mono mappings for Data & System Markers --- */
 .admin-table,

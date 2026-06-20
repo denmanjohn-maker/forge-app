@@ -172,3 +172,28 @@ A rigid 5-step spacing scale derived systematically from a `0.5rem` base. Do not
 * **4px (`sm`):** System interactive fields, data input frames, state badges.
 * **8px (`md`):** Main interface card layouts, modular layout blocks, floating dashboard grids.
 * **9999px (`pill`):** Action chips, user toggles, status pills.
+
+---
+
+## 10 · SPA Navigation, Contrast & Backgrounds
+
+To ensure the master artificer's workspace feels both atmospheric and highly practical, the interface must strictly balance immersive background aesthetics with uncompromising readability and seamless browser integration.
+
+### Background Art & Contrast Control
+* **Subtle Ambience:** The global card-art background grid (`#app-bg-cards`) must be deeply dimmed to prevent visual fatigue. It is strictly capped at **`12%` opacity** (`--bg-grid-opacity: 0.12`) with a heavy sat/brightness filter mapping of `saturate(0.35) brightness(0.3)`. The art must never compete with foreground text.
+* **Secondary Text Legibility:** Critical card-level descriptions (such as `.card-role-text` detailing card functions in a category list) must be styled in **Steel** (`#8A9BAD` / `var(--text-secondary)`) instead of dark muted tones, ensuring a high-contrast ratio on the dark Obsidian background.
+* **Muted Ash Contrast Variable:** The dark-theme muted text variable `--text-muted` is set to **`#8E7F96`** (originally `#4A4050`). This provides a solid **4.5:1 WCAG AA contrast ratio** on Obsidian, making secondary metadata labels, placeholders, and tooltips easily legible for older or visually-strained readers.
+* **Readable Column Metrics:** Quantities (like `.card-qty` "1x" / "4x") are mapped to **Steel** (`var(--text-secondary)`) rather than muted ash so that quantity metadata stands out instantly.
+* **Vibrant Pricing Indicators:** Financial metrics and system prices (`.card-price`) must use high-luminance **Forge Gold** (`#C9922B` / `var(--gold)`) instead of dark gold, making price summaries easily scannable.
+
+### Micro-Typography & Readability Thresholds
+* **No Micro-Text:** Never use font sizes below **`0.78rem` (12.5px)**. Micro-text causes severe strain.
+* **Scales & Spacing for Chips:**
+  - Subtitle wordmark and small header labels: increased from `0.68rem` to **`0.82rem`** at `0.22em` letter-spacing.
+  - Interactive badges, owned status, and budget chips (`.budget-chip`, `.owned-chip`): scaled from `0.7rem` to **`0.85rem`** with a generous padding increase of `0.2rem 0.55rem` to create comfortable reading boundaries.
+  - Table headers and timeline logs (`.collection-table th`, `.history-meta`): scaled from `0.7rem` to **`0.85rem`** using **Steel** for immediate scanning.
+
+### SPA Navigation & Browser State Preservation
+* **URL-State Sync:** Any view transitions driven by `switchView(view)` must maintain a stateful URL in the address bar using hash-routing (e.g., `/#library`, `/#forge`, `/#collection`).
+* **History Stack Integration:** Direct DOM navigation updates must push to the browser's history stack via `history.pushState` on active clicks, but bypass pushing when restoring historical states.
+* **Popstate Handlers:** A global window listener on the `popstate` event must intercept browser Back and Forward clicks, parse the incoming hash, and route the DOM accordingly to ensure the user never "loses their place" when navigating.
