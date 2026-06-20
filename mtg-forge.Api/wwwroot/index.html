@@ -4534,26 +4534,30 @@
                                         <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1.5rem; flex-wrap:wrap;">
                                             <!-- Identity details (left) -->
                                             <div style="flex:1; min-width:0;">
-                                                <div class="detail-colors">
-                                                    ${(deck.colors || []).map((c) => `<span class="mana-pip ${c}">${c}</span>`).join("")}
-                                                </div>
                                                 <h1 style="font-family:'Cinzel',serif;font-size:2rem;font-weight:900;background:linear-gradient(135deg,var(--gold-light),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:0.25rem;line-height:1.2;">${deck.deckName || "Untitled Deck"}</h1>
                                                 ${deck.commander ? `<div class="detail-commander">Commander: ${escHtml(deck.commander)}</div>` : ""}
                                                 <div class="detail-strategy">${deck.strategy || ""}</div>
                                             </div>
-                                            <!-- Shrunk Stat Boxes (right) -->
-                                            <div style="display:flex; gap:0.5rem; flex-shrink:0;">
-                                                <div class="stat-box-mini">
-                                                    <div class="stat-value-mini">${totalCards}</div>
-                                                    <div class="stat-label-mini">Cards</div>
+                                            <!-- Shrunk Stat Boxes + Larger Color Pips (right) -->
+                                            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.5rem; flex-shrink:0;">
+                                                <!-- Stat boxes row -->
+                                                <div style="display:flex; gap:0.5rem;">
+                                                    <div class="stat-box-mini">
+                                                        <div class="stat-value-mini">${totalCards}</div>
+                                                        <div class="stat-label-mini">Cards</div>
+                                                    </div>
+                                                    <div class="stat-box-mini">
+                                                        <div class="stat-value-mini">$${(deck.estimatedTotalPrice || 0).toFixed(0)}</div>
+                                                        <div class="stat-label-mini">Est. Cost</div>
+                                                    </div>
+                                                    <div class="stat-box-mini">
+                                                        <div class="stat-value-mini">${avgCmc}</div>
+                                                        <div class="stat-label-mini">Avg CMC</div>
+                                                    </div>
                                                 </div>
-                                                <div class="stat-box-mini">
-                                                    <div class="stat-value-mini">$${(deck.estimatedTotalPrice || 0).toFixed(0)}</div>
-                                                    <div class="stat-label-mini">Est. Cost</div>
-                                                </div>
-                                                <div class="stat-box-mini">
-                                                    <div class="stat-value-mini">${avgCmc}</div>
-                                                    <div class="stat-label-mini">Avg CMC</div>
+                                                <!-- Larger Color Pips row -->
+                                                <div style="display:flex; gap:0.35rem; margin-top:0.25rem;">
+                                                    ${(deck.colors || []).map((c) => `<span class="mana-pip mana-pip-large ${c}">${c}</span>`).join("")}
                                                 </div>
                                             </div>
                                         </div>
@@ -4680,6 +4684,36 @@
                                 if (cmdImgEl.complete) {
                                     cmdImgEl.style.display = "";
                                 }
+                            } else {
+                                // Fallback: Fuzzy search failed (likely ambiguous, like "Ezuri" or "Anowon")
+                                // Let's do a search query and pick the first match!
+                                fetch(
+                                    `https://api.scryfall.com/cards/search?q=${encodeURIComponent(deck.commander)}`,
+                                )
+                                    .then((r) => r.json())
+                                    .then((searchData) => {
+                                        if (
+                                            searchData.data &&
+                                            searchData.data.length > 0
+                                        ) {
+                                            const firstMatch =
+                                                searchData.data[0];
+                                            const fallbackImgUrl =
+                                                firstMatch.image_uris?.normal ||
+                                                firstMatch.card_faces?.[0]
+                                                    ?.image_uris?.normal;
+                                            if (fallbackImgUrl && cmdImgEl) {
+                                                cmdImgEl.onload = () => {
+                                                    cmdImgEl.style.display = "";
+                                                };
+                                                cmdImgEl.src = fallbackImgUrl;
+                                                if (cmdImgEl.complete) {
+                                                    cmdImgEl.style.display = "";
+                                                }
+                                            }
+                                        }
+                                    })
+                                    .catch(() => {});
                             }
                         })
                         .catch(() => {});
@@ -4887,19 +4921,104 @@
             }
             function closeEditModal() {
                 document.getElementById("editModal").classList.add("hidden");
+                // Clear suggestions on close
+                document
+                    .getElementById("editCommanderSuggestions")
+                    .classList.add("hidden");
+                document.getElementById("editCommanderSuggestions").innerHTML =
+                    "";
             }
-            async function saveEdit() {
+            function selectEditCommander(name) {
+                document.getElementById("editCommander").value = name;
+                const sugDiv = document.getElementById(
+                    "editCommanderSuggestions",
+                );
+                sugDiv.innerHTML = "";
+                sugDiv.classList.add("hidden");
+            }
+            async function saveEdit(bypassVerification = false) {
                 if (!currentDetailDeck) return;
+                const commanderName = document
+                    .getElementById("editCommander")
+                    .value.trim();
                 const colors = ["W", "U", "B", "R", "G"].filter(
                     (c) => document.getElementById(`editColor${c}`).checked,
                 );
+
+                // If commander is provided and changed, we verify it against Scryfall
+                if (
+                    commanderName &&
+                    commanderName !== currentDetailDeck.commander &&
+                    !bypassVerification
+                ) {
+                    showToast("Verifying commander name...");
+                    try {
+                        const res = await fetch(
+                            `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(commanderName)}`,
+                        );
+                        if (res.ok) {
+                            const data = await res.json();
+                            // Exact match found! Update the input field to use exact case/name
+                            document.getElementById("editCommander").value =
+                                data.name;
+                            // Proceed directly to saving
+                            await saveEdit(true);
+                            return;
+                        } else {
+                            // Exact match failed. Let's do a search query.
+                            const searchRes = await fetch(
+                                `https://api.scryfall.com/cards/search?q=${encodeURIComponent(commanderName)}`,
+                            );
+                            if (searchRes.ok) {
+                                const searchData = await searchRes.json();
+                                if (
+                                    searchData.data &&
+                                    searchData.data.length > 0
+                                ) {
+                                    // Build suggestions HTML
+                                    const suggestionsHtml = searchData.data
+                                        .slice(0, 5)
+                                        .map(
+                                            (card) => `
+                                        <div class="commander-suggestion-item" onclick="selectEditCommander('${card.name.replace(/'/g, "\\'")}')">
+                                            ${card.name}
+                                        </div>
+                                    `,
+                                        )
+                                        .join("");
+                                    const sugDiv = document.getElementById(
+                                        "editCommanderSuggestions",
+                                    );
+                                    sugDiv.innerHTML = suggestionsHtml;
+                                    sugDiv.classList.remove("hidden");
+                                    showToast(
+                                        "Ambiguous commander name. Select from suggestions below.",
+                                        true,
+                                    );
+                                    return;
+                                }
+                            }
+                            // If search completely failed (no matches at all)
+                            showToast(
+                                "Commander card not found. Check spelling.",
+                                true,
+                            );
+                            return;
+                        }
+                    } catch (e) {
+                        // Network error or fallback: let them save anyway
+                        console.warn(
+                            "Commander verification failed, saving anyway:",
+                            e,
+                        );
+                    }
+                }
+
                 const body = {
                     deckName: document
                         .getElementById("editDeckName")
                         .value.trim(),
-                    commander: document
-                        .getElementById("editCommander")
-                        .value.trim(),
+                    commander: commanderName,
                     deckDescription: document
                         .getElementById("editDescription")
                         .value.trim(),
@@ -4935,6 +5054,10 @@
                     currentDetailDeck = updated;
                     renderDetail(updated);
                     closeEditModal();
+                    // Clear suggestions
+                    document
+                        .getElementById("editCommanderSuggestions")
+                        .classList.add("hidden");
                     showToast("Deck updated!");
                 } catch (err) {
                     showToast(err.message, true);

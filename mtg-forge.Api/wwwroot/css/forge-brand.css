@@ -1413,6 +1413,14 @@ option {
     font-weight: bold;
 }
 
+.mana-pip.mana-pip-large {
+    width: 32px;
+    height: 32px;
+    font-size: 0.95rem;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.15); /* Sleek highlight ring */
+}
+
 .mana-pip.W {
     background: linear-gradient(135deg, #fffef5, #e8d8b8);
     color: #6b5b3e;
